@@ -1,0 +1,12 @@
+{
+    "manga": {
+        "series1_name": "series1_id",
+        "series2_name": "series2_id",
+        "series3_name": "series3_id"
+    },
+    "group": {
+        "group1_name": "group1_id",
+        "group2_name": "group2_id",
+        "group3_name": "group3_id"
+    }
+}

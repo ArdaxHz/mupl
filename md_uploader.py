@@ -7,9 +7,58 @@ from pathlib import Path
 import requests
 from dotenv import dotenv_values
 
-chapter_regex = re.compile(r'(?:[c](?:h(?:(?:a)?p(?:ter)?)?)?(?:\.)?(?:\s)?)(\d+(?:\.\d)?)', re.IGNORECASE)
-volume_regex = re.compile(r'(?:[v](?:ol(?:ume)?(?:s)?)?(?:\.)?(?:\s)?)(\d+(?:\.\d)?)', re.IGNORECASE)
+uuid_regex = re.compile(r'[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}')
+file_name_regex = re.compile(r'^((?:\[(?P<artist>.+?)\])\s)?(?P<title>.+?)(?:\s\[(?P<language>[a-zA-Z]+)\])?\s-\s(?P<prefix>(?:[c](?:h(?:(?:a)?p(?:ter)?)?)?(?:\.)?)(?:\s)?)?(?P<chapter>\d+(?:\.\d)?)(?:\s\((?:[v](?:ol(?:ume)?(?:s)?)?(?:\.)?(?:\s)?)(?P<volume>\d+(?:\.\d)?)\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?P<group>.+)\])(?:\{(?:v)(?P<version>\d)\})?(?:\.(?P<extension>zip|cbz))?$', re.IGNORECASE)
+languages = [{"english":"English","md":"en","iso":"eng"},{"english":"Japanese","md":"ja","iso":"jpn"},{"english":"Polish","md":"pl","iso":"pol"},{"english":"Serbo-Croatian","md":"sh","iso":"hrv"},{"english":"Dutch","md":"nl","iso":"dut"},{"english":"Italian","md":"it","iso":"ita"},{"english":"Russian","md":"ru","iso":"rus"},{"english":"German","md":"de","iso":"ger"},{"english":"Hungarian","md":"hu","iso":"hun"},{"english":"French","md":"fr","iso":"fre"},{"english":"Finnish","md":"fi","iso":"fin"},{"english":"Vietnamese","md":"vi","iso":"vie"},{"english":"Greek","md":"el","iso":"gre"},{"english":"Bulgarian","md":"bg","iso":"bul"},{"english":"Spanish (Es)","md":"es","iso":"spa"},{"english":"Portuguese (Br)","md":"pt-br","iso":"por"},{"english":"Portuguese (Pt)","md":"pt","iso":"por"},{"english":"Swedish","md":"sv","iso":"swe"},{"english":"Arabic","md":"ar","iso":"ara"},{"english":"Danish","md":"da","iso":"dan"},{"english":"Chinese (Simp)","md":"zh","iso":"chi"},{"english":"Bengali","md":"bn","iso":"ben"},{"english":"Romanian","md":"ro","iso":"rum"},{"english":"Czech","md":"cs","iso":"cze"},{"english":"Mongolian","md":"mn","iso":"mon"},{"english":"Turkish","md":"tr","iso":"tur"},{"english":"Indonesian","md":"id","iso":"ind"},{"english":"Korean","md":"ko","iso":"kor"},{"english":"Spanish (LATAM)","md":"es-la","iso":"spa"},{"english":"Persian","md":"fa","iso":"per"},{"english":"Malay","md":"ms","iso":"may"},{"english":"Thai","md":"th","iso":"tha"},{"english":"Catalan","md":"ca","iso":"cat"},{"english":"Filipino","md":"tl","iso":"fil"},{"english":"Chinese (Trad)","md":"zh-hk","iso":"chi"},{"english":"Ukrainian","md":"uk","iso":"ukr"},{"english":"Burmese","md":"my","iso":"bur"},{"english":"Lithuanian","md":"lt","iso":"lit"},{"english":"Hebrew","md":"he","iso":"heb"},{"english":"Hindi","md":"hi","iso":"hin"},{"english":"Norwegian","md":"no","iso":"nor"},{"english":"Other","md":"NULL","iso":"NULL"}]
 md_upload_api_url = 'https://api.mangadex.org/upload'
+
+
+def get_lang_md(language: str) -> str:
+    """Convert the inputted language into the format MangaDex uses
+
+    Args:
+        language (str): Can be the full language name, ISO 639-2 or ISO 639-3 codes.
+
+    Returns:
+        str: ISO 639-2 code, which MangaDex uses for languages.
+    """
+
+    if language is None:
+        return "en"
+    elif len(language) < 2:
+        print('Not a valid language option.')
+        return
+    elif re.match(r'^[a-zA-Z\-]{2,5}$', language):
+        return language
+    elif len(language) == 3:
+        available_langs = [l["md"] for l in languages if l["iso"] == language]
+
+        if available_langs:
+            return available_langs[0]
+        return "NULL"
+    else:
+        languages_match = [l for l in languages if language.lower() in l["english"].lower()]
+
+        if len(languages_match) > 1:
+            print("Found multiple matching languages, please choose the language you want to download from the following options.")
+
+            for count, item in enumerate(languages_match, start=1):
+                print(f'{count}: {item["english"]}')
+
+            try:
+                lang = int(input(f'Choose a number matching the position of the language: '))
+            except ValueError:
+                print("That's not a number.")
+                return
+
+            if lang not in range(1, (len(languages_match) + 1)):
+                print('Not a valid language option.')
+                return
+
+            lang_to_use = languages_match[(lang - 1)]
+            return lang_to_use["md"]
+
+        return languages_match[0]["md"]
 
 
 def remove_upload_session(session: requests.Session, upload_session_id: str):
@@ -66,41 +115,64 @@ def process_zip(to_upload: Path, names_to_ids: dict):
     """Get the chapter data from the file name."""
 
     # Split the file name into the different components
-    zip_name = to_upload.name
-    zip_name_split = zip_name.split('_')
+    zip_name_match = file_name_regex.match(to_upload.name)
+    if not zip_name_match:
+        print(f'{to_upload.name} not in the correct naming format, skipping.')
+        return
 
-    series = zip_name_split[0]
-    try:
-        manga_series = names_to_ids[series]
-    except KeyError:
-        manga_series = None
+    series = zip_name_match.group("title")
+    if not uuid_regex.match(series):
+        try:
+            manga_series = names_to_ids["manga"].get(series, None)
+        except KeyError:
+            manga_series = None
 
-    chapter_number_match = chapter_regex.search(zip_name_split[1])
-    if chapter_number_match:
-        chapter_number = chapter_number_match.group(1).lstrip('0')
-        # Oneshot chapter
-        if chapter_number in ('', '0'):
-            chapter_number = None
-    else:
+    language = get_lang_md(zip_name_match.group("language"))
+
+    chapter_number = zip_name_match.group("chapter")
+    if chapter_number is not None:
+        chapter_number = chapter_number.lstrip('0')
+        if len(chapter_number) == 0:
+            chapter_number = '0'
+    
+    if zip_name_match.group("prefix") is None:
         chapter_number = None
 
-    volume_number_match = volume_regex.search(zip_name)
-    if volume_number_match:
-        volume_number = volume_number_match.group(1).lstrip('0')
-    else:
-        volume_number = None
+    volume_number = zip_name_match.group("volume")
+    if volume_number is not None:
+        volume_number = volume_number.lstrip('0')
+        if len(volume_number) == 0:
+            volume_number = '0'
 
-    try:
-        chapter_title = zip_name_split[2].replace('(question-mark)', '?')
-    except IndexError:
-        chapter_title = None   
+    chapter_title = zip_name_match.group("chapter_title")
+    if chapter_title is not None:
+        chapter_title = chapter_title
+
+    groups = []
+    groups_match = zip_name_match.group("group")
+    if groups_match is not None:
+        groups_array = groups_match.split('||')
+        groups_array = [g.strip() for g in groups_array]
+
+        for group in groups_array:
+            if not uuid_regex.match(group):
+                try:
+                    group_id = names_to_ids["group"].get(group, None)
+                except KeyError:
+                    group_id = None
+                if group_id is not None:
+                    groups.append(group_id)
+            else:
+                groups.append(group)
 
     print(series)
+    print(language)
     print(chapter_number)
     print(volume_number)
     print(chapter_title)
     print(manga_series)
-    return manga_series, chapter_title, chapter_number, volume_number
+    print(groups)
+    return (manga_series, language, chapter_number, volume_number, groups, chapter_title)
 
 
 def login_to_md(env_values: dict, session: requests.Session):
@@ -121,7 +193,7 @@ def login_to_md(env_values: dict, session: requests.Session):
 def open_manga_series_map(env_values: dict, files_path: Path):
     """Get the manga-name-to-id map."""
     try:
-        with open(files_path.joinpath(env_values["MANGA_NAME_ID_FILE_NAME"]).with_suffix('.json'), 'r') as json_file:
+        with open(files_path.joinpath(env_values["NAME_ID_MAP_FILE"]).with_suffix('.json'), 'r') as json_file:
             names_to_ids = json.load(json_file)
     except FileNotFoundError:
         raise Exception(f"The manga name-to-id json file couldn't be found.")
@@ -140,7 +212,7 @@ def load_env_file(root_path: Path):
     if env_dict["MANGADEX_USERNAME"] == '' or env_dict["MANGADEX_PASSWORD"] == '':
         raise Exception(f'Missing login details.')
 
-    if env_dict["GROUP_ID"] == '':
+    if env_dict["GROUP_FALLBACK_ID"] == '':
         print(f'Group id not found, uploading without a group.')
 
     return env_dict
@@ -149,29 +221,29 @@ def load_env_file(root_path: Path):
 if __name__ == "__main__":
 
     root_path = Path('.')
-    to_upload_folder_path = root_path.joinpath('to_upload')
-    if not to_upload_folder_path.exists():
-        print(f'Uploads folder not found, looking for files in the root directory.')
-        to_upload_folder_path = root_path
-
-    uploaded_files_path = root_path.joinpath('uploaded')
     env_values = load_env_file(root_path)
+    names_to_ids = open_manga_series_map(env_values, root_path)
+    to_upload_folder_path = Path(env_values["UPLOADS_FOLDER"])
+    uploaded_files_path = Path(env_values["UPLOADED_FILES"])
 
     session = requests.Session()
     login_to_md(env_values, session)
-
-    names_to_ids = open_manga_series_map(env_values, root_path)
-    groups = [] if env_values["GROUP_ID"] == '' else [env_values["GROUP_ID"]]
+    group_fallback = [] if env_values["GROUP_FALLBACK_ID"] == '' else [env_values["GROUP_FALLBACK_ID"]]
 
     for to_upload in to_upload_folder_path.iterdir():
+        zip_name = to_upload.name
+        zip_extension = to_upload.suffix
         # Only accept zip files
-        if to_upload.suffix in ('.zip', '.cbz'):
+        if zip_extension in ('.zip', '.cbz'):
             image_ids = []
             failed_image_upload = False
-            manga_series, chapter_title, chapter_number, volume_number = process_zip(to_upload, names_to_ids)
+            manga_series, language, chapter_number, volume_number, groups, chapter_title = process_zip(to_upload, names_to_ids)
+            if not groups:
+                print(f'No groups found, using group fallback')
+                groups = group_fallback
 
             if manga_series is None:
-                print(f'Skipped {to_upload}, no manga id found.')
+                print(f'Skipped {zip_name}, no manga id found.')
                 continue
 
             # Remove any exising upload sessions to not error out
@@ -183,25 +255,26 @@ if __name__ == "__main__":
             upload_session_response = session.post(f'{md_upload_api_url}/begin', json={"manga": manga_series, "groups": groups})
             if upload_session_response.status_code != 200:
                 print_error(upload_session_response)
-                print(f'Error creating draft for {to_upload}.')
+                print(f'Error creating draft for {zip_name}.')
                 continue
 
             upload_session_id = upload_session_response.json()["data"]["id"]
-            print(f'Created upload session: {upload_session_id}, {to_upload}')
+            print(f'Created upload session: {upload_session_id}, {zip_name}')
 
             # Open zip file and read the data
             with zipfile.ZipFile(to_upload) as myzip:
                 info_list = myzip.infolist()
-                # Remove any directories from the zip info array
+                # Remove any directories and none-image files from the zip info array
                 info_list_dir_removed = list(reversed([image for image in reversed(info_list.copy()) if not image.is_dir()]))
+                info_list_images_only = [image for image in info_list_dir_removed if Path(image.filename).suffix in ('.png', '.jpg', '.jpeg', '.gif')]
                 # Separate the image array into smaller arrays of 5 images
-                info_list_separate = [info_list_dir_removed[l:l + 5] for l in range(0, len(info_list_dir_removed), 5)]
+                info_list_separate = [info_list_images_only[l:l + 5] for l in range(0, len(info_list_images_only), 5)]
 
                 for array_index, images in enumerate(info_list_separate, start=1):
                     files = {}
                     # Read the image data and add to files dict
                     for image_index, image in enumerate(images, start=1):
-                        image_filename = str(Path(image.filename).stem)
+                        image_filename = str(Path(image.filename).name)
                         with myzip.open(image) as myfile:
                             files.update({f'{image_filename}': myfile.read()})
 
@@ -233,7 +306,7 @@ if __name__ == "__main__":
 
             # Skip chapter upload and delete upload session
             if failed_image_upload:
-                print(f'Deleting draft due to failed image upload: {upload_session_id}, {to_upload}.')
+                print(f'Deleting draft due to failed image upload: {upload_session_id}, {zip_name}.')
                 remove_upload_session(session, upload_session_id)
                 continue
 
@@ -243,27 +316,25 @@ if __name__ == "__main__":
             while commit_retries < 3:
                 chapter_commit_response = session.post(f'{md_upload_api_url}/{upload_session_id}/commit',
                     json={"chapterDraft":
-                        {"volume": volume_number, "chapter": chapter_number, "title": chapter_title, "translatedLanguage": "en"}, "pageOrder": image_ids
+                        {"volume": volume_number, "chapter": chapter_number, "title": chapter_title, "translatedLanguage": language}, "pageOrder": image_ids
                     })
 
                 if chapter_commit_response.status_code == 200:
                     succesful_upload = True
                     succesful_upload_id = chapter_commit_response.json()["data"]["id"]
-                    print(f'Succesfully uploaded: {succesful_upload_id}, {to_upload}')
+                    print(f'Succesfully uploaded: {succesful_upload_id}, {zip_name}')
 
                     # Move the uploaded zips to a different folder
                     uploaded_files_path.mkdir(parents=True, exist_ok=True)
-                    to_upload_name = to_upload.name
-                    to_upload_extension = to_upload.suffix
-                    to_upload.rename(uploaded_files_path.joinpath(to_upload_name).with_suffix(to_upload_extension))
+                    to_upload.rename(uploaded_files_path.joinpath(zip_name).with_suffix(zip_extension))
                     break
 
-                print(f'Failed to commit {to_upload}, trying again.')
+                print(f'Failed to commit {zip_name}, trying again.')
                 commit_retries += 1
                 time.sleep(1)
 
             if not succesful_upload:
-                print(f'Failed to commit {to_upload}, removing upload draft.')
+                print(f'Failed to commit {zip_name}, removing upload draft.')
                 remove_upload_session(session, upload_session_id)
 
             time.sleep(3)
