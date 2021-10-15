@@ -6,7 +6,7 @@
 - `[lang]` is omitted for English. Use the languages table at the bottom of this page to find out which language code to use for MangaDex. 
 - Omit the chapter prefix if the chapter is a oneshot, e.g. `cXXX` > `XXX`.
 - `(vYY)` can be omitted if the chapter has no volume.
-- `(chapter_title)` can be omitted if the chapter has no title.
+- `(chapter_title)` can be omitted if the chapter has no title. Use `<question_mark>` in place where there would be a `?`.
 - `[group]` can be a list of groups. Separate each separate group with a `||`. Groups can be a key for the `name_id_map.json` file or the group ids.
 
 
