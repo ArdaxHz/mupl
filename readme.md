@@ -41,3 +41,19 @@ In the `name_id_map.json` file, replace `series1_name` with the `manga_title` us
 | Hindi           | hi            | hin           | Turkish         | tr            | tur           |
 | Hungarian       | hu            | hun           | Ukrainian       | uk            | ukr           |
 | Indonesian      | id            | ind           | Vietnamese      | vi            | vie           |
+
+
+## Examples
+Take `takamine - c025 (v04) [XuN].cbz` as the chapter I want to upload. In my `name_id_map.json`, I would have 
+```
+{
+    "manga": {
+        "takamine": "46748d60-9b15-4647-8250-de0926b20268"
+    },
+    "group": {
+        "XuN": "b6d57ade-cab7-4be7-b2b8-be68484b3ad3"
+}
+```
+The progam would then look into this file for the `takamine` key and for the `XuN` key for their ids and would use ids assigned to these keys.
+
+Or if I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-san) [XuN ||  00e03853-1b96-4f41-9542-c71b8692033b ]`, the progam would take the manga id directly from the file, the language as Spanish with the code `es`, chapter number Oneshot and no volume number, chapter title as `Momi-san` with groups `XuN` (id taken form `name_id_map.json`) and `00e03853-1b96-4f41-9542-c71b8692033b`.

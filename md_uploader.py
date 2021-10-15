@@ -125,10 +125,10 @@ def process_zip(to_upload: Path, names_to_ids: dict):
         return
 
     # Get the series title, use id map if zip file doesn't have the uuid already
-    series = zip_name_match.group("title")
-    if not uuid_regex.match(series):
+    manga_series = zip_name_match.group("title")
+    if not uuid_regex.match(manga_series):
         try:
-            manga_series = names_to_ids["manga"].get(series, None)
+            manga_series = names_to_ids["manga"].get(manga_series, None)
         except KeyError:
             manga_series = None
 
@@ -176,7 +176,6 @@ def process_zip(to_upload: Path, names_to_ids: dict):
             else:
                 groups.append(group)
 
-    print(series)
     print(language)
     print(chapter_number)
     print(volume_number)
@@ -201,19 +200,21 @@ def login_to_md(env_values: dict, session: requests.Session):
     session.headers.update({"Authorization": f"Bearer {session_token}"})
 
 
-def open_manga_series_map(env_values: dict, files_path: Path):
+def open_manga_series_map(env_values: dict, files_path: Path) -> dict:
     """Get the manga-name-to-id map."""
     try:
         with open(files_path.joinpath(env_values["NAME_ID_MAP_FILE"]).with_suffix('.json'), 'r') as json_file:
             names_to_ids = json.load(json_file)
     except FileNotFoundError:
-        raise Exception(f"The manga name-to-id json file couldn't be found.")
+        print(f"The manga name-to-id json file couldn't be found. Continuing with an empty name-id map.")
+        return {"manga":{}, "group":{}}
     except json.JSONDecodeError:
-        raise Exception(f"The manga name-to-id json file is corrupted.")
+        print(f"The manga name-to-id json file is corrupted. Continuing with an empty name-id map.")
+        return {"manga":{}, "group":{}}
     return names_to_ids
 
 
-def load_env_file(root_path: Path):
+def load_env_file(root_path: Path) -> dict:
     """Read the data from the env if it exists."""
     env_file_path = root_path.joinpath('.env')
     if not env_file_path.exists():
@@ -250,7 +251,11 @@ if __name__ == "__main__":
 
         image_ids = []
         failed_image_upload = False
-        manga_series, language, chapter_number, volume_number, groups, chapter_title = process_zip(to_upload, names_to_ids)
+        values = process_zip(to_upload, names_to_ids)
+        if values is None:
+            continue
+
+        manga_series, language, chapter_number, volume_number, groups, chapter_title = values
         if not groups:
             print(f'No groups found, using group fallback')
             groups = group_fallback
