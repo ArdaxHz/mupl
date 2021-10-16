@@ -8,7 +8,7 @@ import requests
 from dotenv import dotenv_values
 
 uuid_regex = re.compile(r'[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}')
-file_name_regex = re.compile(r'^((?:\[(?P<artist>.+?)\])\s)?(?P<title>.+?)(?:\s\[(?P<language>[a-zA-Z]+)\])?\s-\s(?P<prefix>(?:[c](?:h(?:(?:a)?p(?:ter)?)?)?(?:\.)?)(?:\s)?)?(?P<chapter>\d+(?:\.\d)?)(?:\s\((?:[v](?:ol(?:ume)?(?:s)?)?(?:\.)?(?:\s)?)(?P<volume>\d+(?:\.\d)?)\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?P<group>.+)\])(?:\{(?:v)(?P<version>\d)\})?(?:\.(?P<extension>zip|cbz))?$', re.IGNORECASE)
+file_name_regex = re.compile(r'^(?:\[(?P<artist>.+?)?\])\s?(?P<title>.+?)(?:\s?\[(?P<language>[a-zA-Z]+)?\])?\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)(?P<volume>\d+(?:\.\d)?)?\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?:(?P<group>.+))?\])\s?(?:\{v?(?P<version>\d)\})?(?:\.(?P<extension>zip|cbz))?$', re.IGNORECASE)
 languages = [{"english":"English","md":"en","iso":"eng"},{"english":"Japanese","md":"ja","iso":"jpn"},{"english":"Polish","md":"pl","iso":"pol"},{"english":"Serbo-Croatian","md":"sh","iso":"hrv"},{"english":"Dutch","md":"nl","iso":"dut"},{"english":"Italian","md":"it","iso":"ita"},{"english":"Russian","md":"ru","iso":"rus"},{"english":"German","md":"de","iso":"ger"},{"english":"Hungarian","md":"hu","iso":"hun"},{"english":"French","md":"fr","iso":"fre"},{"english":"Finnish","md":"fi","iso":"fin"},{"english":"Vietnamese","md":"vi","iso":"vie"},{"english":"Greek","md":"el","iso":"gre"},{"english":"Bulgarian","md":"bg","iso":"bul"},{"english":"Spanish (Es)","md":"es","iso":"spa"},{"english":"Portuguese (Br)","md":"pt-br","iso":"por"},{"english":"Portuguese (Pt)","md":"pt","iso":"por"},{"english":"Swedish","md":"sv","iso":"swe"},{"english":"Arabic","md":"ar","iso":"ara"},{"english":"Danish","md":"da","iso":"dan"},{"english":"Chinese (Simp)","md":"zh","iso":"chi"},{"english":"Bengali","md":"bn","iso":"ben"},{"english":"Romanian","md":"ro","iso":"rum"},{"english":"Czech","md":"cs","iso":"cze"},{"english":"Mongolian","md":"mn","iso":"mon"},{"english":"Turkish","md":"tr","iso":"tur"},{"english":"Indonesian","md":"id","iso":"ind"},{"english":"Korean","md":"ko","iso":"kor"},{"english":"Spanish (LATAM)","md":"es-la","iso":"spa"},{"english":"Persian","md":"fa","iso":"per"},{"english":"Malay","md":"ms","iso":"may"},{"english":"Thai","md":"th","iso":"tha"},{"english":"Catalan","md":"ca","iso":"cat"},{"english":"Filipino","md":"tl","iso":"fil"},{"english":"Chinese (Trad)","md":"zh-hk","iso":"chi"},{"english":"Ukrainian","md":"uk","iso":"ukr"},{"english":"Burmese","md":"my","iso":"bur"},{"english":"Lithuanian","md":"lt","iso":"lit"},{"english":"Hebrew","md":"he","iso":"heb"},{"english":"Hindi","md":"hi","iso":"hin"},{"english":"Norwegian","md":"no","iso":"nor"},{"english":"Other","md":"NULL","iso":"NULL"}]
 md_upload_api_url = 'https://api.mangadex.org/upload'
 
@@ -161,7 +161,7 @@ def process_zip(to_upload: Path, names_to_ids: dict):
     groups_match = zip_name_match.group("group")
     if groups_match is not None:
         # Split the zip name groups into an array and remove any leading/trailing whitespace 
-        groups_array = groups_match.split('||')
+        groups_array = groups_match.split('+')
         groups_array = [g.strip() for g in groups_array]
 
         # Check if the groups are using uuids, if not, use the id map for the id
@@ -225,7 +225,7 @@ def load_env_file(root_path: Path) -> dict:
         raise Exception(f'Missing login details.')
 
     if env_dict["GROUP_FALLBACK_ID"] == '':
-        print(f'Group id not found, uploading without a group.')
+        print(f'Group fallback id not found, uploading without a group.')
 
     return env_dict
 
@@ -249,15 +249,13 @@ if __name__ == "__main__":
         if zip_extension not in ('.zip', '.cbz'):
             continue
 
-        image_ids = []
-        failed_image_upload = False
         values = process_zip(to_upload, names_to_ids)
         if values is None:
             continue
 
         manga_series, language, chapter_number, volume_number, groups, chapter_title = values
         if not groups:
-            print(f'No groups found, using group fallback')
+            print(f'No groups found, using group fallback.')
             groups = group_fallback
 
         if manga_series is None:
@@ -277,8 +275,10 @@ if __name__ == "__main__":
             continue
 
         upload_session_id = upload_session_response.json()["data"]["id"]
-        print(f'Created upload session: {upload_session_id}, {zip_name}')
+        print(f'Created upload session: {upload_session_id}, {zip_name}.')
 
+        image_ids = []
+        failed_image_upload = False
         # Open zip file and read the data
         with zipfile.ZipFile(to_upload) as myzip:
             info_list = myzip.infolist()
@@ -340,7 +340,7 @@ if __name__ == "__main__":
             if chapter_commit_response.status_code == 200:
                 succesful_upload = True
                 succesful_upload_id = chapter_commit_response.json()["data"]["id"]
-                print(f'Succesfully uploaded: {succesful_upload_id}, {zip_name}')
+                print(f'Succesfully uploaded: {succesful_upload_id}, {zip_name}.')
 
                 # Move the uploaded zips to a different folder
                 uploaded_files_path.mkdir(parents=True, exist_ok=True)
