@@ -8,8 +8,9 @@ import requests
 from dotenv import dotenv_values
 
 uuid_regex = re.compile(r'[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}')
-file_name_regex = re.compile(r'^(?:\[(?P<artist>.+?)?\])?\s?(?P<title>.+?)(?:\s?\[(?P<language>[a-zA-Z]+)?\])?\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)(?P<volume>\d+(?:\.\d)?)?\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?:(?P<group>.+))?\])\s?(?:\{v?(?P<version>\d)\})?(?:\.(?P<extension>zip|cbz))?$', re.IGNORECASE)
+file_name_regex = re.compile(r'^(?:\[(?P<artist>.+?)?\])?\s?(?P<title>.+?)(?:\s?\[(?P<language>[a-zA-Z]+)?\])?\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?:(?P<group>.+))?\])?\s?(?:\{v?(?P<version>\d)?\})?(?:\.(?P<extension>zip|cbz))?$', re.IGNORECASE)
 languages = [{"english":"English","md":"en","iso":"eng"},{"english":"Japanese","md":"ja","iso":"jpn"},{"english":"Polish","md":"pl","iso":"pol"},{"english":"Serbo-Croatian","md":"sh","iso":"hrv"},{"english":"Dutch","md":"nl","iso":"dut"},{"english":"Italian","md":"it","iso":"ita"},{"english":"Russian","md":"ru","iso":"rus"},{"english":"German","md":"de","iso":"ger"},{"english":"Hungarian","md":"hu","iso":"hun"},{"english":"French","md":"fr","iso":"fre"},{"english":"Finnish","md":"fi","iso":"fin"},{"english":"Vietnamese","md":"vi","iso":"vie"},{"english":"Greek","md":"el","iso":"gre"},{"english":"Bulgarian","md":"bg","iso":"bul"},{"english":"Spanish (Es)","md":"es","iso":"spa"},{"english":"Portuguese (Br)","md":"pt-br","iso":"por"},{"english":"Portuguese (Pt)","md":"pt","iso":"por"},{"english":"Swedish","md":"sv","iso":"swe"},{"english":"Arabic","md":"ar","iso":"ara"},{"english":"Danish","md":"da","iso":"dan"},{"english":"Chinese (Simp)","md":"zh","iso":"chi"},{"english":"Bengali","md":"bn","iso":"ben"},{"english":"Romanian","md":"ro","iso":"rum"},{"english":"Czech","md":"cs","iso":"cze"},{"english":"Mongolian","md":"mn","iso":"mon"},{"english":"Turkish","md":"tr","iso":"tur"},{"english":"Indonesian","md":"id","iso":"ind"},{"english":"Korean","md":"ko","iso":"kor"},{"english":"Spanish (LATAM)","md":"es-la","iso":"spa"},{"english":"Persian","md":"fa","iso":"per"},{"english":"Malay","md":"ms","iso":"may"},{"english":"Thai","md":"th","iso":"tha"},{"english":"Catalan","md":"ca","iso":"cat"},{"english":"Filipino","md":"tl","iso":"fil"},{"english":"Chinese (Trad)","md":"zh-hk","iso":"chi"},{"english":"Ukrainian","md":"uk","iso":"ukr"},{"english":"Burmese","md":"my","iso":"bur"},{"english":"Lithuanian","md":"lt","iso":"lit"},{"english":"Hebrew","md":"he","iso":"heb"},{"english":"Hindi","md":"hi","iso":"hin"},{"english":"Norwegian","md":"no","iso":"nor"},{"english":"Other","md":"NULL","iso":"NULL"}]
+http_error_codes = {"400": "Bad request.", "401": "Unauthorised.", "403": "Forbidden.", "404": "Not found.", "429": "Too many requests."}
 md_upload_api_url = 'https://api.mangadex.org/upload'
 
 
@@ -70,33 +71,36 @@ def remove_upload_session(session: requests.Session, upload_session_id: str):
     session.delete(f'{md_upload_api_url}/{upload_session_id}')
 
 
-def print_error(error_json: requests.Response):
+def print_error(error_response: requests.Response):
     """Print the errors the site returns."""
     # Api didn't return json object
     try:
-        error_json = error_json.json()
+        error_json = error_response.json()
     except json.JSONDecodeError:
-        print(error_json.status_code)
+        print(error_response.status_code)
         return
     # Maybe already a json object
     except AttributeError:
         # Try load as a json object
         try:
-            error_json = json.loads(error_json)
+            error_json = json.loads(error_response)
         except json.JSONDecodeError:
-            print(error_json.status_code)
+            print(error_response.status_code)
             return
 
     # Api response doesn't follow the normal api error format
     try:
-        error = [e["detail"] for e in error_json["errors"] if e["detail"] is not None]
-        error = ', '.join(error)
+        errors = [e["detail"] for e in error_json["errors"] if e["detail"] is not None]
+        errors = ', '.join(errors)
         code = [str(e["status"]) for e in error_json["errors"] if e["status"] is not None]
         code = ', '.join(code)
 
-        print(f'Error: {code}, {error}')
+        if not errors:
+            errors = [http_error_codes.get(str(error_response.status_code), '')]
+
+        print(f'Error: {code}, {errors}')
     except KeyError:
-        print(error_json.status_code)
+        print(error_response.status_code)
 
 
 def print_error_upload_legacy(error_response: requests.Response):
@@ -110,7 +114,9 @@ def print_error_upload_legacy(error_response: requests.Response):
     # Api error format changed
     try:
         errors = [e["message"] for e in error_json["errors"] if e["message"] is not None]
-        print(f'Error', ', '.join(errors))
+        if not errors:
+            errors = [http_error_codes.get(str(error_response.status_code), '')]
+        print(f'Error: ', ', '.join(errors))
     except KeyError:
         print_error(error_response)
 
@@ -257,6 +263,8 @@ if __name__ == "__main__":
         if not groups:
             print(f'No groups found, using group fallback.')
             groups = group_fallback
+            if not groups:
+                print('Group fallback not found, uploading without a group.')
 
         if manga_series is None:
             print(f'Skipped {zip_name}, no manga id found.')
@@ -290,11 +298,14 @@ if __name__ == "__main__":
 
             for array_index, images in enumerate(info_list_separate, start=1):
                 files = {}
+                image_new_names = {}
                 # Read the image data and add to files dict
                 for image_index, image in enumerate(images, start=1):
                     image_filename = str(Path(image.filename).name)
+                    renamed_file = f'file{image_index}'
                     with myzip.open(image) as myfile:
-                        files.update({f'{image_filename}': myfile.read()})
+                        files.update({renamed_file: myfile.read()})
+                    image_new_names.update({renamed_file: image_filename})
 
                 # Upload the images
                 image_upload_response = session.post(f'{md_upload_api_url}/{upload_session_id}', files=files)
@@ -313,7 +324,9 @@ if __name__ == "__main__":
                 for uploaded_image in uploaded_image_data["data"]:
                     image_ids.append(uploaded_image["id"])
                     uploaded_image_attributes = uploaded_image["attributes"]
-                    print(f'Success: Uploaded page {uploaded_image_attributes["originalFileName"]}, size: {uploaded_image_attributes["fileSize"]} bytes.')
+                    original_filename = uploaded_image_attributes["originalFileName"]
+                    file_size = uploaded_image_attributes["fileSize"]
+                    print(f'Success: Uploaded page {image_new_names.get(original_filename, original_filename)}, size: {file_size} bytes.')
 
                 if failed_image_upload:
                     break
