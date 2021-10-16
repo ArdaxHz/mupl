@@ -230,8 +230,18 @@ def load_env_file(root_path: Path) -> dict:
     if env_dict["MANGADEX_USERNAME"] == '' or env_dict["MANGADEX_PASSWORD"] == '':
         raise Exception(f'Missing login details.')
 
-    if env_dict["GROUP_FALLBACK_ID"] == '':
-        print(f'Group fallback id not found, uploading without a group.')
+    # if env_dict["GROUP_FALLBACK_ID"] == '':
+    #     print(f'Group fallback id not found, uploading without a group.')
+
+    try:
+        env_dict["NUMBER_OF_IMAGES_UPLOAD"] = int(env_dict["NUMBER_OF_IMAGES_UPLOAD"])
+    except ValueError:
+        env_dict["NUMBER_OF_IMAGES_UPLOAD"] = 5
+
+    try:
+        env_dict["UPLOAD_RETRY"] = int(env_dict["UPLOAD_RETRY"])
+    except ValueError:
+        env_dict["UPLOAD_RETRY"] = 3
 
     return env_dict
 
@@ -243,10 +253,13 @@ if __name__ == "__main__":
     names_to_ids = open_manga_series_map(env_values, root_path)
     to_upload_folder_path = Path(env_values["UPLOADS_FOLDER"])
     uploaded_files_path = Path(env_values["UPLOADED_FILES"])
+    images_upload_session = int(env_values["NUMBER_OF_IMAGES_UPLOAD"])
+    number_upload_retry = int(env_values["UPLOAD_RETRY"])
 
     session = requests.Session()
     login_to_md(env_values, session)
     group_fallback = [] if env_values["GROUP_FALLBACK_ID"] == '' else [env_values["GROUP_FALLBACK_ID"]]
+    failed_uploads = []
 
     for to_upload in to_upload_folder_path.iterdir():
         zip_name = to_upload.name
@@ -291,42 +304,57 @@ if __name__ == "__main__":
         with zipfile.ZipFile(to_upload) as myzip:
             info_list = myzip.infolist()
             # Remove any directories and none-image files from the zip info array
-            info_list_dir_removed = list(reversed([image for image in reversed(info_list.copy()) if not image.is_dir()]))
-            info_list_images_only = [image for image in info_list_dir_removed if Path(image.filename).suffix in ('.png', '.jpg', '.jpeg', '.gif')]
+            info_list_images_only = [image.filename for image in info_list if (not image.is_dir() and Path(image.filename).suffix in ('.png', '.jpg', '.jpeg', '.gif'))]
             # Separate the image array into smaller arrays of 5 images
-            info_list_separate = [info_list_images_only[l:l + 5] for l in range(0, len(info_list_images_only), 5)]
+            info_list_separate = [info_list_images_only[l:l + images_upload_session] for l in range(0, len(info_list_images_only), images_upload_session)]
 
             for array_index, images in enumerate(info_list_separate, start=1):
                 files = {}
                 image_new_names = {}
                 # Read the image data and add to files dict
                 for image_index, image in enumerate(images, start=1):
-                    image_filename = str(Path(image.filename).name)
-                    renamed_file = f'file{image_index}'
+                    image_filename = str(Path(image).name)
+                    renamed_file = str(info_list_images_only.index(image))
+                    image_new_names.update({renamed_file: image_filename})
                     with myzip.open(image) as myfile:
                         files.update({renamed_file: myfile.read()})
-                    image_new_names.update({renamed_file: image_filename})
 
-                # Upload the images
-                image_upload_response = session.post(f'{md_upload_api_url}/{upload_session_id}', files=files)
-                if image_upload_response.status_code != 200:
-                    print(image_upload_response.status_code)
-                    print_error_upload_legacy(image_upload_response)
-                    failed_image_upload = True
-                    break
+                image_retries = 0
+                while image_retries < number_upload_retry:
+                    # Upload the images
+                    image_upload_response = session.post(f'{md_upload_api_url}/{upload_session_id}', files=files)
+                    if image_upload_response.status_code != 200:
+                        print(image_upload_response.status_code)
+                        print_error_upload_legacy(image_upload_response)
+                        failed_image_upload = True
+                        image_retries += 1
+                        time.sleep(2)
+                        continue
 
-                # Some images returned errors
-                uploaded_image_data = image_upload_response.json()
-                if uploaded_image_data["errors"]:
-                    print_error_upload_legacy(image_upload_response)
+                    # Some images returned errors
+                    uploaded_image_data = image_upload_response.json()
+                    succesful_upload_data = uploaded_image_data["data"]
+                    if uploaded_image_data["errors"] or uploaded_image_data["result"] == 'error':
+                        print_error_upload_legacy(image_upload_response)
 
-                # Add successful image uploads to the image ids array
-                for uploaded_image in uploaded_image_data["data"]:
-                    image_ids.append(uploaded_image["id"])
-                    uploaded_image_attributes = uploaded_image["attributes"]
-                    original_filename = uploaded_image_attributes["originalFileName"]
-                    file_size = uploaded_image_attributes["fileSize"]
-                    print(f'Success: Uploaded page {image_new_names.get(original_filename, original_filename)}, size: {file_size} bytes.')
+                    # Add successful image uploads to the image ids array
+                    for uploaded_image in succesful_upload_data:
+                        uploaded_image_attributes = uploaded_image["attributes"]
+                        original_filename = uploaded_image_attributes["originalFileName"]
+                        file_size = uploaded_image_attributes["fileSize"]
+                        image_ids.insert(int(original_filename), uploaded_image["id"])
+                        print(f'Success: Uploaded page {image_new_names[original_filename]}, size: {file_size} bytes.')
+
+                    if len(succesful_upload_data) == len(files):
+                        failed_image_upload = False
+                        image_retries == number_upload_retry
+                        break
+                    else:
+                        files = {k:v for (k, v) in files.items() if k not in [i["attributes"]["originalFileName"] for i in succesful_upload_data]}
+                        failed_image_upload = True
+                        image_retries += 1
+                        time.sleep(2)
+                        continue
 
                 if failed_image_upload:
                     break
@@ -339,12 +367,13 @@ if __name__ == "__main__":
         if failed_image_upload:
             print(f'Deleting draft due to failed image upload: {upload_session_id}, {zip_name}.')
             remove_upload_session(session, upload_session_id)
+            failed_uploads.append(to_upload)
             continue
 
         # Try to commit the chapter 3 times
         commit_retries = 0
         succesful_upload = False
-        while commit_retries < 3:
+        while commit_retries < number_upload_retry:
             chapter_commit_response = session.post(f'{md_upload_api_url}/{upload_session_id}/commit',
                 json={"chapterDraft":
                     {"volume": volume_number, "chapter": chapter_number, "title": chapter_title, "translatedLanguage": language}, "pageOrder": image_ids
@@ -358,6 +387,7 @@ if __name__ == "__main__":
                 # Move the uploaded zips to a different folder
                 uploaded_files_path.mkdir(parents=True, exist_ok=True)
                 to_upload.rename(uploaded_files_path.joinpath(zip_name).with_suffix(zip_extension))
+                commit_retries == number_upload_retry
                 break
 
             print(f'Failed to commit {zip_name}, trying again.')
@@ -367,5 +397,11 @@ if __name__ == "__main__":
         if not succesful_upload:
             print(f'Failed to commit {zip_name}, removing upload draft.')
             remove_upload_session(session, upload_session_id)
+            failed_uploads.append(to_upload)
 
         time.sleep(3)
+
+    if failed_uploads:
+        print(f'Failed uploads:')
+        for fail in failed_uploads:
+            print(fail)

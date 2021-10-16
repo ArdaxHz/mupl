@@ -12,6 +12,8 @@
 
 Copy the `.env.example` file and remove the `.example`. Put the respective details next to the equals sign.
 - `GROUP_FALLBACK_ID` will be used if the upload file has no groups, you can leave this blank if you do not wish to upload to any group.
+- `NUMBER_OF_IMAGES_UPLOAD` is the number of images to upload at once, a maximum of 10 images can be uploaded at once.
+- `UPLOAD_RETRY` is the number of times to retry uploading images or committing (releasing) the chapter.
 
 In the `name_id_map.json` file, replace `series1_name` with the `manga_title` used in your zip file and `series1_id` with the MangaDex id of the series. You can add more series by adding new lines under `series1_name` following the same format as the `series1_name` line. If adding more lines, each line except the last, must end with a `,`. You can do the same for the group names and ids.
 
@@ -29,7 +31,7 @@ Take `takamine - c025 (v04) [XuN].cbz` as the chapter I want to upload. In my `n
 ```
 The progam would then look through this file for the `takamine` key and for the `XuN` key for their assigned ids.
 
-If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-san) [XuN ||  00e03853-1b96-4f41-9542-c71b8692033b ]`, the progam would take the manga id directly from the file, the language as Spanish with the code `es`, chapter number Oneshot and no volume number, chapter title as `Momi-san` with groups `XuN` (id taken form `name_id_map.json`) and `00e03853-1b96-4f41-9542-c71b8692033b`.
+If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-san) [XuN+00e03853-1b96-4f41-9542-c71b8692033b]`, the progam would take the manga id directly from the file, the language as Spanish with the code `es`, chapter number Oneshot and no volume number, chapter title as `Momi-san` with groups `XuN` (id taken form `name_id_map.json`) and `00e03853-1b96-4f41-9542-c71b8692033b`.
 
 
 ## Languages
