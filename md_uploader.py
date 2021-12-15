@@ -9,7 +9,7 @@ from dotenv import dotenv_values
 
 uuid_regex = re.compile(r'[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}')
 file_name_regex = re.compile(r'^(?:\[(?P<artist>.+?)?\])?\s?(?P<title>.+?)(?:\s?\[(?P<language>[a-zA-Z]+)?\])?\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?:(?P<group>.+))?\])?\s?(?:\{v?(?P<version>\d)?\})?(?:\.(?P<extension>zip|cbz))?$', re.IGNORECASE)
-languages = [{"english":"English","md":"en","iso":"eng"},{"english":"Japanese","md":"ja","iso":"jpn"},{"english":"Polish","md":"pl","iso":"pol"},{"english":"Serbo-Croatian","md":"sh","iso":"hrv"},{"english":"Dutch","md":"nl","iso":"dut"},{"english":"Italian","md":"it","iso":"ita"},{"english":"Russian","md":"ru","iso":"rus"},{"english":"German","md":"de","iso":"ger"},{"english":"Hungarian","md":"hu","iso":"hun"},{"english":"French","md":"fr","iso":"fre"},{"english":"Finnish","md":"fi","iso":"fin"},{"english":"Vietnamese","md":"vi","iso":"vie"},{"english":"Greek","md":"el","iso":"gre"},{"english":"Bulgarian","md":"bg","iso":"bul"},{"english":"Spanish (Es)","md":"es","iso":"spa"},{"english":"Portuguese (Br)","md":"pt-br","iso":"por"},{"english":"Portuguese (Pt)","md":"pt","iso":"por"},{"english":"Swedish","md":"sv","iso":"swe"},{"english":"Arabic","md":"ar","iso":"ara"},{"english":"Danish","md":"da","iso":"dan"},{"english":"Chinese (Simp)","md":"zh","iso":"chi"},{"english":"Bengali","md":"bn","iso":"ben"},{"english":"Romanian","md":"ro","iso":"rum"},{"english":"Czech","md":"cs","iso":"cze"},{"english":"Mongolian","md":"mn","iso":"mon"},{"english":"Turkish","md":"tr","iso":"tur"},{"english":"Indonesian","md":"id","iso":"ind"},{"english":"Korean","md":"ko","iso":"kor"},{"english":"Spanish (LATAM)","md":"es-la","iso":"spa"},{"english":"Persian","md":"fa","iso":"per"},{"english":"Malay","md":"ms","iso":"may"},{"english":"Thai","md":"th","iso":"tha"},{"english":"Catalan","md":"ca","iso":"cat"},{"english":"Filipino","md":"tl","iso":"fil"},{"english":"Chinese (Trad)","md":"zh-hk","iso":"chi"},{"english":"Ukrainian","md":"uk","iso":"ukr"},{"english":"Burmese","md":"my","iso":"bur"},{"english":"Lithuanian","md":"lt","iso":"lit"},{"english":"Hebrew","md":"he","iso":"heb"},{"english":"Hindi","md":"hi","iso":"hin"},{"english":"Norwegian","md":"no","iso":"nor"},{"english":"Other","md":"NULL","iso":"NULL"}]
+languages = [{"english":"English","md":"en","iso":"eng"},{"english":"Japanese","md":"ja","iso":"jpn"},{"english":"Japanese (Romaji)","md":"ja-ro","iso":"jpn"},{"english":"Polish","md":"pl","iso":"pol"},{"english":"Serbo-Croatian","md":"sh","iso":"hrv"},{"english":"Dutch","md":"nl","iso":"dut"},{"english":"Italian","md":"it","iso":"ita"},{"english":"Russian","md":"ru","iso":"rus"},{"english":"German","md":"de","iso":"ger"},{"english":"Hungarian","md":"hu","iso":"hun"},{"english":"French","md":"fr","iso":"fre"},{"english":"Finnish","md":"fi","iso":"fin"},{"english":"Vietnamese","md":"vi","iso":"vie"},{"english":"Greek","md":"el","iso":"gre"},{"english":"Bulgarian","md":"bg","iso":"bul"},{"english":"Spanish (Es)","md":"es","iso":"spa"},{"english":"Portuguese (Br)","md":"pt-br","iso":"por"},{"english":"Portuguese (Pt)","md":"pt","iso":"por"},{"english":"Swedish","md":"sv","iso":"swe"},{"english":"Arabic","md":"ar","iso":"ara"},{"english":"Danish","md":"da","iso":"dan"},{"english":"Chinese (Simp)","md":"zh","iso":"chi"},{"english":"Chinese (Romaji)","md":"zh-ro","iso":"chi"},{"english":"Bengali","md":"bn","iso":"ben"},{"english":"Romanian","md":"ro","iso":"rum"},{"english":"Czech","md":"cs","iso":"cze"},{"english":"Mongolian","md":"mn","iso":"mon"},{"english":"Turkish","md":"tr","iso":"tur"},{"english":"Indonesian","md":"id","iso":"ind"},{"english":"Korean","md":"ko","iso":"kor"},{"english":"Korean (Romaji)","md":"ko-ro","iso":"kor"},{"english":"Spanish (LATAM)","md":"es-la","iso":"spa"},{"english":"Persian","md":"fa","iso":"per"},{"english":"Malay","md":"ms","iso":"may"},{"english":"Thai","md":"th","iso":"tha"},{"english":"Catalan","md":"ca","iso":"cat"},{"english":"Filipino","md":"tl","iso":"fil"},{"english":"Chinese (Trad)","md":"zh-hk","iso":"chi"},{"english":"Ukrainian","md":"uk","iso":"ukr"},{"english":"Burmese","md":"my","iso":"bur"},{"english":"Lithuanian","md":"lt","iso":"lit"},{"english":"Hebrew","md":"he","iso":"heb"},{"english":"Hindi","md":"hi","iso":"hin"},{"english":"Norwegian","md":"no","iso":"nor"},{"english":"Other","md":"NULL","iso":"NULL"}]
 http_error_codes = {"400": "Bad request.", "401": "Unauthorised.", "403": "Forbidden.", "404": "Not found.", "429": "Too many requests."}
 md_upload_api_url = 'https://api.mangadex.org/upload'
 
@@ -26,6 +26,8 @@ def get_lang_md(language: str) -> str:
 
     # Chapter language is English
     if language is None:
+        return "en"
+    elif language.lower() in ("eng", "en"):
         return "en"
     elif len(language) < 2:
         print('Not a valid language option.')
@@ -73,52 +75,41 @@ def remove_upload_session(session: requests.Session, upload_session_id: str):
 
 def print_error(error_response: requests.Response):
     """Print the errors the site returns."""
+    status_code = error_response.status_code
+    error_converting_json_log_message = "{} when converting error_response into json."
+    error_converting_json_print_message = f"{status_code}: Couldn't convert api reposnse into json."
+
+    if status_code == 429:
+        print(f'Error 429: {http_error_codes.get(str(status_code))}')
+        return
+
     # Api didn't return json object
     try:
         error_json = error_response.json()
-    except json.JSONDecodeError:
-        print(error_response.status_code)
+    except json.JSONDecodeError as e:
+        print(error_converting_json_print_message)
         return
     # Maybe already a json object
     except AttributeError:
         # Try load as a json object
         try:
-            error_json = json.loads(error_response)
-        except json.JSONDecodeError:
-            print(error_response.status_code)
+            error_json = json.loads(error_response.content)
+        except json.JSONDecodeError as e:
+            print(error_converting_json_print_message)
             return
 
     # Api response doesn't follow the normal api error format
     try:
-        errors = [e["detail"] for e in error_json["errors"] if e["detail"] is not None]
+        errors = [f'{e["status"]}: {e["detail"] if e["detail"] is not None else ""}' for e in error_json["errors"]]
         errors = ', '.join(errors)
-        code = [str(e["status"]) for e in error_json["errors"] if e["status"] is not None]
-        code = ', '.join(code)
 
         if not errors:
-            errors = [http_error_codes.get(str(error_response.status_code), '')]
+            errors = http_error_codes.get(str(status_code), '')
 
-        print(f'Error: {code}, {errors}')
+        print(f'Error: {errors}.')
     except KeyError:
-        print(error_response.status_code)
-
-
-def print_error_upload_legacy(error_response: requests.Response):
-    """The legacy errors array format returned when uploading images."""
-    # Maybe the api didn't return a json object
-    try:
-        error_json = error_response.json()
-    except json.JSONDecodeError:
-        pass
-
-    # Api error format changed
-    try:
-        errors = [e["message"] for e in error_json["errors"] if e["message"] is not None]
-        if not errors:
-            errors = [http_error_codes.get(str(error_response.status_code), '')]
-        print(f'Error: ', ', '.join(errors))
-    except KeyError:
-        print_error(error_response)
+        keyerror_message = f'KeyError: {status_code}.'
+        print(keyerror_message)
 
 
 def process_zip(to_upload: Path, names_to_ids: dict):
@@ -182,12 +173,7 @@ def process_zip(to_upload: Path, names_to_ids: dict):
             else:
                 groups.append(group)
 
-    print(language)
-    print(chapter_number)
-    print(volume_number)
-    print(chapter_title)
-    print(manga_series)
-    print(groups)
+    print(f'Manga id {manga_series}, Chapter {chapter_number}, Volume {volume_number}, Title {chapter_title}, Language {language}, Groups {groups}.')
     return (manga_series, language, chapter_number, volume_number, groups, chapter_title)
 
 
@@ -230,13 +216,10 @@ def load_env_file(root_path: Path) -> dict:
     if env_dict["MANGADEX_USERNAME"] == '' or env_dict["MANGADEX_PASSWORD"] == '':
         raise Exception(f'Missing login details.')
 
-    # if env_dict["GROUP_FALLBACK_ID"] == '':
-    #     print(f'Group fallback id not found, uploading without a group.')
-
     try:
         env_dict["NUMBER_OF_IMAGES_UPLOAD"] = int(env_dict["NUMBER_OF_IMAGES_UPLOAD"])
     except ValueError:
-        env_dict["NUMBER_OF_IMAGES_UPLOAD"] = 5
+        env_dict["NUMBER_OF_IMAGES_UPLOAD"] = 10
 
     try:
         env_dict["UPLOAD_RETRY"] = int(env_dict["UPLOAD_RETRY"])
@@ -325,7 +308,7 @@ if __name__ == "__main__":
                     image_upload_response = session.post(f'{md_upload_api_url}/{upload_session_id}', files=files)
                     if image_upload_response.status_code != 200:
                         print(image_upload_response.status_code)
-                        print_error_upload_legacy(image_upload_response)
+                        print_error(image_upload_response)
                         failed_image_upload = True
                         image_retries += 1
                         time.sleep(2)
@@ -335,7 +318,7 @@ if __name__ == "__main__":
                     uploaded_image_data = image_upload_response.json()
                     succesful_upload_data = uploaded_image_data["data"]
                     if uploaded_image_data["errors"] or uploaded_image_data["result"] == 'error':
-                        print_error_upload_legacy(image_upload_response)
+                        print_error(image_upload_response)
 
                     # Add successful image uploads to the image ids array
                     for uploaded_image in succesful_upload_data:
