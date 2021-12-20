@@ -1,7 +1,11 @@
 import json
+import logging
 import re
+import sys
 import time
+from typing import Optional, Tuple
 import zipfile
+from datetime import date
 from pathlib import Path
 
 import requests
@@ -12,6 +16,19 @@ file_name_regex = re.compile(r'^(?:\[(?P<artist>.+?)?\])?\s?(?P<title>.+?)(?:\s?
 languages = [{"english":"English","md":"en","iso":"eng"},{"english":"Japanese","md":"ja","iso":"jpn"},{"english":"Japanese (Romaji)","md":"ja-ro","iso":"jpn"},{"english":"Polish","md":"pl","iso":"pol"},{"english":"Serbo-Croatian","md":"sh","iso":"hrv"},{"english":"Dutch","md":"nl","iso":"dut"},{"english":"Italian","md":"it","iso":"ita"},{"english":"Russian","md":"ru","iso":"rus"},{"english":"German","md":"de","iso":"ger"},{"english":"Hungarian","md":"hu","iso":"hun"},{"english":"French","md":"fr","iso":"fre"},{"english":"Finnish","md":"fi","iso":"fin"},{"english":"Vietnamese","md":"vi","iso":"vie"},{"english":"Greek","md":"el","iso":"gre"},{"english":"Bulgarian","md":"bg","iso":"bul"},{"english":"Spanish (Es)","md":"es","iso":"spa"},{"english":"Portuguese (Br)","md":"pt-br","iso":"por"},{"english":"Portuguese (Pt)","md":"pt","iso":"por"},{"english":"Swedish","md":"sv","iso":"swe"},{"english":"Arabic","md":"ar","iso":"ara"},{"english":"Danish","md":"da","iso":"dan"},{"english":"Chinese (Simp)","md":"zh","iso":"chi"},{"english":"Chinese (Romaji)","md":"zh-ro","iso":"chi"},{"english":"Bengali","md":"bn","iso":"ben"},{"english":"Romanian","md":"ro","iso":"rum"},{"english":"Czech","md":"cs","iso":"cze"},{"english":"Mongolian","md":"mn","iso":"mon"},{"english":"Turkish","md":"tr","iso":"tur"},{"english":"Indonesian","md":"id","iso":"ind"},{"english":"Korean","md":"ko","iso":"kor"},{"english":"Korean (Romaji)","md":"ko-ro","iso":"kor"},{"english":"Spanish (LATAM)","md":"es-la","iso":"spa"},{"english":"Persian","md":"fa","iso":"per"},{"english":"Malay","md":"ms","iso":"may"},{"english":"Thai","md":"th","iso":"tha"},{"english":"Catalan","md":"ca","iso":"cat"},{"english":"Filipino","md":"tl","iso":"fil"},{"english":"Chinese (Trad)","md":"zh-hk","iso":"chi"},{"english":"Ukrainian","md":"uk","iso":"ukr"},{"english":"Burmese","md":"my","iso":"bur"},{"english":"Lithuanian","md":"lt","iso":"lit"},{"english":"Hebrew","md":"he","iso":"heb"},{"english":"Hindi","md":"hi","iso":"hin"},{"english":"Norwegian","md":"no","iso":"nor"},{"english":"Other","md":"NULL","iso":"NULL"}]
 http_error_codes = {"400": "Bad request.", "401": "Unauthorised.", "403": "Forbidden.", "404": "Not found.", "429": "Too many requests."}
 md_upload_api_url = 'https://api.mangadex.org/upload'
+
+root_path = Path('.')
+log_folder_path = root_path.joinpath('logs')
+log_folder_path.mkdir(parents=True, exist_ok=True)
+
+logs_path = log_folder_path.joinpath(
+    f'md_uploader_{str(date.today())}.log')
+logging.basicConfig(
+    filename=logs_path,
+    encoding='utf-8',
+    level=logging.DEBUG,
+    format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%Y-%m-%d:%H:%M:%S')
 
 
 def get_lang_md(language: str) -> str:
@@ -30,10 +47,12 @@ def get_lang_md(language: str) -> str:
     elif language.lower() in ("eng", "en"):
         return "en"
     elif len(language) < 2:
+        logging.warning(f'Language selected, {language} isn\'t in ISO format.')
         print('Not a valid language option.')
-        return
+        return "NULL"
     # Chapter language already in correct format for MD
     elif re.match(r'^[a-zA-Z\-]{2,5}$', language):
+        logging.info(f'Language {language} already in ISO-639-2 form.')
         return language
     # Language in iso-639-3 format already
     elif len(language) == 3:
@@ -55,12 +74,14 @@ def get_lang_md(language: str) -> str:
             try:
                 lang = int(input(f'Choose a number matching the position of the language: '))
             except ValueError:
+                logging.warning('Language option selected is not a number, using NULL as language.')
                 print("That's not a number.")
-                return
+                return "NULL"
 
             if lang not in range(1, (len(languages_match) + 1)):
+                logging.warning('Language option selected is not in the accepted range.')
                 print('Not a valid language option.')
-                return
+                return "NULL"
 
             lang_to_use = languages_match[(lang - 1)]
             return lang_to_use["md"]
@@ -71,53 +92,68 @@ def get_lang_md(language: str) -> str:
 def remove_upload_session(session: requests.Session, upload_session_id: str):
     """Delete the upload session."""
     session.delete(f'{md_upload_api_url}/{upload_session_id}')
+    logging.info(f'Sent session {upload_session_id} to be deleted.')
 
 
-def print_error(error_response: requests.Response):
+def print_error(error_response: requests.Response) -> str:
     """Print the errors the site returns."""
     status_code = error_response.status_code
     error_converting_json_log_message = "{} when converting error_response into json."
     error_converting_json_print_message = f"{status_code}: Couldn't convert api reposnse into json."
+    error_message = ''
 
     if status_code == 429:
-        print(f'Error 429: {http_error_codes.get(str(status_code))}')
-        return
+        error_message = f'429: {http_error_codes.get(str(status_code))}'
+        logging.error(error_message)
+        print(error_message)
+        time.sleep(4)
+        return error_message
 
     # Api didn't return json object
     try:
         error_json = error_response.json()
     except json.JSONDecodeError as e:
+        logging.error(error_converting_json_log_message.format(e))
         print(error_converting_json_print_message)
-        return
+        return error_converting_json_print_message
     # Maybe already a json object
     except AttributeError:
+        logging.error(f"error_response is already a json.")
         # Try load as a json object
         try:
             error_json = json.loads(error_response.content)
         except json.JSONDecodeError as e:
+            logging.error(error_converting_json_log_message.format(e))
             print(error_converting_json_print_message)
-            return
+            return error_converting_json_print_message
 
     # Api response doesn't follow the normal api error format
     try:
-        errors = [f'{e["status"]}: {e["detail"] if e["detail"] is not None else ""}' for e in error_json["errors"]]
+        errors = [
+            f'{e["status"]}: {e["detail"] if e["detail"] is not None else ""}' for e in error_json["errors"]]
         errors = ', '.join(errors)
 
         if not errors:
             errors = http_error_codes.get(str(status_code), '')
 
-        print(f'Error: {errors}.')
+        error_message = f'Error: {errors}.'
+        logging.warning(error_message)
+        print(error_message)
     except KeyError:
-        keyerror_message = f'KeyError: {status_code}.'
-        print(keyerror_message)
+        error_message = f'KeyError: {status_code}.'
+        logging.warning(error_message)
+        print(error_message)
+
+    return error_message
 
 
-def process_zip(to_upload: Path, names_to_ids: dict):
+def process_zip(to_upload: Path, names_to_ids: dict) -> Optional[Tuple[Optional[str]]]:
     """Get the chapter data from the file name."""
 
     # Check if the zip name is in the correct format
     zip_name_match = file_name_regex.match(to_upload.name)
     if not zip_name_match:
+        logging.error(f"Zip {to_upload.name} isn't in the correct naming format.")
         print(f'{to_upload.name} not in the correct naming format, skipping.')
         return
 
@@ -128,6 +164,7 @@ def process_zip(to_upload: Path, names_to_ids: dict):
             manga_series = names_to_ids["manga"].get(manga_series, None)
         except KeyError:
             manga_series = None
+            logging.warning(f'No manga id found for {manga_series}.')
 
     language = get_lang_md(zip_name_match.group("language"))
 
@@ -141,6 +178,7 @@ def process_zip(to_upload: Path, names_to_ids: dict):
     # Chapter is a oneshot
     if zip_name_match.group("prefix") is None:
         chapter_number = None
+        logging.info('No chapter number prefix found, uploading as oneshot.')
 
     volume_number = zip_name_match.group("volume")
     if volume_number is not None:
@@ -167,13 +205,16 @@ def process_zip(to_upload: Path, names_to_ids: dict):
                 try:
                     group_id = names_to_ids["group"].get(group, None)
                 except KeyError:
+                    logging.warning(f'No group id found for {group}, not tagging the upload with this group.')
                     group_id = None
                 if group_id is not None:
                     groups.append(group_id)
             else:
                 groups.append(group)
 
-    print(f'Manga id {manga_series}, Chapter {chapter_number}, Volume {volume_number}, Title {chapter_title}, Language {language}, Groups {groups}.')
+    upload_details = f'Manga id: {manga_series}, chapter: {chapter_number}, volume: {volume_number}, title: {chapter_title}, language: {language}, groups: {groups}.'
+    logging.info(f'Chapter upload details: {upload_details}')
+    print(upload_details)
     return (manga_series, language, chapter_number, volume_number, groups, chapter_title)
 
 
@@ -184,7 +225,8 @@ def login_to_md(env_values: dict, session: requests.Session):
     login_response = session.post('https://api.mangadex.org/auth/login', json={"username": username, "password": password})
 
     if login_response.status_code != 200:
-        print_error(login_response)
+        error = print_error(login_response)
+        logging.critical(f"Couldn't login. Error: {error}")
         raise Exception("Couldn't login.")
 
     # Update requests session with headers to always be logged in
@@ -198,10 +240,14 @@ def open_manga_series_map(env_values: dict, files_path: Path) -> dict:
         with open(files_path.joinpath(env_values["NAME_ID_MAP_FILE"]).with_suffix('.json'), 'r') as json_file:
             names_to_ids = json.load(json_file)
     except FileNotFoundError:
-        print(f"The manga name-to-id json file couldn't be found. Continuing with an empty name-id map.")
+        not_found_error = f"The manga name-to-id json file couldn't be found. Continuing with an empty name-id map."
+        logging.error(not_found_error)
+        print(not_found_error)
         return {"manga":{}, "group":{}}
     except json.JSONDecodeError:
-        print(f"The manga name-to-id json file is corrupted. Continuing with an empty name-id map.")
+        corrupted_error = f"The manga name-to-id json file is corrupted. Continuing with an empty name-id map."
+        logging.error(corrupted_error)
+        print(corrupted_error)
         return {"manga":{}, "group":{}}
     return names_to_ids
 
@@ -210,20 +256,24 @@ def load_env_file(root_path: Path) -> dict:
     """Read the data from the env if it exists."""
     env_file_path = root_path.joinpath('.env')
     if not env_file_path.exists():
+        logging.critical('.env file not found.')
         raise Exception(f"Couldn't find env file.")
 
     env_dict = dotenv_values(env_file_path)
     if env_dict["MANGADEX_USERNAME"] == '' or env_dict["MANGADEX_PASSWORD"] == '':
+        logging.critical('No mangadex login details provided.')
         raise Exception(f'Missing login details.')
 
     try:
         env_dict["NUMBER_OF_IMAGES_UPLOAD"] = int(env_dict["NUMBER_OF_IMAGES_UPLOAD"])
     except ValueError:
+        logging.warning('.env file number of images to upload is empty or contains a non-number character, using default of 10.')
         env_dict["NUMBER_OF_IMAGES_UPLOAD"] = 10
 
     try:
         env_dict["UPLOAD_RETRY"] = int(env_dict["UPLOAD_RETRY"])
     except ValueError:
+        logging.warning('.env file number of image retry is empty or contains a non-number character, using default of 10.')
         env_dict["UPLOAD_RETRY"] = 3
 
     return env_dict
@@ -231,55 +281,71 @@ def load_env_file(root_path: Path) -> dict:
 
 if __name__ == "__main__":
 
-    root_path = Path('.')
     env_values = load_env_file(root_path)
     names_to_ids = open_manga_series_map(env_values, root_path)
     to_upload_folder_path = Path(env_values["UPLOADS_FOLDER"])
     uploaded_files_path = Path(env_values["UPLOADED_FILES"])
     images_upload_session = int(env_values["NUMBER_OF_IMAGES_UPLOAD"])
     number_upload_retry = int(env_values["UPLOAD_RETRY"])
+    zips_to_upload = [x for x in to_upload_folder_path.iterdir() if x.suffix in ('.zip', '.cbz')]
+    zips_to_not_upload = [x for x in to_upload_folder_path.iterdir() if x.suffix not in ('.zip', '.cbz')]
+
+    logging.warning(f'Skipping zips {zips_to_not_upload}')
+
+    if not zips_to_upload:
+        logging.info('No zips found for upload, exiting.')
+        sys.exit(0)
 
     session = requests.Session()
     login_to_md(env_values, session)
     group_fallback = [] if env_values["GROUP_FALLBACK_ID"] == '' else [env_values["GROUP_FALLBACK_ID"]]
     failed_uploads = []
 
-    for to_upload in to_upload_folder_path.iterdir():
+    for to_upload in zips_to_upload:
         zip_name = to_upload.name
         zip_extension = to_upload.suffix
         # Only accept zip files
         if zip_extension not in ('.zip', '.cbz'):
+            logging.error(f"{to_upload} doesn't have the correct extension, skipping.")
             continue
 
         values = process_zip(to_upload, names_to_ids)
         if values is None:
+            logging.error(f"No values processed from {to_upload}, skipping.")
             continue
 
         manga_series, language, chapter_number, volume_number, groups, chapter_title = values
         if not groups:
+            logging.info('Zip groups array is empty, using group fallback.')
             print(f'No groups found, using group fallback.')
             groups = group_fallback
             if not groups:
+                logging.info('Group fallback not found, uploading without a group.')
                 print('Group fallback not found, uploading without a group.')
 
         if manga_series is None:
+            logging.error(f"Couldn't find a manga id for {zip_name}, skipping.")
             print(f'Skipped {zip_name}, no manga id found.')
             continue
 
         # Remove any exising upload sessions to not error out
         existing_session = session.get(f'{md_upload_api_url}')
         if existing_session.status_code == 200:
+            logging.info(f'Upload session found, deleting it.')
             remove_upload_session(session, existing_session.json()["data"]["id"])
 
         # Start the upload session
         upload_session_response = session.post(f'{md_upload_api_url}/begin', json={"manga": manga_series, "groups": groups})
         if upload_session_response.status_code != 200:
-            print_error(upload_session_response)
+            error = print_error(upload_session_response)
+            logging.error(f"Couldn't create upload draft for {zip_name}. Error: {error}")
             print(f'Error creating draft for {zip_name}.')
             continue
 
         upload_session_id = upload_session_response.json()["data"]["id"]
-        print(f'Created upload session: {upload_session_id}, {zip_name}.')
+        upload_session_id_message = f'Created upload session: {upload_session_id}, {zip_name}.'
+        logging.info(upload_session_id_message)
+        print(upload_session_id_message)
 
         image_ids = []
         failed_image_upload = False
@@ -288,6 +354,7 @@ if __name__ == "__main__":
             info_list = myzip.infolist()
             # Remove any directories and none-image files from the zip info array
             info_list_images_only = [image.filename for image in info_list if (not image.is_dir() and Path(image.filename).suffix in ('.png', '.jpg', '.jpeg', '.gif'))]
+            logging.info(f'Images to upload: {info_list_images_only}')
             # Separate the image array into smaller arrays of 5 images
             info_list_separate = [info_list_images_only[l:l + images_upload_session] for l in range(0, len(info_list_images_only), images_upload_session)]
 
@@ -307,8 +374,8 @@ if __name__ == "__main__":
                     # Upload the images
                     image_upload_response = session.post(f'{md_upload_api_url}/{upload_session_id}', files=files)
                     if image_upload_response.status_code != 200:
-                        print(image_upload_response.status_code)
-                        print_error(image_upload_response)
+                        error = print_error(image_upload_response)
+                        logging.error(f"Error uploading images. Error: {error}")
                         failed_image_upload = True
                         image_retries += 1
                         time.sleep(2)
@@ -318,7 +385,8 @@ if __name__ == "__main__":
                     uploaded_image_data = image_upload_response.json()
                     succesful_upload_data = uploaded_image_data["data"]
                     if uploaded_image_data["errors"] or uploaded_image_data["result"] == 'error':
-                        print_error(image_upload_response)
+                        error = print_error(image_upload_response)
+                        logging.warning(f"Image errored out. Error: {error}")
 
                     # Add successful image uploads to the image ids array
                     for uploaded_image in succesful_upload_data:
@@ -326,14 +394,18 @@ if __name__ == "__main__":
                         original_filename = uploaded_image_attributes["originalFileName"]
                         file_size = uploaded_image_attributes["fileSize"]
                         image_ids.insert(int(original_filename), uploaded_image["id"])
-                        print(f'Success: Uploaded page {image_new_names[original_filename]}, size: {file_size} bytes.')
+                        succesful_upload_message = f'Success: Uploaded page {image_new_names[original_filename]}, size: {file_size} bytes.'
+                        logging.info(succesful_upload_message)
+                        print(succesful_upload_message)
 
                     if len(succesful_upload_data) == len(files):
                         failed_image_upload = False
                         image_retries == number_upload_retry
+                        logging.info('Uploaded all images.')
                         break
                     else:
                         files = {k:v for (k, v) in files.items() if k not in [i["attributes"]["originalFileName"] for i in succesful_upload_data]}
+                        logging.warning(f"Some images didn't upload, retrying. Failed images: {files}")
                         failed_image_upload = True
                         image_retries += 1
                         time.sleep(2)
@@ -348,7 +420,9 @@ if __name__ == "__main__":
 
         # Skip chapter upload and delete upload session
         if failed_image_upload:
-            print(f'Deleting draft due to failed image upload: {upload_session_id}, {zip_name}.')
+            failed_image_upload_message = f'Deleting draft due to failed image upload: {upload_session_id}, {zip_name}.'
+            print(failed_image_upload_message)
+            logging.error(failed_image_upload_message)
             remove_upload_session(session, upload_session_id)
             failed_uploads.append(to_upload)
             continue
@@ -366,6 +440,7 @@ if __name__ == "__main__":
                 succesful_upload = True
                 succesful_upload_id = chapter_commit_response.json()["data"]["id"]
                 print(f'Succesfully uploaded: {succesful_upload_id}, {zip_name}.')
+                logging.info(f"Succesful commit: {succesful_upload_id}, {zip_name}.")
 
                 # Move the uploaded zips to a different folder
                 uploaded_files_path.mkdir(parents=True, exist_ok=True)
@@ -373,18 +448,23 @@ if __name__ == "__main__":
                 commit_retries == number_upload_retry
                 break
 
-            print(f'Failed to commit {zip_name}, trying again.')
+            commit_fail_message = f'Failed to commit {zip_name}, error {chapter_commit_response.status_code} trying again.'
+            logging.warning(commit_fail_message)
+            print(commit_fail_message)
             commit_retries += 1
             time.sleep(1)
 
         if not succesful_upload:
-            print(f'Failed to commit {zip_name}, removing upload draft.')
+            commit_error_message = f'Failed to commit {zip_name}, removing upload draft.'
+            logging.error(commit_error_message)
+            print(commit_error_message)
             remove_upload_session(session, upload_session_id)
             failed_uploads.append(to_upload)
 
         time.sleep(3)
 
     if failed_uploads:
+        logging.info(f'Failed uploads: {failed_uploads}')
         print(f'Failed uploads:')
         for fail in failed_uploads:
             print(fail)
