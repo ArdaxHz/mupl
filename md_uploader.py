@@ -25,7 +25,6 @@ logs_path = log_folder_path.joinpath(
     f'md_uploader_{str(date.today())}.log')
 logging.basicConfig(
     filename=logs_path,
-    encoding='utf-8',
     level=logging.DEBUG,
     format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
     datefmt='%Y-%m-%d:%H:%M:%S')
