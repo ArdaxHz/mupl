@@ -169,10 +169,11 @@ def process_zip(to_upload: Path, names_to_ids: dict) -> Optional[Tuple[Optional[
 
     chapter_number = zip_name_match.group("chapter")
     if chapter_number is not None:
-        chapter_number = chapter_number.lstrip('0')
-        # The chapter number was 0, hence re-add the 0 to the chapter number
-        if len(chapter_number) == 0:
-            chapter_number = '0'
+        parts = re.split('\.|\-', chapter_number)
+        parts[0] = '0' if len(parts[0].lstrip(
+            '0')) == 0 else parts[0].lstrip('0')
+
+        chapter_number = '.'.join(parts)
 
     # Chapter is a oneshot
     if zip_name_match.group("prefix") is None:
@@ -447,6 +448,7 @@ if __name__ == "__main__":
                 commit_retries == number_upload_retry
                 break
 
+            print_error(chapter_commit_response)
             commit_fail_message = f'Failed to commit {zip_name}, error {chapter_commit_response.status_code} trying again.'
             logging.warning(commit_fail_message)
             print(commit_fail_message)
