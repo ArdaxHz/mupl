@@ -389,7 +389,7 @@ if __name__ == "__main__":
                     succesful_upload_data = uploaded_image_data["data"]
                     if uploaded_image_data["errors"] or uploaded_image_data["result"] == 'error':
                         error = print_error(image_upload_response)
-                        logging.warning(f"Image errored out. Error: {error}")
+                        logging.warning(f"Some images errored out. Error: {error}")
 
                     # Add successful image uploads to the image ids array
                     for uploaded_image in succesful_upload_data:
@@ -404,7 +404,7 @@ if __name__ == "__main__":
                     if len(succesful_upload_data) == len(files):
                         failed_image_upload = False
                         image_retries == number_upload_retry
-                        logging.info('Uploaded all images.')
+                        logging.info('Uploaded all images in current batch.')
                         break
                     else:
                         files = {k:v for (k, v) in files.items() if k not in [i["attributes"]["originalFileName"] for i in succesful_upload_data]}
@@ -419,7 +419,10 @@ if __name__ == "__main__":
 
                 # Rate limit
                 if array_index % 5 == 0:
+                    logging.debug('Sleeping between image uploads.')
                     time.sleep(3)
+
+        logging.info("Uploaded all of the chapter's images.")
 
         # Skip chapter upload and delete upload session
         if failed_image_upload:
@@ -447,7 +450,8 @@ if __name__ == "__main__":
 
                 # Move the uploaded zips to a different folder
                 uploaded_files_path.mkdir(parents=True, exist_ok=True)
-                to_upload.rename(uploaded_files_path.joinpath(zip_name).with_suffix(zip_extension))
+                new_uploaded_zip_path = to_upload.rename(uploaded_files_path.joinpath(zip_name).with_suffix(zip_extension))
+                logging.info(f'Moved {to_upload} to {new_uploaded_zip_path}.')
                 commit_retries == number_upload_retry
                 break
 
@@ -465,6 +469,7 @@ if __name__ == "__main__":
             remove_upload_session(session, upload_session_id)
             failed_uploads.append(to_upload)
 
+        logging.debug('Sleeping between zip upload.')
         time.sleep(3)
 
     if failed_uploads:
