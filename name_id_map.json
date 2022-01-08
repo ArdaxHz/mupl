@@ -1,8 +1,12 @@
 {
     "manga": {
-        "series1_name": "series1_id",
-        "series2_name": "series2_id",
-        "series3_name": "series3_id"
+        "Please Put These On, Takamine-san": "46748d60-9b15-4647-8250-de0926b20268",
+        "Growing Tired of the Lazy High Elf Life After 120 Years": "8280b28c-aeff-4f89-ac99-a4c783e14782",
+        "The 100 Girlfriends Who Really, Really, Really, Really, Really Love You": "efb4278c-a761-406b-9d69-19603c5e4c8b",
+        "The Demon King's Daughter Is Way Too Easy": "d3608ab4-fed0-4f65-856e-55466c931ebe",
+        "Ice Guy and the Cool Female Colleague": "fbc8e1e4-cba6-48ec-b828-d613fe3d93a6",
+        "Ojousama no Shimobe": "ddb80900-12c2-4b9e-bfb7-cb8abc082f9a",
+        "test": "f9c33607-9180-4ba6-b85c-e4b5faee7192"
     },
     "group": {
         "group1_name": "group1_id",
