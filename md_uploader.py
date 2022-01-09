@@ -525,7 +525,8 @@ class ChapterUploaderProcess:
                 print(succesful_upload_message)
 
             if len(succesful_upload_data) == len(image_batch):
-                logging.info('Uploaded all images in current batch.')
+                image_batch_list = list(image_batch.keys())
+                logging.info(f'Uploaded images {image_batch_list[0]} to {image_batch_list[-1]}.')
                 failed_image_upload = False
                 image_retries == self.number_upload_retry
                 break
