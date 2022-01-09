@@ -1,11 +1,15 @@
+[User Set]
 NUMBER_OF_IMAGES_UPLOAD=10
 UPLOAD_RETRY=3
-
+RATELIMIT_TIME=2
 GROUP_FALLBACK_ID=
 
+[MangaDex Credentials]
 MANGADEX_USERNAME=
 MANGADEX_PASSWORD=
 
+[Paths]
 NAME_ID_MAP_FILE=name_id_map.json
 UPLOADS_FOLDER=to_upload
 UPLOADED_FILES=uploaded
+MANGADEX_API_URL=https://api.mangadex.org
