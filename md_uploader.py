@@ -8,7 +8,7 @@ import zipfile
 
 from datetime import date
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from uuid import UUID
 
 import requests
@@ -41,7 +41,7 @@ logging.basicConfig(
 
 
 def load_config_info(config: configparser.RawConfigParser):
-
+    """Check if the config file has the needed data, if not, use the default values."""
     if config["Paths"].get("mangadex_api_url", '') == '':
         logging.warning('Mangadex api path empty, using default.')
         config["Paths"]["mangadex_api_url"] = 'https://api.mangadex.org'
@@ -57,6 +57,8 @@ def load_config_info(config: configparser.RawConfigParser):
     if config["Paths"].get("uploaded_files", '') == '':
         logging.info('Uploaded files folder path empty, using default.')
         config["Paths"]["uploaded_files"] = 'uploaded'
+
+    # Config files can only take strings, convert all the integers to string.
 
     try:
         int(config["User Set"]["number_of_images_upload"])
@@ -81,6 +83,7 @@ def load_config_info(config: configparser.RawConfigParser):
 
 
 def open_config_file(root_path: Path) -> configparser.RawConfigParser:
+    """Try to open the config file if it exists."""
     config_file_path = root_path.joinpath('config').with_suffix('.ini')
     # Open config file and read values
     if config_file_path.exists():
@@ -177,6 +180,7 @@ def print_error(error_response: requests.Response) -> str:
 
 
 def make_session(headers: dict = {}) -> requests.Session:
+    """Make a new requests session and update the headers if provided."""
     session = requests.Session()
     session.headers.update(headers)
     return session
@@ -248,6 +252,7 @@ class FileProcesser:
         self._config = config
 
     def _match_file_name(self) -> Optional[re.Match[str]]:
+        """Check for a full regex match of the file."""
         # Check if the zip name is in the correct format
         zip_name_match = file_name_regex.match(self._zip_name)
         if not zip_name_match:
@@ -258,8 +263,7 @@ class FileProcesser:
         return zip_name_match
 
     def _get_manga_series(self) -> Optional[UUID]:
-        # Get the series title, use id map if zip file doesn't have the uuid
-        # already
+        """Get the series title, use the id map if zip file doesn't have the uuid already."""
         manga_series = self._zip_name_match.group("title")
         if not uuid_regex.match(manga_series):
             try:
@@ -334,10 +338,11 @@ class FileProcesser:
 
                 lang_to_use = languages_match[(lang - 1)]
                 return lang_to_use["md"]
-
             return languages_match[0]["md"]
 
     def _get_chapter_number(self) -> Optional[str]:
+        """Get the chapter number from the file,
+            use None for the number if the chapter is a prefix."""
         chapter_number = self._zip_name_match.group("chapter")
         if chapter_number is not None:
             parts = re.split(r'\.|\-', chapter_number)
@@ -351,28 +356,28 @@ class FileProcesser:
             chapter_number = None
             logging.info(
                 'No chapter number prefix found, uploading as oneshot.')
-
         return chapter_number
 
     def _get_volume_number(self) -> Optional[str]:
+        """Get the volume number from the file if it exists."""
         volume_number = self._zip_name_match.group("volume")
         if volume_number is not None:
             volume_number = volume_number.lstrip('0')
             # Volume 0
             if len(volume_number) == 0:
                 volume_number = '0'
-
         return volume_number
 
     def _get_chapter_title(self) -> Optional[str]:
+        """Get the chapter title from the file if it exists."""
         chapter_title = self._zip_name_match.group("chapter_title")
         if chapter_title is not None:
             # Add the question mark back to the chapter title
             chapter_title = chapter_title.replace('<question_mark>', '?')
-
         return chapter_title
 
     def _get_groups(self) -> List[Optional[UUID]]:
+        """Get the group ids from the file, use the group fallback if the file has no gorups."""
         groups = []
         groups_match = self._zip_name_match.group("group")
         if groups_match is not None:
@@ -405,10 +410,10 @@ class FileProcesser:
                 logging.info(
                     'Group fallback not found, uploading without a group.')
                 print('Group fallback not found, uploading without a group.')
-
         return groups
 
     def process_zip_name(self) -> bool:
+        """Extract the respective chapter data from the file name."""
         self._zip_name_match = self._match_file_name()
         if self._zip_name_match is None:
             logging.error(
@@ -463,6 +468,7 @@ class ChapterUploaderProcess:
         self.images_to_upload_ids: List[UUID] = []
 
     def _get_images_to_upload(self):
+        """Read the image data from the zip as list."""
         # Open zip file and read the data
         with zipfile.ZipFile(self.to_upload) as myzip:
             info_list = myzip.infolist()
@@ -490,8 +496,10 @@ class ChapterUploaderProcess:
                         files.update({renamed_file: myfile.read()})
                 self.images_to_upload.append(files)
 
-    def _upload_images(self, upload_session_id: UUID,
-                       image_batch: Dict[str, bytes]) -> bool:
+    def _upload_images(
+            self, upload_session_id: UUID,
+            image_batch: Dict[str, bytes]) -> bool:
+        """Try to upload every 10 (default) images to the upload session."""
         image_retries = 0
         failed_image_upload = False
         while image_retries < self.number_upload_retry:
@@ -694,6 +702,7 @@ class ChapterUploaderProcess:
             return False
 
     def start_chapter_upload(self):
+        """Process the zip for uploading."""
         # Only accept zip files
         if self.zip_extension not in ('.zip', '.cbz'):
             logging.error(
@@ -753,6 +762,7 @@ class ChapterUploaderProcess:
 
 def get_zips_to_upload(
         config: configparser.RawConfigParser) -> Optional[List[Path]]:
+    """Get a list of files that end with a zip/cbz extension for uploading."""
     to_upload_folder_path = Path(config["Paths"]["uploads_folder"])
     zips_to_upload = [
         x for x in to_upload_folder_path.iterdir() if x.suffix in (
@@ -775,6 +785,7 @@ def get_zips_to_upload(
 
 
 def main(config: configparser.RawConfigParser):
+    """Run the uploader on each zip."""
     zips_to_upload = get_zips_to_upload(config)
     if zips_to_upload is None:
         return
