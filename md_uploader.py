@@ -199,10 +199,6 @@ class AuthMD:
         self.successful_login = False
         self.token_file = root_path.joinpath(config["Paths"]["mdauth_path"])
 
-    def update_session(self, session: requests.Session):
-        """Update object requests session a with new one."""
-        self.session = session
-
     def _save_session(self, token: dict):
         """Save the session and refresh tokens."""
         with open(self.token_file, 'w') as login_file:
@@ -902,7 +898,7 @@ def main(config: configparser.RawConfigParser):
         if index % 3 == 0 and 'Authorization' in session.headers:
             session = make_session(
                 {"Authorization": session.headers["Authorization"]})
-            md_auth_object.update_session(session)
+            md_auth_object.session = session
 
     if failed_uploads:
         logging.info(f'Failed uploads: {failed_uploads}')
