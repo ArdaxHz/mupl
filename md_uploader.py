@@ -103,8 +103,8 @@ def open_config_file(root_path: Path) -> configparser.RawConfigParser:
 
 
 config = open_config_file(root_path)
-md_api_url = config["Paths"]["mangadex_api_url"]
-md_upload_api_url = f'{md_api_url}/upload'
+mangadex_api_url = config["Paths"]["mangadex_api_url"]
+md_upload_api_url = f'{mangadex_api_url}/upload'
 ratelimit_time = int(config["User Set"]["ratelimit_time"])
 
 
@@ -127,7 +127,7 @@ def convert_json(response_to_convert: requests.Response) -> Optional[dict]:
             print(critical_decode_error_message)
             return
 
-    logging.info("Convert api response into json.")
+    logging.debug("Convert api response into json.")
     return converted_response
 
 
@@ -198,6 +198,7 @@ class AuthMD:
         self.config = config
         self.successful_login = False
         self.token_file = root_path.joinpath(config["Paths"]["mdauth_path"])
+        self.md_auth_api_url = f'{mangadex_api_url}/auth'
 
     def _save_session(self, token: dict):
         """Save the session and refresh tokens."""
@@ -209,35 +210,35 @@ class AuthMD:
         """Update the session headers to include the auth token."""
         self.session.headers = {"Authorization": f"Bearer {session_token}"}
 
-    def _refresh_token(self, token: dict) -> bool:
+    def _refresh_token(self, refresh_token: str) -> bool:
         """Use the refresh token to get a new session token."""
         refresh_response = self.session.post(
-            f'{md_api_url}/auth/refresh',
+            f'{self.md_auth_api_url}/refresh',
             json={
-                "token": token["refresh"]})
+                "token": refresh_token})
 
         if refresh_response.status_code == 200:
             refresh_response_json = convert_json(refresh_response)
             if refresh_response_json is not None:
                 refresh_data = refresh_response_json["token"]
 
-                self._update_headers(token["session"])
+                self._update_headers(refresh_data["session"])
                 self._save_session(refresh_data)
                 return True
             return False
         elif refresh_response.status_code in (401, 403):
             error = print_error(refresh_response)
             logging.warning(
-                f"Couldn't login using refresh token, login using your account. Error: {error}")
+                f"Couldn't login using refresh token, logging in using your account. Error: {error}")
             return self._login_using_details()
         else:
             error = print_error(refresh_response)
             logging.error(f"Couldn't refresh token. Error: {error}")
             return False
 
-    def _check_login(self, token: dict) -> bool:
+    def _check_login(self, refresh_token: Optional[str]) -> bool:
         """Try login using saved session token."""
-        auth_check_response = self.session.get(f'{md_api_url}/auth/check')
+        auth_check_response = self.session.get(f'{self.md_auth_api_url}/check')
 
         if auth_check_response.status_code == 200:
             auth_data = convert_json(auth_check_response)
@@ -246,7 +247,9 @@ class AuthMD:
                     logging.info('Logged in using saved token.')
                     return True
 
-        return self._refresh_token(token)
+        if refresh_token is None:
+            return self._login_using_details()
+        return self._refresh_token(refresh_token)
 
     def _login_using_details(self) -> bool:
         """Login using account details."""
@@ -259,7 +262,7 @@ class AuthMD:
             raise Exception(critical_message)
 
         login_response = self.session.post(
-            f'{md_api_url}/auth/login',
+            f'{self.md_auth_api_url}/login',
             json={
                 "username": username,
                 "password": password})
@@ -267,9 +270,9 @@ class AuthMD:
         if login_response.status_code == 200:
             login_response_json = convert_json(login_response)
             if login_response_json is not None:
-                token = login_response_json["token"]
-                self._update_headers(token["session"])
-                self._save_session(token)
+                login_token = login_response_json["token"]
+                self._update_headers(login_token["session"])
+                self._save_session(login_token)
                 return True
 
         error = print_error(login_response)
@@ -286,7 +289,7 @@ class AuthMD:
                 token = json.load(login_file)
 
             self._update_headers(token["session"])
-            logged_in = self._check_login(token)
+            logged_in = self._check_login(token["refresh"])
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error(
                 "Couldn't find the file, trying to login using your account details.")
@@ -895,10 +898,9 @@ def main(config: configparser.RawConfigParser):
             failed_uploads,
             md_auth_object).start_chapter_upload()
 
-        if index % 3 == 0 and 'Authorization' in session.headers:
-            session = make_session(
-                {"Authorization": session.headers["Authorization"]})
-            md_auth_object.session = session
+        if index % 3 == 0:
+            md_auth_object.session = session = make_session()
+            md_auth_object.login()
 
     if failed_uploads:
         logging.info(f'Failed uploads: {failed_uploads}')
