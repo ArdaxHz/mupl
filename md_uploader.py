@@ -58,6 +58,10 @@ def load_config_info(config: configparser.RawConfigParser):
         logging.info('Uploaded files folder path empty, using default.')
         config["Paths"]["uploaded_files"] = 'uploaded'
 
+    if config["Paths"].get("mdauth_path", '') == '':
+        logging.info('mdauth path empty, using default.')
+        config["Paths"]["mdauth_path"] = '.mdauth'
+
     # Config files can only take strings, convert all the integers to string.
 
     try:
@@ -186,40 +190,119 @@ def make_session(headers: dict = {}) -> requests.Session:
     return session
 
 
-def login_to_md(session: requests.Session,
-                config: configparser.RawConfigParser):
-    """Login to MangaDex using the credentials found in the env file."""
-    username = config["MangaDex Credentials"]["mangadex_username"]
-    password = config["MangaDex Credentials"]["mangadex_password"]
+class AuthMD:
 
-    if username == '' or password == '':
-        critical_message = 'Login details missing.'
-        logging.critical(critical_message)
-        raise Exception(critical_message)
+    def __init__(self, session: requests.Session,
+                 config: configparser.RawConfigParser):
+        self.session = session
+        self.config = config
+        self.successful_login = False
+        self.token_file = root_path.joinpath(config["Paths"]["mdauth_path"])
 
-    login_response = session.post(
-        f'{md_api_url}/auth/login',
-        json={
-            "username": username,
-            "password": password})
+    def update_session(self, session: requests.Session):
+        """Update object requests session a with new one."""
+        self.session = session
 
-    if login_response.status_code != 200:
-        login_response_error_message = f"Couldn't login, mangadex returned an error {login_response.status_code}."
-        logging.critical(login_response_error_message)
-        print_error(login_response)
-        raise Exception(login_response_error_message)
+    def _save_session(self, token: dict):
+        """Save the session and refresh tokens."""
+        with open(self.token_file, 'w') as login_file:
+            login_file.write(json.dumps(token, indent=4))
+        logging.debug('Saved mdauth file.')
 
-    # Update requests session with headers to always be logged in
-    login_response_json = convert_json(login_response)
-    if login_response_json is None:
-        login_response_json_message = "Couldn't convert login api response into a json."
-        logging.error(login_response_json_message)
-        raise Exception(login_response_json_message)
+    def _update_headers(self, session_token: str):
+        """Update the session headers to include the auth token."""
+        self.session.headers = {"Authorization": f"Bearer {session_token}"}
 
-    session_token = login_response_json["token"]["session"]
-    session.headers.update({"Authorization": f"Bearer {session_token}"})
-    logging.info(f'Logged into mangadex.')
-    print('Logged in.')
+    def _refresh_token(self, token: dict) -> bool:
+        """Use the refresh token to get a new session token."""
+        refresh_response = self.session.post(
+            f'{md_api_url}/auth/refresh',
+            json={
+                "token": token["refresh"]})
+
+        if refresh_response.status_code == 200:
+            refresh_response_json = convert_json(refresh_response)
+            if refresh_response_json is not None:
+                refresh_data = refresh_response_json["token"]
+
+                self._update_headers(token["session"])
+                self._save_session(refresh_data)
+                return True
+            return False
+        elif refresh_response.status_code in (401, 403):
+            error = print_error(refresh_response)
+            logging.warning(
+                f"Couldn't login using refresh token, login using your account. Error: {error}")
+            return self._login_using_details()
+        else:
+            error = print_error(refresh_response)
+            logging.error(f"Couldn't refresh token. Error: {error}")
+            return False
+
+    def _check_login(self, token: dict) -> bool:
+        """Try login using saved session token."""
+        auth_check_response = self.session.get(f'{md_api_url}/auth/check')
+
+        if auth_check_response.status_code == 200:
+            auth_data = convert_json(auth_check_response)
+            if auth_data is not None:
+                if auth_data["isAuthenticated"]:
+                    logging.info('Logged in using saved token.')
+                    return True
+
+            return self._refresh_token(token)
+
+    def _login_using_details(self) -> bool:
+        """Login using account details."""
+        username = self.config["MangaDex Credentials"]["mangadex_username"]
+        password = self.config["MangaDex Credentials"]["mangadex_password"]
+
+        if username == '' or password == '':
+            critical_message = 'Login details missing.'
+            logging.critical(critical_message)
+            raise Exception(critical_message)
+
+        login_response = self.session.post(
+            f'{md_api_url}/auth/login',
+            json={
+                "username": username,
+                "password": password})
+
+        if login_response.status_code == 200:
+            login_response_json = convert_json(login_response)
+            if login_response_json is not None:
+                token = login_response_json["token"]
+                self._update_headers(token["session"])
+                self._save_session(token)
+                return True
+
+        error = print_error(login_response)
+        logging.error(
+            f"Couldn't login to mangadex using the details provided. Error: {error}.")
+        return False
+
+    def login(self):
+        """Login to MD account using details or saved token."""
+        logging.info('Trying to login through the .mdauth file.')
+
+        try:
+            with open(self.token_file, 'r') as login_file:
+                token = json.load(login_file)
+
+            self._update_headers(token["session"])
+            logged_in = self._check_login(token)
+        except (FileNotFoundError, json.JSONDecodeError):
+            logging.error(
+                "Couldn't find the file, trying to login using your account details.")
+            logged_in = self._login_using_details()
+
+        if logged_in:
+            self.successful_login = True
+            logging.info(f'Logged into mangadex.')
+            print('Logged in.')
+        else:
+            logging.critical("Couldn't login.")
+            raise Exception("Couldn't login.")
 
 
 def open_manga_series_map(
@@ -448,12 +531,15 @@ class ChapterUploaderProcess:
             session: requests.Session,
             names_to_ids: dict,
             config: configparser.RawConfigParser,
-            failed_uploads: list):
+            failed_uploads: list,
+            md_auth_object: AuthMD):
+
         self.to_upload = to_upload
         self.session = session
         self.names_to_ids = names_to_ids
         self.config = config
         self.failed_uploads = failed_uploads
+        self.md_auth_object = md_auth_object
         self.zip_name = to_upload.name
         self.zip_extension = to_upload.suffix
 
@@ -506,6 +592,7 @@ class ChapterUploaderProcess:
             # Upload the images
             image_upload_response = self.session.post(
                 f'{md_upload_api_url}/{upload_session_id}', files=image_batch)
+
             if image_upload_response.status_code != 200:
                 error = print_error(image_upload_response)
                 logging.error(f"Error uploading images. Error: {error}")
@@ -526,15 +613,18 @@ class ChapterUploaderProcess:
                 uploaded_image_attributes = uploaded_image["attributes"]
                 original_filename = uploaded_image_attributes["originalFileName"]
                 file_size = uploaded_image_attributes["fileSize"]
+
                 self.images_to_upload_ids.insert(
                     int(original_filename), uploaded_image["id"])
                 succesful_upload_message = f'Success: Uploaded page {self.images_to_upload_names[original_filename]}, size: {file_size} bytes.'
+
                 logging.info(succesful_upload_message)
                 print(succesful_upload_message)
 
             if len(succesful_upload_data) == len(image_batch):
                 image_batch_list = list(image_batch.keys())
-                logging.info(f'Uploaded images {image_batch_list[0]} to {image_batch_list[-1]}.')
+                logging.info(
+                    f'Uploaded images {image_batch_list[0]} to {image_batch_list[-1]}.')
                 failed_image_upload = False
                 image_retries == self.number_upload_retry
                 break
@@ -560,8 +650,10 @@ class ChapterUploaderProcess:
         removal_retry = 0
         while removal_retry < self.number_upload_retry:
             existing_session = self.session.get(f'{md_upload_api_url}')
+
             if existing_session.status_code == 200:
                 existing_session_json = convert_json(existing_session)
+
                 if existing_session_json is None:
                     removal_retry += 1
                     logging.warning(
@@ -570,12 +662,13 @@ class ChapterUploaderProcess:
                     self._remove_upload_session(
                         existing_session_json["data"]["id"])
                     return
+
             elif existing_session.status_code == 404:
                 logging.info("No existing upload session found.")
                 return
             elif existing_session.status_code == 401:
                 logging.warning("Not logged in, logging in and retrying.")
-                login_to_md(self.session, config)
+                self.md_auth_object.login()
                 removal_retry += 1
             else:
                 removal_retry += 1
@@ -601,7 +694,7 @@ class ChapterUploaderProcess:
                     "groups": self.processed_zip_object.groups})
 
             if upload_session_response.status_code == 401:
-                login_to_md(self.session, config)
+                self.md_auth_object.login()
 
             elif upload_session_response.status_code != 200:
                 error = print_error(upload_session_response)
@@ -662,9 +755,11 @@ class ChapterUploaderProcess:
 
                     # Move the uploaded zips to a different folder
                     self.uploaded_files_path.mkdir(parents=True, exist_ok=True)
-                    if f'{self.zip_name}{self.zip_extension}' in os.listdir(self.uploaded_files_path):
+                    if f'{self.zip_name}{self.zip_extension}' in os.listdir(
+                            self.uploaded_files_path):
                         zip_name = f'{self.zip_name}{{2}}'
-                        logging.warning(f'{self.zip_name} already exists in {self.uploaded_files_path}, renaming to {zip_name}.')
+                        logging.warning(
+                            f'{self.zip_name} already exists in {self.uploaded_files_path}, renaming to {zip_name}.')
                     else:
                         zip_name = self.zip_name
 
@@ -683,7 +778,7 @@ class ChapterUploaderProcess:
                 return True
 
             elif chapter_commit_response.status_code == 401:
-                login_to_md(self.session, config)
+                self.md_auth_object.login()
 
             else:
                 commit_fail_message = f'Failed to commit {self.zip_name}, error {chapter_commit_response.status_code} trying again.'
@@ -716,7 +811,7 @@ class ChapterUploaderProcess:
             return
 
         if 'Authorization' not in self.session.headers:
-            login_to_md(self.session, config)
+            self.md_auth_object.login()
 
         upload_session_response_json = self._create_upload_session()
         if upload_session_response_json is None:
@@ -740,7 +835,7 @@ class ChapterUploaderProcess:
                 break
 
             # Rate limit
-            if array_index % 5 == 0:
+            if array_index % 10 == 0:
                 logging.debug('Sleeping between image uploads.')
                 time.sleep(self.ratelimit_time)
 
@@ -791,6 +886,7 @@ def main(config: configparser.RawConfigParser):
         return
 
     session = make_session()
+    md_auth_object = AuthMD(session, config)
     names_to_ids = open_manga_series_map(config, root_path)
     failed_uploads = []
 
@@ -800,11 +896,13 @@ def main(config: configparser.RawConfigParser):
             session,
             names_to_ids,
             config,
-            failed_uploads).start_chapter_upload()
+            failed_uploads,
+            md_auth_object).start_chapter_upload()
 
         if index % 3 == 0 and 'Authorization' in session.headers:
             session = make_session(
                 {"Authorization": session.headers["Authorization"]})
+            md_auth_object.update_session(session)
 
     if failed_uploads:
         logging.info(f'Failed uploads: {failed_uploads}')

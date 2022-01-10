@@ -13,3 +13,4 @@ NAME_ID_MAP_FILE=name_id_map.json
 UPLOADS_FOLDER=to_upload
 UPLOADED_FILES=uploaded
 MANGADEX_API_URL=https://api.mangadex.org
+MDAUTH_PATH=.mdauth
