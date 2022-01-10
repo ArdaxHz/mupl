@@ -250,7 +250,7 @@ class AuthMD:
                     logging.info('Logged in using saved token.')
                     return True
 
-            return self._refresh_token(token)
+        return self._refresh_token(token)
 
     def _login_using_details(self) -> bool:
         """Login using account details."""
