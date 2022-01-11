@@ -5,7 +5,6 @@ import os
 import re
 import time
 import zipfile
-
 from datetime import date
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -13,11 +12,8 @@ from uuid import UUID
 
 import requests
 
-uuid_regex = re.compile(
-    r'[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}')
-file_name_regex = re.compile(
-    r'^(?:\[(?P<artist>.+?)?\])?\s?(?P<title>.+?)(?:\s?\[(?P<language>[a-zA-Z]+)?\])?\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?:(?P<group>.+))?\])?\s?(?:\{v?(?P<version>\d)?\})?(?:\.(?P<extension>zip|cbz))?$',
-    re.IGNORECASE)
+__version__ = '0.5.0'
+
 languages = [{"english":"English","md":"en","iso":"eng"},{"english":"Japanese","md":"ja","iso":"jpn"},{"english":"Japanese (Romaji)","md":"ja-ro","iso":"jpn"},{"english":"Polish","md":"pl","iso":"pol"},{"english":"Serbo-Croatian","md":"sh","iso":"hrv"},{"english":"Dutch","md":"nl","iso":"dut"},{"english":"Italian","md":"it","iso":"ita"},{"english":"Russian","md":"ru","iso":"rus"},{"english":"German","md":"de","iso":"ger"},{"english":"Hungarian","md":"hu","iso":"hun"},{"english":"French","md":"fr","iso":"fre"},{"english":"Finnish","md":"fi","iso":"fin"},{"english":"Vietnamese","md":"vi","iso":"vie"},{"english":"Greek","md":"el","iso":"gre"},{"english":"Bulgarian","md":"bg","iso":"bul"},{"english":"Spanish (Es)","md":"es","iso":"spa"},{"english":"Portuguese (Br)","md":"pt-br","iso":"por"},{"english":"Portuguese (Pt)","md":"pt","iso":"por"},{"english":"Swedish","md":"sv","iso":"swe"},{"english":"Arabic","md":"ar","iso":"ara"},{"english":"Danish","md":"da","iso":"dan"},{"english":"Chinese (Simp)","md":"zh","iso":"chi"},{"english":"Chinese (Romaji)","md":"zh-ro","iso":"chi"},{"english":"Bengali","md":"bn","iso":"ben"},{"english":"Romanian","md":"ro","iso":"rum"},{"english":"Czech","md":"cs","iso":"cze"},{"english":"Mongolian","md":"mn","iso":"mon"},{"english":"Turkish","md":"tr","iso":"tur"},{"english":"Indonesian","md":"id","iso":"ind"},{"english":"Korean","md":"ko","iso":"kor"},{"english":"Korean (Romaji)","md":"ko-ro","iso":"kor"},{"english":"Spanish (LATAM)","md":"es-la","iso":"spa"},{"english":"Persian","md":"fa","iso":"per"},{"english":"Malay","md":"ms","iso":"may"},{"english":"Thai","md":"th","iso":"tha"},{"english":"Catalan","md":"ca","iso":"cat"},{"english":"Filipino","md":"tl","iso":"fil"},{"english":"Chinese (Trad)","md":"zh-hk","iso":"chi"},{"english":"Ukrainian","md":"uk","iso":"ukr"},{"english":"Burmese","md":"my","iso":"bur"},{"english":"Lithuanian","md":"lt","iso":"lit"},{"english":"Hebrew","md":"he","iso":"heb"},{"english":"Hindi","md":"hi","iso":"hin"},{"english":"Norwegian","md":"no","iso":"nor"},{"english":"Other","md":"NULL","iso":"NULL"}]
 http_error_codes = {
     "400": "Bad request.",
@@ -104,7 +100,6 @@ def open_config_file(root_path: Path) -> configparser.RawConfigParser:
 
 config = open_config_file(root_path)
 mangadex_api_url = config["Paths"]["mangadex_api_url"]
-md_upload_api_url = f'{mangadex_api_url}/upload'
 ratelimit_time = int(config["User Set"]["ratelimit_time"])
 
 
@@ -197,8 +192,22 @@ class AuthMD:
         self.session = session
         self.config = config
         self.successful_login = False
+        self.refresh_token = None
         self.token_file = root_path.joinpath(config["Paths"]["mdauth_path"])
         self.md_auth_api_url = f'{mangadex_api_url}/auth'
+
+    def _open_auth_file(self) -> Optional[str]:
+        try:
+            with open(self.token_file, 'r') as login_file:
+                token = json.load(login_file)
+
+            refresh_token = token["refresh"]
+            self.refresh_token = refresh_token
+            return refresh_token
+        except (FileNotFoundError, json.JSONDecodeError):
+            logging.error(
+                "Couldn't find the file, trying to login using your account details.")
+            return None
 
     def _save_session(self, token: dict):
         """Save the session and refresh tokens."""
@@ -210,12 +219,12 @@ class AuthMD:
         """Update the session headers to include the auth token."""
         self.session.headers = {"Authorization": f"Bearer {session_token}"}
 
-    def _refresh_token(self, refresh_token: str) -> bool:
+    def _refresh_token(self) -> bool:
         """Use the refresh token to get a new session token."""
         refresh_response = self.session.post(
             f'{self.md_auth_api_url}/refresh',
             json={
-                "token": refresh_token})
+                "token": self.refresh_token})
 
         if refresh_response.status_code == 200:
             refresh_response_json = convert_json(refresh_response)
@@ -236,7 +245,7 @@ class AuthMD:
             logging.error(f"Couldn't refresh token. Error: {error}")
             return False
 
-    def _check_login(self, refresh_token: Optional[str]) -> bool:
+    def _check_login(self) -> bool:
         """Try login using saved session token."""
         auth_check_response = self.session.get(f'{self.md_auth_api_url}/check')
 
@@ -247,9 +256,11 @@ class AuthMD:
                     logging.info('Logged in using saved token.')
                     return True
 
-        if refresh_token is None:
-            return self._login_using_details()
-        return self._refresh_token(refresh_token)
+        if self.refresh_token is None:
+            self.refresh_token = self._open_auth_file()
+            if self.refresh_token is None:
+                return self._login_using_details()
+        return self._refresh_token()
 
     def _login_using_details(self) -> bool:
         """Login using account details."""
@@ -280,20 +291,18 @@ class AuthMD:
             f"Couldn't login to mangadex using the details provided. Error: {error}.")
         return False
 
-    def login(self):
+    def login(self, check_login = True):
         """Login to MD account using details or saved token."""
         logging.info('Trying to login through the .mdauth file.')
-
-        try:
-            with open(self.token_file, 'r') as login_file:
-                token = json.load(login_file)
-
-            self._update_headers(token["session"])
-            logged_in = self._check_login(token["refresh"])
-        except (FileNotFoundError, json.JSONDecodeError):
-            logging.error(
-                "Couldn't find the file, trying to login using your account details.")
-            logged_in = self._login_using_details()
+        
+        if check_login:
+            logged_in = self._check_login()
+        else:
+            self.refresh_token = self._open_auth_file()
+            if self.refresh_token is None:
+                logged_in = self._login_using_details()
+            else:
+                logged_in = self._refresh_token()
 
         if logged_in:
             self.successful_login = True
@@ -332,11 +341,16 @@ class FileProcesser:
         self._zip_name = to_upload.name
         self._names_to_ids = names_to_ids
         self._config = config
+        self._uuid_regex = re.compile(
+            r'[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}')
+        self._file_name_regex = re.compile(
+            r'^(?:\[(?P<artist>.+?)?\])?\s?(?P<title>.+?)(?:\s?\[(?P<language>[a-zA-Z]+)?\])?\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?:(?P<group>.+))?\])?\s?(?:\{v?(?P<version>\d)?\})?(?:\.(?P<extension>zip|cbz))?$',
+            re.IGNORECASE)
 
     def _match_file_name(self) -> Optional[re.Match[str]]:
         """Check for a full regex match of the file."""
         # Check if the zip name is in the correct format
-        zip_name_match = file_name_regex.match(self._zip_name)
+        zip_name_match = self._file_name_regex.match(self._zip_name)
         if not zip_name_match:
             logging.error(
                 f"Zip {self._zip_name} isn't in the correct naming format.")
@@ -347,7 +361,7 @@ class FileProcesser:
     def _get_manga_series(self) -> Optional[UUID]:
         """Get the series title, use the id map if zip file doesn't have the uuid already."""
         manga_series = self._zip_name_match.group("title")
-        if not uuid_regex.match(manga_series):
+        if not self._uuid_regex.match(manga_series):
             try:
                 manga_series = self._names_to_ids["manga"].get(
                     manga_series, None)
@@ -471,7 +485,7 @@ class FileProcesser:
             # Check if the groups are using uuids, if not, use the id map for
             # the id
             for group in groups_array:
-                if not uuid_regex.match(group):
+                if not self._uuid_regex.match(group):
                     try:
                         group_id = self._names_to_ids["group"].get(group, None)
                     except KeyError:
@@ -547,10 +561,12 @@ class ChapterUploaderProcess:
             self.config["User Set"]["number_of_images_upload"])
         self.number_upload_retry = int(self.config["User Set"]["upload_retry"])
         self.ratelimit_time = ratelimit_time
+        self.md_upload_api_url = f'{mangadex_api_url}/upload'
 
         self.images_to_upload: List[List[Dict[str, bytes]]] = []
         self.images_to_upload_names: Dict[str, str] = {}
         self.images_to_upload_ids: List[UUID] = []
+        self.upload_session_id: Optional[UUID] = None
 
     def _get_images_to_upload(self):
         """Read the image data from the zip as list."""
@@ -581,16 +597,14 @@ class ChapterUploaderProcess:
                         files.update({renamed_file: myfile.read()})
                 self.images_to_upload.append(files)
 
-    def _upload_images(
-            self, upload_session_id: UUID,
-            image_batch: Dict[str, bytes]) -> bool:
+    def _upload_images(self, image_batch: Dict[str, bytes]) -> bool:
         """Try to upload every 10 (default) images to the upload session."""
         image_retries = 0
         failed_image_upload = False
         while image_retries < self.number_upload_retry:
             # Upload the images
             image_upload_response = self.session.post(
-                f'{md_upload_api_url}/{upload_session_id}', files=image_batch)
+                f'{self.md_upload_api_url}/{self.upload_session_id}', files=image_batch)
 
             if image_upload_response.status_code != 200:
                 error = print_error(image_upload_response)
@@ -639,16 +653,19 @@ class ChapterUploaderProcess:
 
         return failed_image_upload
 
-    def _remove_upload_session(self, upload_session_id: UUID):
+    def remove_upload_session(self, session_id: Optional[UUID]=None):
         """Delete the upload session."""
-        self.session.delete(f'{md_upload_api_url}/{upload_session_id}')
-        logging.info(f'Sent {upload_session_id} to be deleted.')
+        if session_id is None:
+            session_id = self.upload_session_id
+        
+        self.session.delete(f'{self.md_upload_api_url}/{session_id}')
+        logging.info(f'Sent {session_id} to be deleted.')
 
     def _delete_exising_upload_session(self):
         """Remove any exising upload sessions to not error out as mangadex only allows one upload session at a time."""
         removal_retry = 0
         while removal_retry < self.number_upload_retry:
-            existing_session = self.session.get(f'{md_upload_api_url}')
+            existing_session = self.session.get(f'{self.md_upload_api_url}')
 
             if existing_session.status_code == 200:
                 existing_session_json = convert_json(existing_session)
@@ -658,7 +675,7 @@ class ChapterUploaderProcess:
                     logging.warning(
                         f"Couldn't convert exising upload session response into a json, retrying.")
                 else:
-                    self._remove_upload_session(
+                    self.remove_upload_session(
                         existing_session_json["data"]["id"])
                     return
 
@@ -687,7 +704,7 @@ class ChapterUploaderProcess:
             time.sleep(self.ratelimit_time)
             # Start the upload session
             upload_session_response = self.session.post(
-                f'{md_upload_api_url}/begin',
+                f'{self.md_upload_api_url}/begin',
                 json={
                     "manga": self.processed_zip_object.manga_series,
                     "groups": self.processed_zip_object.groups})
@@ -725,13 +742,13 @@ class ChapterUploaderProcess:
             self.failed_uploads.append(self.to_upload)
             return
 
-    def _commit_chapter(self, upload_session_id: UUID) -> bool:
+    def _commit_chapter(self) -> bool:
         """Try commit the chapter to mangadex."""
         commit_retries = 0
         succesful_upload = False
         while commit_retries < self.number_upload_retry:
             chapter_commit_response = self.session.post(
-                f'{md_upload_api_url}/{upload_session_id}/commit',
+                f'{self.md_upload_api_url}/{self.upload_session_id}/commit',
                 json={
                     "chapterDraft": {
                         "volume": self.processed_zip_object.volume_number,
@@ -791,18 +808,12 @@ class ChapterUploaderProcess:
             commit_error_message = f'Failed to commit {self.zip_name}, removing upload draft.'
             logging.error(commit_error_message)
             print(commit_error_message)
-            self._remove_upload_session(upload_session_id)
+            self.remove_upload_session()
             self.failed_uploads.append(self.to_upload)
             return False
 
     def start_chapter_upload(self):
         """Process the zip for uploading."""
-        # Only accept zip files
-        if self.zip_extension not in ('.zip', '.cbz'):
-            logging.error(
-                f"{self.to_upload} doesn't have the correct extension, skipping.")
-            return
-
         self.processed_zip_object = FileProcesser(
             self.to_upload, self.names_to_ids, self.config)
         processed_zip = self.processed_zip_object.process_zip_name()
@@ -810,15 +821,15 @@ class ChapterUploaderProcess:
             return
 
         if 'Authorization' not in self.session.headers:
-            self.md_auth_object.login()
+            self.md_auth_object.login(False)
 
         upload_session_response_json = self._create_upload_session()
         if upload_session_response_json is None:
             time.sleep(self.ratelimit_time)
             return
 
-        upload_session_id = upload_session_response_json["data"]["id"]
-        upload_session_id_message = f'Created upload session: {upload_session_id}, {self.zip_name}.'
+        self.upload_session_id = upload_session_response_json["data"]["id"]
+        upload_session_id_message = f'Created upload session: {self.upload_session_id}, {self.zip_name}.'
         logging.info(upload_session_id_message)
         print(upload_session_id_message)
 
@@ -827,8 +838,7 @@ class ChapterUploaderProcess:
         failed_image_upload = False
         for array_index, image_batch in enumerate(
                 self.images_to_upload, start=1):
-            failed_image_upload = self._upload_images(
-                upload_session_id, image_batch)
+            failed_image_upload = self._upload_images(image_batch)
 
             if failed_image_upload:
                 break
@@ -840,15 +850,15 @@ class ChapterUploaderProcess:
 
         # Skip chapter upload and delete upload session
         if failed_image_upload:
-            failed_image_upload_message = f'Deleting draft due to failed image upload: {upload_session_id}, {self.zip_name}.'
+            failed_image_upload_message = f'Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}.'
             print(failed_image_upload_message)
             logging.error(failed_image_upload_message)
-            self._remove_upload_session(self.session, upload_session_id)
+            self.remove_upload_session(self.session)
             self.failed_uploads.append(self.to_upload)
             return
 
         logging.info("Uploaded all of the chapter's images.")
-        self._commit_chapter(upload_session_id)
+        self._commit_chapter()
 
         logging.debug('Sleeping between zip upload.')
         time.sleep(self.ratelimit_time * 2)
@@ -866,7 +876,8 @@ def get_zips_to_upload(
             '.zip', '.cbz')]
 
     if not zips_to_not_upload:
-        logging.warning(f'Skipping files: {zips_to_not_upload}')
+        logging.warning(
+            f"Skipping {len(zips_to_not_upload)} files as they don't have the correct extension: {zips_to_not_upload}")
 
     if not zips_to_upload:
         no_zips_found_error_message = 'No zips found to upload, exiting.'
@@ -890,17 +901,27 @@ def main(config: configparser.RawConfigParser):
     failed_uploads = []
 
     for index, to_upload in enumerate(zips_to_upload, start=1):
-        ChapterUploaderProcess(
-            to_upload,
-            session,
-            names_to_ids,
-            config,
-            failed_uploads,
-            md_auth_object).start_chapter_upload()
+        try: 
+            uploader_process = ChapterUploaderProcess(
+                to_upload,
+                session,
+                names_to_ids,
+                config,
+                failed_uploads,
+                md_auth_object)
+            uploader_process.start_chapter_upload()
 
-        if index % 3 == 0:
-            md_auth_object.session = session = make_session()
-            md_auth_object.login()
+            if index % 3 == 0:
+                md_auth_object.session = session = make_session()
+                md_auth_object.login()
+
+        except KeyboardInterrupt:
+            logging.warning('Keyboard Interrupt detected, deleting upload session.')
+            print('Keyboard interrupt detected, exiting.')
+            uploader_process.remove_upload_session()
+            failed_uploads.append(
+                zips_to_upload[zips_to_upload.index(to_upload)])
+            break
 
     if failed_uploads:
         logging.info(f'Failed uploads: {failed_uploads}')
