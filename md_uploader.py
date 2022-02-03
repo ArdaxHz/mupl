@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.7.2"
+__version__ = "0.7.3"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -180,7 +180,9 @@ def convert_json(response_to_convert: requests.Response) -> Optional[dict]:
     return converted_response
 
 
-def print_error(error_response: requests.Response, show_error: bool = True) -> str:
+def print_error(
+    error_response: requests.Response, show_error: bool = True
+) -> Optional[str]:
     """Print the errors the site returns."""
     status_code = error_response.status_code
     error_converting_json_log_message = "{} when converting error_response into json."
@@ -188,6 +190,9 @@ def print_error(error_response: requests.Response, show_error: bool = True) -> s
         f"{status_code}: Couldn't convert api reposnse into json."
     )
     error_message = ""
+
+    if status_code in range(200, 300):
+        return
 
     if status_code == 429:
         error_message = f"429: {http_error_codes.get(str(status_code))}"
@@ -303,24 +308,29 @@ def request(
             if retry is not None:
                 retry = datetime.fromtimestamp(int(retry))
 
-            if (
-                remaining is not None
-                and remaining == "0"
-                and response.status_code != 429
-            ):
+            if remaining is not None and remaining == "0":
                 if retry is not None:
                     delta = retry - datetime.now()
                     sleep = delta.total_seconds() + 1
-                    logging.warning(
-                        f"A ratelimit has been exhausted, sleeping for: {sleep}"
-                    )
+                else:
+                    sleep = 5
 
-            # if limit is not None and remaining is not None:
-            #     if int(remaining) == 0:
-            #         remaining = limit
-            #     sleep_ = int(limit) / int(remaining)
-            #     logging.debug(f"Sleeping for {sleep_}.")
-            #     time.sleep(sleep_)
+                logging.warning(
+                    f"A ratelimit has been exhausted, sleeping for: {sleep}"
+                )
+                time.sleep(sleep)
+                if response.status_code == 429:
+                    continue
+
+            if limit is not None and remaining is not None:
+                if int(remaining) == 0:
+                    remaining = limit
+                sleep_ = int(limit) / int(remaining)
+                logging.debug(f"Sleeping for {sleep_}.")
+                time.sleep(sleep_)
+            elif limit is None and remaining is None:
+                logging.debug(f"Sleeping for {ratelimit_time}.")
+                time.sleep(ratelimit_time)
 
             if 300 > response.status_code >= 200:
                 data = convert_json(response)
