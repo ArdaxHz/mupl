@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.7.3"
+__version__ = "0.7.4"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -232,7 +232,7 @@ def print_error(
         if not errors:
             errors = http_error_codes.get(str(status_code), "")
 
-        error_message = f"Error: {errors}."
+        error_message = f"Error: {errors}"
         logging.warning(error_message)
         if show_error:
             print(error_message)
@@ -286,6 +286,7 @@ def request(
 ) -> CustomResponse:
     response: Optional[requests.Response] = None
     for tries in range(5):
+        logging.debug(f"Try {tries} for request {route}.")
         try:
             response = session.request(
                 route.verb,
@@ -320,6 +321,7 @@ def request(
                 )
                 time.sleep(sleep)
                 if response.status_code == 429:
+                    logging.debug(f"Hit a 429, retrying. {route}")
                     continue
 
             if limit is not None and remaining is not None:
@@ -332,8 +334,9 @@ def request(
                 logging.debug(f"Sleeping for {ratelimit_time}.")
                 time.sleep(ratelimit_time)
 
+            data = convert_json(response)
+
             if 300 > response.status_code >= 200:
-                data = convert_json(response)
                 if data is not None:
                     return CustomResponse(response.status_code, data=data)
                 else:
@@ -451,7 +454,10 @@ class AuthMD:
         )
 
         auth_check_response = request(self.session, route)
-        if auth_check_response.data is not None:
+        if (
+            auth_check_response.status_code == 200
+            and auth_check_response.data is not None
+        ):
             if auth_check_response.data["isAuthenticated"]:
                 logging.info("Already logged in.")
                 return True
@@ -479,7 +485,7 @@ class AuthMD:
         )
 
         login_response = request(self.session, route)
-        if login_response.data is not None:
+        if login_response.status_code == 200 and login_response.data is not None:
             login_token = login_response.data["token"]
             self._update_headers(login_token["session"])
             self._save_session(login_token)
@@ -823,10 +829,9 @@ class ChapterUploaderProcess:
 
     def _upload_images(self, image_batch: Dict[str, bytes]) -> bool:
         """Try to upload every 10 (default) images to the upload session."""
-        image_retries = 0
         failed_image_upload = False
 
-        while image_retries < self.number_upload_retry:
+        for image_retries in range(self.number_upload_retry):
             # Upload the images
             route = Route(
                 "POST",
@@ -842,7 +847,6 @@ class ChapterUploaderProcess:
                     f"Error uploading images. Error: {image_upload_response.error}"
                 )
                 failed_image_upload = True
-                image_retries += 1
                 continue
 
             # Some images returned errors
@@ -876,7 +880,6 @@ class ChapterUploaderProcess:
                     f"Uploaded images {image_batch_list[0]} to {image_batch_list[-1]}."
                 )
                 failed_image_upload = False
-                image_retries == self.number_upload_retry
                 break
             else:
                 image_batch = {
@@ -892,7 +895,6 @@ class ChapterUploaderProcess:
                     f"Some images didn't upload, retrying. Failed images: {image_batch}"
                 )
                 failed_image_upload = True
-                image_retries += 1
                 continue
 
         return failed_image_upload
@@ -906,18 +908,27 @@ class ChapterUploaderProcess:
         request(self.session, route, show_error=False)
         logging.info(f"Sent {session_id} to be deleted.")
 
-    def _delete_exising_upload_session(self, chapter_upload_session_retry: int):
+    def _delete_exising_upload_session(
+        self, chapter_upload_session_retry: int, check_for_session=False
+    ):
         """Remove any exising upload sessions to not error out as mangadex only allows one upload session at a time."""
         if chapter_upload_session_retry > 0:
             return
 
         route = Route("GET", f"{self.md_upload_api_url}")
 
-        removal_retry = 0
-        while removal_retry < self.number_upload_retry:
+        if check_for_session:
+            time.sleep(0.5)
+
+        for removal_retry in range(self.number_upload_retry):
             existing_session = request(self.session, route, show_error=False)
 
-            if existing_session.data is not None:
+            if (
+                existing_session.status_code == 200
+                and existing_session.data is not None
+            ):
+                if check_for_session:
+                    return existing_session.data["data"]["id"]
                 self.remove_upload_session(existing_session.data["data"]["id"])
                 return
             elif existing_session.status_code == 404:
@@ -926,19 +937,18 @@ class ChapterUploaderProcess:
             elif existing_session.status_code == 401:
                 logging.warning("Not logged in, logging in and retrying.")
                 self.md_auth_object.login()
-                removal_retry += 1
+                continue
             else:
-                removal_retry += 1
                 logging.warning(
                     f"Couldn't delete the exising upload session, retrying."
                 )
+                continue
 
         logging.error("Exising upload session not deleted.")
         raise Exception(f"Couldn't delete existing upload session.")
 
     def _create_upload_session(self) -> Optional[dict]:
         """Try create an upload session 3 times."""
-        chapter_upload_session_retry = 0
         chapter_upload_session_successful = False
 
         route = Route(
@@ -950,28 +960,37 @@ class ChapterUploaderProcess:
             },
         )
 
-        while chapter_upload_session_retry < self.number_upload_retry:
+        for chapter_upload_session_retry in range(self.number_upload_retry):
             self._delete_exising_upload_session(chapter_upload_session_retry)
             # Start the upload session
             upload_session_response = request(
                 self.session, route, md_auth_object=self.md_auth_object
             )
 
+            check_session_id = self._delete_exising_upload_session(0, True)
+
+            if check_session_id is None:
+                logging.warning(
+                    f"Checking for just-made session returned an error, retrying."
+                )
+                continue
+
             if upload_session_response.status_code == 401:
                 self.md_auth_object.login()
-
             elif upload_session_response.status_code != 200:
                 logging.error(
                     f"Couldn't create upload draft for {self.zip_name}. Error: {upload_session_response.error}"
                 )
                 print(f"Error creating draft for {self.zip_name}.")
 
-            if upload_session_response.data is not None:
+            if (
+                upload_session_response.status_code == 200
+                and upload_session_response.data is not None
+            ):
                 chapter_upload_session_successful = True
-                chapter_upload_session_retry == self.number_upload_retry
                 return upload_session_response.data
 
-            chapter_upload_session_retry += 1
+            continue
 
         # Couldn't create an upload session, skip the chapter
         if not chapter_upload_session_successful:
@@ -985,7 +1004,6 @@ class ChapterUploaderProcess:
 
     def _commit_chapter(self) -> bool:
         """Try commit the chapter to mangadex."""
-        commit_retries = 0
         succesful_upload = False
 
         route = Route(
@@ -1002,12 +1020,15 @@ class ChapterUploaderProcess:
             },
         )
 
-        while commit_retries < self.number_upload_retry:
+        for commit_retries in range(self.number_upload_retry):
             chapter_commit_response = request(
                 self.session, route, md_auth_object=self.md_auth_object
             )
 
-            if chapter_commit_response.data is not None:
+            if (
+                chapter_commit_response.status_code == 200
+                and chapter_commit_response.data is not None
+            ):
                 succesful_upload = True
 
                 succesful_upload_id = chapter_commit_response.data["data"]["id"]
@@ -1041,18 +1062,15 @@ class ChapterUploaderProcess:
                     )
                 )
                 logging.info(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
-                commit_retries == self.number_upload_retry
-                return True
-
+                break
             elif chapter_commit_response.status_code == 401:
                 self.md_auth_object.login()
-
             else:
                 commit_fail_message = f"Failed to commit {self.zip_name}, error {chapter_commit_response.status_code} trying again."
                 logging.warning(commit_fail_message)
                 print(commit_fail_message)
 
-            commit_retries += 1
+            continue
 
         if not succesful_upload:
             commit_error_message = (
@@ -1063,6 +1081,7 @@ class ChapterUploaderProcess:
             self.remove_upload_session()
             self.failed_uploads.append(self.to_upload)
             return False
+        return True
 
     def start_chapter_upload(self):
         """Process the zip for uploading."""
