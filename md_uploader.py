@@ -194,6 +194,13 @@ def print_error(
     if status_code in range(200, 300):
         return
 
+    logging.warning(
+            f"Request id: {error_response.headers.get('X-request-ID', None)}"
+        )
+    logging.warning(
+        f"Correlation id: {error_response.headers.get('X-correlation-ID', None)}"
+    )
+
     if status_code == 429:
         error_message = f"429: {http_error_codes.get(str(status_code))}"
         logging.error(error_message)
@@ -234,12 +241,6 @@ def print_error(
 
         error_message = f"Error: {errors}"
         logging.warning(error_message)
-        logging.warning(
-            f"Request id: {error_response.headers.get('X-request-ID', None)}"
-        )
-        logging.warning(
-            f"Correlation id: {error_response.headers.get('X-correlation-ID', None)}"
-        )
 
         if show_error:
             print(error_message)
