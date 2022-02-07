@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.7.4"
+__version__ = "0.7.5"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -234,6 +234,13 @@ def print_error(
 
         error_message = f"Error: {errors}"
         logging.warning(error_message)
+        logging.warning(
+            f"Request id: {error_response.headers.get('X-request-ID', None)}"
+        )
+        logging.warning(
+            f"Correlation id: {error_response.headers.get('X-correlation-ID', None)}"
+        )
+
         if show_error:
             print(error_message)
     except KeyError:
@@ -286,7 +293,7 @@ def request(
 ) -> CustomResponse:
     response: Optional[requests.Response] = None
     for tries in range(5):
-        logging.debug(f"Try {tries} for request {route}.")
+        logging.debug(f"Try {tries} for request {route.__dict__}.")
         try:
             response = session.request(
                 route.verb,
@@ -368,8 +375,8 @@ def request(
                 continue
 
             return CustomResponse(response.status_code, error=error)
-        except (requests.RequestException,) as error:
-            logging.error(f"Requests error occurred: {error}")
+        except (requests.RequestException,) as e:
+            logging.error(f"Requests error occurred: {e}")
             time.sleep(5)
             continue
 
