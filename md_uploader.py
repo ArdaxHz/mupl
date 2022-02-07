@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.7.7"
+__version__ = "0.7.8"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -278,7 +278,7 @@ class AuthMD:
         """Save the session and refresh tokens."""
         with open(self.token_file, "w") as login_file:
             login_file.write(json.dumps(token, indent=4))
-        logging.debug("Saved mdauth file.")
+        logging.debug("Saved .mdauth file.")
 
     def _update_headers(self, session_token: str):
         """Update the session headers to include the auth token."""
@@ -654,7 +654,7 @@ class ChapterUploaderProcess:
         else:
             return x
 
-    def _get_images_to_upload(self, start: int, stop: int):
+    def _get_images_to_upload(self, start: int, stop: int) -> tuple[int, int]:
         """Read the image data from the zip as list."""
         logging.debug(f"Reading zip for image data of images {start}-{stop}.")
         # Open zip file and read the data
@@ -696,14 +696,23 @@ class ChapterUploaderProcess:
                 with myzip.open(image) as myfile:
                     files.update({renamed_file: myfile.read()})
             self.images_to_upload = files
-        return stop, stop + self.images_upload_session
+
+        start_to_return = stop
+        stop_to_return = (
+            len(self.valid_images_to_upload)
+            if stop >= len(self.valid_images_to_upload)
+            else stop + self.images_upload_session
+        )
+        return start_to_return, stop_to_return
 
     def _upload_images(self, image_batch: Dict[str, bytes]) -> bool:
         """Try to upload every 10 (default) images to the upload session."""
         image_batch_list = list(image_batch.keys())
-        print(f"Uploading images {image_batch_list[0]} to {image_batch_list[-1]}.")
+        print(
+            f"Uploading images {int(image_batch_list[0])+1} to {int(image_batch_list[-1])+1}."
+        )
         logging.debug(
-            f"Uploading images {image_batch_list[0]} to {image_batch_list[-1]}."
+            f"Uploading images {int(image_batch_list[0])+1} to {int(image_batch_list[-1])+1}."
         )
 
         failed_image_upload = False
@@ -745,7 +754,7 @@ class ChapterUploaderProcess:
 
             if len(succesful_upload_data) == len(image_batch):
                 logging.info(
-                    f"Uploaded images {image_batch_list[0]} to {image_batch_list[-1]}."
+                    f"Uploaded images {int(image_batch_list[0])+1} to {int(image_batch_list[-1])+1}."
                 )
                 failed_image_upload = False
                 break
@@ -803,6 +812,7 @@ class ChapterUploaderProcess:
                 self.md_auth_object.login()
                 # self._delete_exising_upload_session(chapter_upload_session_retry)
             else:
+                print_error(existing_session)
                 logging.warning(
                     f"Couldn't delete the exising upload session, retrying."
                 )
@@ -861,6 +871,7 @@ class ChapterUploaderProcess:
     def _commit_chapter(self) -> bool:
         """Try commit the chapter to mangadex."""
         succesful_upload = False
+        chapter_commit_response: Optional[requests.Response] = None
         for commit_retries in range(self.number_upload_retry):
             chapter_commit_response = self.session.post(
                 f"{self.md_upload_api_url}/{self.upload_session_id}/commit",
@@ -908,8 +919,8 @@ class ChapterUploaderProcess:
                         break
 
                 new_uploaded_zip_path = self.to_upload.rename(
-                    self.uploaded_files_path.joinpath(zip_name).with_suffix(
-                        self.zip_extension
+                    os.path.join(
+                        self.uploaded_files_path, f"{zip_name}{self.zip_extension}"
                     )
                 )
                 logging.info(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
@@ -917,13 +928,18 @@ class ChapterUploaderProcess:
             elif chapter_commit_response.status_code == 401:
                 self.md_auth_object.login()
             else:
-                commit_fail_message = f"Failed to commit {self.zip_name}, error {chapter_commit_response.status_code} trying again."
+                error = print_error(chapter_commit_response)
+                commit_fail_message = (
+                    f"Failed to commit {self.zip_name}, error {error} trying again."
+                )
                 logging.warning(commit_fail_message)
                 print(commit_fail_message)
 
             time.sleep(self.ratelimit_time)
 
         if not succesful_upload:
+            if chapter_commit_response is not None:
+                print_error(chapter_commit_response)
             commit_error_message = (
                 f"Failed to commit {self.zip_name}, removing upload draft."
             )
@@ -963,10 +979,7 @@ class ChapterUploaderProcess:
             start, stop = self._get_images_to_upload(start, stop)
             failed_image_upload = self._upload_images(self.images_to_upload)
 
-            if failed_image_upload:
-                break
-
-            if stop >= len(self.valid_images_to_upload) or stop == -1:
+            if stop in (len(self.valid_images_to_upload), -1) or failed_image_upload:
                 break
 
         # Skip chapter upload and delete upload session
