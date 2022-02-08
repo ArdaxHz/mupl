@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.7.8"
+__version__ = "0.7.9"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -654,9 +654,10 @@ class ChapterUploaderProcess:
         else:
             return x
 
-    def _get_images_to_upload(self, start: int, stop: int) -> tuple[int, int]:
+    def _get_images_to_upload(self, start: int, stop: int) -> Optional[tuple[int, int]]:
         """Read the image data from the zip as list."""
         logging.debug(f"Reading zip for image data of images {start}-{stop}.")
+        zip_end = False
         # Open zip file and read the data
         with zipfile.ZipFile(self.to_upload) as myzip:
             info_list = myzip.infolist()
@@ -686,6 +687,9 @@ class ChapterUploaderProcess:
                 if x.filename in self.valid_images_to_upload[start:stop]
             ]
 
+            if images_to_read[-1] == self.valid_images_to_upload[-1]:
+                zip_end = True
+
             logging.info(f"Images to upload: {images_to_read}")
             files: Dict[str, bytes] = {}
             # Read the image data and add to files dict
@@ -703,7 +707,9 @@ class ChapterUploaderProcess:
             if stop >= len(self.valid_images_to_upload)
             else stop + self.images_upload_session
         )
-        return start_to_return, stop_to_return
+        if not zip_end:
+            return start_to_return, stop_to_return
+        return
 
     def _upload_images(self, image_batch: Dict[str, bytes]) -> bool:
         """Try to upload every 10 (default) images to the upload session."""
@@ -976,11 +982,17 @@ class ChapterUploaderProcess:
         failed_image_upload = False
 
         while True:
-            start, stop = self._get_images_to_upload(start, stop)
+            values = self._get_images_to_upload(start, stop)
             failed_image_upload = self._upload_images(self.images_to_upload)
 
-            if stop in (len(self.valid_images_to_upload), -1) or failed_image_upload:
+            if (
+                stop in (len(self.valid_images_to_upload), -1)
+                or failed_image_upload
+                or values is None
+            ):
                 break
+
+            start, stop = values
 
         # Skip chapter upload and delete upload session
         if failed_image_upload:
