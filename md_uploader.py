@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.7.9"
+__version__ = "0.8.0"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -676,6 +676,14 @@ class ChapterUploaderProcess:
                 info_list_images_only = natsorted(info_list_images_only, key=self._key)
                 self.valid_images_to_upload = info_list_images_only
 
+                if not self.valid_images_to_upload:
+                    no_valid_images_found_error_message = (
+                        f"{self.zip_name} has no valid images to upload, skipping."
+                    )
+                    print(no_valid_images_found_error_message)
+                    logging.error(no_valid_images_found_error_message)
+                    return
+
             stop = (
                 stop
                 if stop <= len(self.valid_images_to_upload)
@@ -686,6 +694,9 @@ class ChapterUploaderProcess:
                 for x in info_list
                 if x.filename in self.valid_images_to_upload[start:stop]
             ]
+
+            if not images_to_read:
+                return
 
             if images_to_read[-1] == self.valid_images_to_upload[-1]:
                 zip_end = True
@@ -713,6 +724,9 @@ class ChapterUploaderProcess:
 
     def _upload_images(self, image_batch: Dict[str, bytes]) -> bool:
         """Try to upload every 10 (default) images to the upload session."""
+        if not image_batch:
+            return True
+
         image_batch_list = list(image_batch.keys())
         print(
             f"Uploading images {int(image_batch_list[0])+1} to {int(image_batch_list[-1])+1}."
