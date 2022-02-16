@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.8.0"
+__version__ = "0.8.1"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -669,7 +669,7 @@ class ChapterUploaderProcess:
                     for image in info_list
                     if (
                         not image.is_dir()
-                        and Path(image.filename).suffix
+                        and Path(image.filename).suffix.lower()
                         in (".png", ".jpg", ".jpeg", ".gif")
                     )
                 ]
