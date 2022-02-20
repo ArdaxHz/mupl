@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.8.2"
+__version__ = "0.8.3"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -646,9 +646,11 @@ class ChapterUploaderProcess:
         self.ratelimit_time = ratelimit_time
         self.md_upload_api_url = f"{mangadex_api_url}/upload"
 
-        self.valid_images_to_upload: List[str] = []
-        self.images_to_upload: Dict[str, bytes] = {}
+        # Spliced list of lists
+        self.valid_images_to_upload: List[List[str]] = []
+        # Renamed file to original file name
         self.images_to_upload_names: Dict[str, str] = {}
+        # Images to include with chapter commit
         self.images_to_upload_ids: List[str] = []
         self.upload_session_id: Optional[str] = None
 
@@ -701,55 +703,25 @@ class ChapterUploaderProcess:
             to_iter = [x.filename for x in self.myzip.infolist()]
 
         info_list = [image for image in to_iter if self._get_image_mime_type(image)]
-
         info_list_images_only = natsorted(info_list, key=self._key)
-        self.valid_images_to_upload = info_list_images_only
-        return info_list
 
-    def _get_images_to_upload(self, start: int, stop: int) -> Optional[tuple[int, int]]:
-        """Read the image data from the zip as list."""
-        logging.debug(f"Reading zip for image data of images {start}-{stop}.")
-        zip_end = False
-
-        stop = (
-            stop
-            if stop <= len(self.valid_images_to_upload)
-            else len(self.valid_images_to_upload)
-        )
-        images_to_read = [
-            x for x in self.info_list if x in self.valid_images_to_upload[start:stop]
+        self.valid_images_to_upload = [
+            info_list_images_only[l : l + self.images_upload_session]
+            for l in range(0, len(info_list_images_only), self.images_upload_session)
         ]
+        return info_list_images_only
 
-        if not images_to_read:
-            return
-
-        if images_to_read[-1] == self.valid_images_to_upload[-1]:
-            zip_end = True
-
+    def _get_images_to_upload(self, images_to_read: List[str]) -> Dict[str, bytes]:
+        """Read the image data from the zip as list."""
         logging.info(f"Images to upload: {images_to_read}")
         files: Dict[str, bytes] = {}
         # Read the image data and add to files dict
         for array_index, image in enumerate(images_to_read, start=1):
             image_filename = str(Path(image).name)
-            renamed_file = str(self.valid_images_to_upload.index(image))
+            renamed_file = str(self.info_list.index(image))
             self.images_to_upload_names.update({renamed_file: image_filename})
-
-            if self.folder_upload:
-                files.update({renamed_file: self._read_image_data(image)})
-            else:
-                files.update({renamed_file: self._read_image_data(image)})
-
-        self.images_to_upload = files
-
-        start_to_return = stop
-        stop_to_return = (
-            len(self.valid_images_to_upload)
-            if stop >= len(self.valid_images_to_upload)
-            else stop + self.images_upload_session
-        )
-        if not zip_end:
-            return start_to_return, stop_to_return
-        return
+            files.update({renamed_file: self._read_image_data(image)})
+        return files
 
     def _upload_images(self, image_batch: Dict[str, bytes]) -> bool:
         """Try to upload every 10 (default) images to the upload session."""
@@ -1039,22 +1011,11 @@ class ChapterUploaderProcess:
         )
         logging.info(upload_session_id_message)
         print(upload_session_id_message)
-        start = 0
-        stop = self.images_upload_session
         failed_image_upload = False
 
-        while True:
-            values = self._get_images_to_upload(start, stop)
-            failed_image_upload = self._upload_images(self.images_to_upload)
-
-            if (
-                stop in (len(self.valid_images_to_upload), -1)
-                or failed_image_upload
-                or values is None
-            ):
-                break
-
-            start, stop = values
+        for images_array in self.valid_images_to_upload:
+            images_to_upload = self._get_images_to_upload(images_array)
+            failed_image_upload = self._upload_images(images_to_upload)
 
         if not self.folder_upload:
             self.myzip.close()
