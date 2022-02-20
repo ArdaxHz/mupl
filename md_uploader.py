@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -81,6 +81,11 @@ logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s",
     datefmt="%Y-%m-%d:%H:%M:%S",
+)
+
+FILE_NAME_REGEX = re.compile(
+    r"^(?:\[(?P<artist>.+?)?\])?\s?(?P<title>.+?)(?:\s?\[(?P<language>[a-zA-Z\-]{2,5}|[a-zA-Z]{3}|[a-zA-Z]+)?\])?\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?:(?P<group>.+))?\])?\s?(?:\{v?(?P<version>\d)?\})?(?:\.(?P<extension>zip|cbz))?$",
+    re.IGNORECASE,
 )
 
 
@@ -162,9 +167,6 @@ def convert_json(response_to_convert: requests.Response) -> Optional[dict]:
 
     logging.debug(
         f"Request id: {response_to_convert.headers.get('x-request-id', None)}"
-    )
-    logging.debug(
-        f"Correlation id: {response_to_convert.headers.get('x-correlation-id', None)}"
     )
 
     try:
@@ -416,12 +418,10 @@ class FileProcesser:
         self._names_to_ids = names_to_ids
         self._config = config
         self._uuid_regex = re.compile(
-            r"[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}"
-        )
-        self._file_name_regex = re.compile(
-            r"^(?:\[(?P<artist>.+?)?\])?\s?(?P<title>.+?)(?:\s?\[(?P<language>[a-zA-Z\-]{2,5}|[a-zA-Z]{3}|[a-zA-Z]+)?\])?\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?:(?P<group>.+))?\])?\s?(?:\{v?(?P<version>\d)?\})?(?:\.(?P<extension>zip|cbz))?$",
+            r"[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}",
             re.IGNORECASE,
         )
+        self._file_name_regex = FILE_NAME_REGEX
 
     def _match_file_name(self) -> Optional[re.Match[str]]:
         """Check for a full regex match of the file."""
@@ -633,6 +633,10 @@ class ChapterUploaderProcess:
         self.md_auth_object = md_auth_object
         self.zip_name = to_upload.name
         self.zip_extension = to_upload.suffix
+        self.folder_upload = False
+        if self.to_upload.is_dir():
+            self.folder_upload = True
+            self.zip_extension = None
 
         self.uploaded_files_path = Path(self.config["Paths"]["uploaded_files"])
         self.images_upload_session = int(
@@ -648,69 +652,94 @@ class ChapterUploaderProcess:
         self.images_to_upload_ids: List[str] = []
         self.upload_session_id: Optional[str] = None
 
+        self.myzip = None
+        if not self.folder_upload:
+            self.myzip = self._read_zip()
+
+        self.info_list = self._get_valid_images()
+
     def _key(self, x: str) -> Union[Literal[0], str]:
         if Path(x).name[0] in string.punctuation:
             return 0
         else:
             return x
 
+    def _read_image_data(self, image: str) -> bytes:
+        if self.folder_upload:
+            image_path = self.to_upload.joinpath(image)
+            return image_path.read_bytes()
+        else:
+            with self.myzip.open(image) as myfile:
+                return myfile.read()
+
+    def _read_zip(self) -> zipfile.ZipFile:
+        # Open zip file and read the data
+        return zipfile.ZipFile(self.to_upload)
+
+    def _get_image_mime_type(self, image: str) -> bool:
+        """Returns the image type from the first few bytes."""
+        image_data = self._read_image_data(image)
+
+        if image_data.startswith(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"):
+            return True
+        elif image_data[0:3] == b"\xff\xd8\xff" or image_data[6:10] in (
+            b"JFIF",
+            b"Exif",
+        ):
+            return True
+        elif image_data.startswith(
+            (b"\x47\x49\x46\x38\x37\x61", b"\x47\x49\x46\x38\x39\x61")
+        ):
+            return True
+        else:
+            return False
+
+    def _get_valid_images(self):
+        if self.folder_upload:
+            to_iter = [x.name for x in self.to_upload.iterdir()]
+        else:
+            to_iter = [x.filename for x in self.myzip.infolist()]
+
+        info_list = [image for image in to_iter if self._get_image_mime_type(image)]
+
+        info_list_images_only = natsorted(info_list, key=self._key)
+        self.valid_images_to_upload = info_list_images_only
+        return info_list
+
     def _get_images_to_upload(self, start: int, stop: int) -> Optional[tuple[int, int]]:
         """Read the image data from the zip as list."""
         logging.debug(f"Reading zip for image data of images {start}-{stop}.")
         zip_end = False
-        # Open zip file and read the data
-        with zipfile.ZipFile(self.to_upload) as myzip:
-            info_list = myzip.infolist()
-            # Remove any directories and none-image files from the zip info
-            # array
-            if not self.valid_images_to_upload:
-                info_list_images_only = [
-                    image.filename
-                    for image in info_list
-                    if (
-                        not image.is_dir()
-                        and Path(image.filename).suffix.lower()
-                        in (".png", ".jpg", ".jpeg", ".gif")
-                    )
-                ]
-                info_list_images_only = natsorted(info_list_images_only, key=self._key)
-                self.valid_images_to_upload = info_list_images_only
 
-                if not self.valid_images_to_upload:
-                    no_valid_images_found_error_message = (
-                        f"{self.zip_name} has no valid images to upload, skipping."
-                    )
-                    print(no_valid_images_found_error_message)
-                    logging.error(no_valid_images_found_error_message)
-                    return
+        stop = (
+            stop
+            if stop <= len(self.valid_images_to_upload)
+            else len(self.valid_images_to_upload)
+        )
+        images_to_read = [
+            x for x in self.info_list if x in self.valid_images_to_upload[start:stop]
+        ]
 
-            stop = (
-                stop
-                if stop <= len(self.valid_images_to_upload)
-                else len(self.valid_images_to_upload)
-            )
-            images_to_read = [
-                x.filename
-                for x in info_list
-                if x.filename in self.valid_images_to_upload[start:stop]
-            ]
+        if not images_to_read:
+            return
 
-            if not images_to_read:
-                return
+        if images_to_read[-1] == self.valid_images_to_upload[-1]:
+            zip_end = True
 
-            if images_to_read[-1] == self.valid_images_to_upload[-1]:
-                zip_end = True
+        logging.info(f"Images to upload: {images_to_read}")
+        files: Dict[str, bytes] = {}
+        # Read the image data and add to files dict
+        for array_index, image in enumerate(images_to_read, start=1):
+            image_filename = str(Path(image).name)
+            renamed_file = str(self.valid_images_to_upload.index(image))
+            self.images_to_upload_names.update({renamed_file: image_filename})
 
-            logging.info(f"Images to upload: {images_to_read}")
-            files: Dict[str, bytes] = {}
-            # Read the image data and add to files dict
-            for array_index, image in enumerate(images_to_read, start=1):
-                image_filename = str(Path(image).name)
-                renamed_file = str(self.valid_images_to_upload.index(image))
-                self.images_to_upload_names.update({renamed_file: image_filename})
-                with myzip.open(image) as myfile:
-                    files.update({renamed_file: myfile.read()})
-            self.images_to_upload = files
+            if self.folder_upload:
+                files.update({renamed_file: self._read_image_data(image)})
+            else:
+                files.update({renamed_file: self._read_image_data(image)})
+
+        self.images_to_upload = files
 
         start_to_return = stop
         stop_to_return = (
@@ -892,18 +921,22 @@ class ChapterUploaderProcess:
         """Try commit the chapter to mangadex."""
         succesful_upload = False
         chapter_commit_response: Optional[requests.Response] = None
+        payload = {
+            "chapterDraft": {
+                "volume": self.processed_zip_object.volume_number,
+                "chapter": self.processed_zip_object.chapter_number,
+                "title": self.processed_zip_object.chapter_title,
+                "translatedLanguage": self.processed_zip_object.language,
+            },
+            "pageOrder": self.images_to_upload_ids,
+        }
+
+        logging.debug(f"Payload: {payload}")
+
         for commit_retries in range(self.number_upload_retry):
             chapter_commit_response = self.session.post(
                 f"{self.md_upload_api_url}/{self.upload_session_id}/commit",
-                json={
-                    "chapterDraft": {
-                        "volume": self.processed_zip_object.volume_number,
-                        "chapter": self.processed_zip_object.chapter_number,
-                        "title": self.processed_zip_object.chapter_title,
-                        "translatedLanguage": self.processed_zip_object.language,
-                    },
-                    "pageOrder": self.images_to_upload_ids,
-                },
+                json=payload,
             )
 
             if chapter_commit_response.status_code == 200:
@@ -925,23 +958,30 @@ class ChapterUploaderProcess:
 
                 # Move the uploaded zips to a different folder
                 self.uploaded_files_path.mkdir(parents=True, exist_ok=True)
-                zip_name = self.zip_name.rsplit(".", 1)[0]
-                zip_path_str = f"{zip_name}{self.zip_extension}"
+                if self.folder_upload:
+                    zip_name = self.zip_name
+                else:
+                    zip_name = self.zip_name.rsplit(".", 1)[0]
+                zip_extension = self.zip_extension or ""
+                zip_path_str = f"{zip_name}{zip_extension}"
                 version = 1
 
                 while True:
                     version += 1
                     if zip_path_str in os.listdir(self.uploaded_files_path):
-                        zip_name = f"{self.zip_name.rsplit('.', 1)[0]}{{v{version}}}"
-                        zip_path_str = f"{zip_name}{self.zip_extension}"
+                        if self.folder_upload:
+                            zip_name_unformat = self.zip_name
+                        else:
+                            zip_name_unformat = self.zip_name.rsplit(".", 1)[0]
+
+                        zip_name = f"{zip_name_unformat}{{v{version}}}"
+                        zip_path_str = f"{zip_name}{zip_extension}"
                         continue
                     else:
                         break
 
                 new_uploaded_zip_path = self.to_upload.rename(
-                    os.path.join(
-                        self.uploaded_files_path, f"{zip_name}{self.zip_extension}"
-                    )
+                    os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}")
                 )
                 logging.info(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
                 break
@@ -950,7 +990,7 @@ class ChapterUploaderProcess:
             else:
                 error = print_error(chapter_commit_response)
                 commit_fail_message = (
-                    f"Failed to commit {self.zip_name}, error {error} trying again."
+                    f"Failed to commit {self.zip_name}, error {error}, trying again."
                 )
                 logging.warning(commit_fail_message)
                 print(commit_fail_message)
@@ -971,6 +1011,14 @@ class ChapterUploaderProcess:
 
     def start_chapter_upload(self):
         """Process the zip for uploading."""
+        if not self.valid_images_to_upload:
+            no_valid_images_found_error_message = (
+                f"{self.zip_name} has no valid images to upload, skipping."
+            )
+            print(no_valid_images_found_error_message)
+            logging.error(no_valid_images_found_error_message)
+            return
+
         self.processed_zip_object = FileProcesser(
             self.to_upload, self.names_to_ids, self.config
         )
@@ -1008,6 +1056,9 @@ class ChapterUploaderProcess:
 
             start, stop = values
 
+        if not self.folder_upload:
+            self.myzip.close()
+
         # Skip chapter upload and delete upload session
         if failed_image_upload:
             failed_image_upload_message = f"Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}."
@@ -1025,19 +1076,21 @@ def get_zips_to_upload(config: configparser.RawConfigParser) -> Optional[List[Pa
     """Get a list of files that end with a zip/cbz extension for uploading."""
     to_upload_folder_path = Path(config["Paths"]["uploads_folder"])
     zips_to_upload = [
-        x for x in to_upload_folder_path.iterdir() if x.suffix in (".zip", ".cbz")
+        x
+        for x in to_upload_folder_path.iterdir()
+        if bool(FILE_NAME_REGEX.match(x.name))
     ]
     zips_to_not_upload = [
-        x for x in to_upload_folder_path.iterdir() if x.suffix not in (".zip", ".cbz")
+        x for x in to_upload_folder_path.iterdir() if x not in zips_to_upload
     ]
 
-    if not zips_to_not_upload:
+    if zips_to_not_upload:
         logging.warning(
-            f"Skipping {len(zips_to_not_upload)} files as they don't have the correct extension: {zips_to_not_upload}"
+            f"Skipping {len(zips_to_not_upload)} files as they don't match the FILE_NAME_REGEX pattern: {zips_to_not_upload}"
         )
 
     if not zips_to_upload:
-        no_zips_found_error_message = "No zips found to upload, exiting."
+        no_zips_found_error_message = "No valid files found to upload, exiting."
         print(no_zips_found_error_message)
         logging.error(no_zips_found_error_message)
         return
@@ -1063,6 +1116,8 @@ def main(config: configparser.RawConfigParser):
                 to_upload, session, names_to_ids, config, failed_uploads, md_auth_object
             )
             uploader_process.start_chapter_upload()
+            if not uploader_process.folder_upload:
+                uploader_process.myzip.close()
 
             if index % 5 == 0:
                 md_auth_object.session = session = make_session()
@@ -1077,6 +1132,8 @@ def main(config: configparser.RawConfigParser):
             print("Keyboard interrupt detected, exiting.")
             try:
                 uploader_process.remove_upload_session()
+                if not uploader_process.folder_upload:
+                    uploader_process.myzip.close()
                 del uploader_process
             except UnboundLocalError:
                 pass
