@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.8.4"
+__version__ = "0.8.5"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -60,7 +60,7 @@ languages = [
     {"english": "Hebrew", "md": "he", "iso": "heb"},
     {"english": "Hindi", "md": "hi", "iso": "hin"},
     {"english": "Norwegian", "md": "no", "iso": "nor"},
-    {"english": "Other", "md": "NULL", "iso": "NULL"},
+    {"english": "Other", "md": "null", "iso": "null"},
 ]
 http_error_codes = {
     "400": "Bad request.",
@@ -1116,6 +1116,55 @@ def main(config: configparser.RawConfigParser):
             print(fail)
 
 
+def check_for_update():
+    """Check For any program updates."""
+    logging.debug("Looking for program update.")
+
+    # Check the local version is the same as on GitHub
+    remote_version_info_response = requests.get(
+        "https://raw.githubusercontent.com/Rudoal/mangadex_bulk_uploader/main/md_uploader.py"
+    )
+    if remote_version_info_response.ok:
+        remote_version_info = remote_version_info_response.content.decode()
+
+        ver_regex = re.compile(r"^__version__\s=\s\"(.+)\"$", re.MULTILINE)
+        match = ver_regex.search(remote_version_info)
+        remote_number = match.group(1)
+
+        local_version = int(__version__.replace(".", ""))
+        remote_version = int(remote_number.replace(".", ""))
+        logging.warning(
+            f"GitHub version: {remote_number}, local version: {__version__}."
+        )
+
+        if remote_version > local_version:
+            download_update = input(
+                f"""Looks like update {remote_number} is available, you're on {__version__}, do you want to download?
+                "y" or "n" """
+            )
+
+            if download_update.lower() == "y":
+                with open(
+                    root_path.joinpath(f"{__file__}").with_suffix(".py"), "wb"
+                ) as file:
+                    file.write(remote_version_info_response.content)
+
+                print(
+                    "Downloaded the update, next program run will use the new update."
+                )
+                logging.info(
+                    f"Successfully downloaded {remote_version}, will be used next program run."
+                )
+            else:
+                print("Skipping update, this might result in api errors.")
+                logging.warning("Update download skipped.")
+    else:
+        logging.error(
+            f"Error searching for update: {remote_version_info_response.status_code}."
+        )
+
+
 if __name__ == "__main__":
 
+    check_for_update()
     main(config)

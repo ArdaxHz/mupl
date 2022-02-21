@@ -1,6 +1,7 @@
 
 ## Only accepts zip files. Files to upload must be in a `to_upload` folder.
 ### Files must be named in the format `manga_title [lang] - cXXX (vYY) (chapter_title) [group]`
+#### To stop check for program update, comment [line 1169](./md_uploader.py#L1169)
 
 - `manga_title` can either be a key to be used in the `name_id_map.json` or the manga id.
 - `[lang]` is omitted for English. Use the languages table at the bottom of this page to find out which language code to use for MangaDex. 
@@ -10,7 +11,7 @@
 - `[group]` can be a list of groups. Separate each separate group with a `+`. Groups can be a key for the `name_id_map.json` file or the group ids.
 
 
-Copy the `.env.example` file and remove the `.example`. Put the respective details next to the equals sign.
+Copy the `config.ini.example` file and remove the `.example`. Put the respective details next to the equals sign.
 - `GROUP_FALLBACK_ID` will be used if the upload file has no groups, you can leave this blank if you do not wish to upload to any group.
 - `NUMBER_OF_IMAGES_UPLOAD` is the number of images to upload at once, a maximum of 10 images can be uploaded at once.
 - `UPLOAD_RETRY` is the number of times to retry uploading images or committing (releasing) the chapter.
