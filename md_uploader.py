@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.8.3"
+__version__ = "0.8.4"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -84,7 +84,15 @@ logging.basicConfig(
 )
 
 FILE_NAME_REGEX = re.compile(
-    r"^(?:\[(?P<artist>.+?)?\])?\s?(?P<title>.+?)(?:\s?\[(?P<language>[a-zA-Z\-]{2,5}|[a-zA-Z]{3}|[a-zA-Z]+)?\])?\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?\s?(?:\((?P<chapter_title>.+)\))?\s?(?:\[(?:(?P<group>.+))?\])?\s?(?:\{v?(?P<version>\d)?\})?(?:\.(?P<extension>zip|cbz))?$",
+    r"^(?:\[(?P<artist>.+?)?\])?\s?"  # Artist
+    r"(?P<title>.+?)"  # Manga title
+    r"(?:\s?\[(?P<language>[a-z]{2}(?:-[a-z]{2})?|[a-zA-Z]{3}|[a-zA-Z]+)?\])?"  # Language
+    r"\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?"  # Chapter number + prefix
+    r"(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?"  # Volume number
+    r"\s?(?:\((?P<chapter_title>.+)\))?"  # Chapter title
+    r"\s?(?:\[(?:(?P<group>.+))?\])?"  # Groups
+    r"\s?(?:\{v?(?P<version>\d)?\})?"  # Chapter version
+    r"(?:\.(?P<extension>zip|cbz))?$",  # File extension
     re.IGNORECASE,
 )
 
@@ -253,6 +261,28 @@ def make_session(headers: dict = {}) -> requests.Session:
     return session
 
 
+def open_manga_series_map(
+    config: configparser.RawConfigParser, files_path: Path
+) -> dict:
+    """Get the manga-name-to-id map."""
+    try:
+        with open(
+            files_path.joinpath(config["Paths"]["name_id_map_file"]), "r"
+        ) as json_file:
+            names_to_ids = json.load(json_file)
+    except FileNotFoundError:
+        not_found_error = f"The manga name-to-id json file couldn't be found. Continuing with an empty name-id map."
+        logging.error(not_found_error)
+        print(not_found_error)
+        return {"manga": {}, "group": {}}
+    except json.JSONDecodeError:
+        corrupted_error = f"The manga name-to-id json file is corrupted. Continuing with an empty name-id map."
+        logging.error(corrupted_error)
+        print(corrupted_error)
+        return {"manga": {}, "group": {}}
+    return names_to_ids
+
+
 class AuthMD:
     def __init__(self, session: requests.Session, config: configparser.RawConfigParser):
         self.session = session
@@ -387,28 +417,6 @@ class AuthMD:
             raise Exception("Couldn't login.")
 
 
-def open_manga_series_map(
-    config: configparser.RawConfigParser, files_path: Path
-) -> dict:
-    """Get the manga-name-to-id map."""
-    try:
-        with open(
-            files_path.joinpath(config["Paths"]["name_id_map_file"]), "r"
-        ) as json_file:
-            names_to_ids = json.load(json_file)
-    except FileNotFoundError:
-        not_found_error = f"The manga name-to-id json file couldn't be found. Continuing with an empty name-id map."
-        logging.error(not_found_error)
-        print(not_found_error)
-        return {"manga": {}, "group": {}}
-    except json.JSONDecodeError:
-        corrupted_error = f"The manga name-to-id json file is corrupted. Continuing with an empty name-id map."
-        logging.error(corrupted_error)
-        print(corrupted_error)
-        return {"manga": {}, "group": {}}
-    return names_to_ids
-
-
 class FileProcesser:
     def __init__(
         self, to_upload: Path, names_to_ids: dict, config: configparser.RawConfigParser
@@ -442,7 +450,6 @@ class FileProcesser:
             except KeyError:
                 manga_series = None
                 logging.warning(f"No manga id found for {manga_series}.")
-
         return manga_series
 
     def _get_language(self) -> str:
@@ -464,9 +471,9 @@ class FileProcesser:
         elif len(language) < 2:
             logging.warning(f"Language selected, {language} isn't in ISO format.")
             print("Not a valid language option.")
-            return "NULL"
+            return "null"
         # Chapter language already in correct format for MD
-        elif re.match(r"^[a-zA-Z\-]{2,5}$", language):
+        elif re.match(r"^[a-z]{2}(?:-[a-z]{2})?$", language):
             logging.info(f"Language {language} already in ISO-639-2 form.")
             return language
         # Language in iso-639-3 format already
@@ -475,7 +482,7 @@ class FileProcesser:
 
             if available_langs:
                 return available_langs[0]
-            return "NULL"
+            return "null"
         else:
             # Language is a word instead of code, look for language and use that
             # code
@@ -499,17 +506,17 @@ class FileProcesser:
                     )
                 except ValueError:
                     logging.warning(
-                        "Language option selected is not a number, using NULL as language."
+                        "Language option selected is not a number, using null as language."
                     )
                     print("That's not a number.")
-                    return "NULL"
+                    return "null"
 
                 if lang not in range(1, (len(languages_match) + 1)):
                     logging.warning(
                         "Language option selected is not in the accepted range."
                     )
                     print("Not a valid language option.")
-                    return "NULL"
+                    return "null"
 
                 lang_to_use = languages_match[(lang - 1)]
                 return lang_to_use["md"]
@@ -520,7 +527,7 @@ class FileProcesser:
         use None for the number if the chapter is a prefix."""
         chapter_number = self._zip_name_match.group("chapter")
         if chapter_number is not None:
-            parts = re.split(r"\.|\-", chapter_number)
+            parts = re.split(r"\.|\-|\,", chapter_number)
             parts[0] = "0" if len(parts[0].lstrip("0")) == 0 else parts[0].lstrip("0")
 
             chapter_number = ".".join(parts)
