@@ -10,10 +10,10 @@ from datetime import date
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Union
 
+import natsort
 import requests
-from natsort import natsorted
 
-__version__ = "0.8.7"
+__version__ = "0.8.8"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -727,7 +727,7 @@ class ChapterUploaderProcess:
             to_iter = [x.filename for x in self.myzip.infolist()]
 
         info_list = [image for image in to_iter if self._get_image_mime_type(image)]
-        info_list_images_only = natsorted(info_list, key=self._key)
+        info_list_images_only = natsort.natsorted(info_list, key=self._key)
 
         self.valid_images_to_upload = [
             info_list_images_only[l : l + self.images_upload_session]
@@ -1090,7 +1090,7 @@ def get_zips_to_upload(config: configparser.RawConfigParser) -> Optional[List[Pa
         for x in to_upload_folder_path.iterdir()
         if bool(FILE_NAME_REGEX.match(x.name))
     ]
-    zips_to_upload = natsorted(zips_to_upload)
+    zips_to_upload = natsort.os_sorted(zips_to_upload)
     zips_to_not_upload = [
         x for x in to_upload_folder_path.iterdir() if x not in zips_to_upload
     ]
