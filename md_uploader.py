@@ -6,14 +6,14 @@ import re
 import string
 import time
 import zipfile
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Union
 
 import natsort
 import requests
 
-__version__ = "0.8.8"
+__version__ = "0.8.9"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -86,12 +86,13 @@ logging.basicConfig(
 FILE_NAME_REGEX = re.compile(
     r"^(?:\[(?P<artist>.+?)?\])?\s?"  # Artist
     r"(?P<title>.+?)"  # Manga title
-    r"(?:\s?\[(?P<language>[a-z]{2}(?:-[a-z]{2})?|[a-zA-Z]{3}|[a-zA-Z]+)?\])?"  # Language
-    r"\s?-\s?(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?"  # Chapter number + prefix
+    r"(?:\s?\[(?P<language>[a-z]{2}(?:-[a-z]{2})?|[a-zA-Z]{3}|[a-zA-Z]+)?\])?\s-\s"  # Language
+    r"(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?"  # Chapter number and prefix
     r"(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?"  # Volume number
-    r"\s?(?:\((?P<chapter_title>.+)\))?"  # Chapter title
-    r"\s?(?:\[(?:(?P<group>.+))?\])?"  # Groups
-    r"\s?(?:\{v?(?P<version>\d)?\})?"  # Chapter version
+    r"(?:\s?\((?P<chapter_title>.+)\))?"  # Chapter title
+    r"(?:\s?\{(?P<publish_date>\d{4}-[0-1]\d-(?:[0-2]\d|3[0-1]))\})?"  # Publish date
+    r"(?:\s?\[(?:(?P<group>.+))?\])?"  # Groups
+    r"(?:\s?\{v?(?P<version>\d)?\})?"  # Chapter version
     r"(?:\.(?P<extension>zip|cbz))?$",  # File extension
     re.IGNORECASE,
 )
@@ -570,8 +571,25 @@ class FileProcesser:
         chapter_title = self._zip_name_match.group("chapter_title")
         if chapter_title is not None:
             # Add the question mark back to the chapter title
-            chapter_title = chapter_title.replace("<question_mark>", "?")
+            chapter_title = chapter_title.replace(r"{question_mark}", "?")
         return chapter_title
+
+    def _get_publish_date(self):
+        """Get the chapter publish date."""
+        publish_date = self._zip_name_match.group("publish_date")
+        if datetime.fromisoformat(
+            f"{publish_date}T00:00:00"
+        ) > datetime.now() + timedelta(weeks=2):
+            publish_date_over_2_weeks_error = f"Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
+            logging.warning(publish_date_over_2_weeks_error)
+            print(publish_date_over_2_weeks_error)
+
+        if datetime.fromisoformat(f"{publish_date}T00:00:00") < datetime.now():
+            publish_date_before_current_error = f"Chosen publish date is before the current date, not setting a publish date."
+            logging.warning(publish_date_before_current_error)
+            print(publish_date_before_current_error)
+            publish_date = None
+        return publish_date
 
     def _get_groups(self) -> List[str]:
         """Get the group ids from the file, use the group fallback if the file has no gorups."""
@@ -631,8 +649,9 @@ class FileProcesser:
         self.volume_number = self._get_volume_number()
         self.groups = self._get_groups()
         self.chapter_title = self._get_chapter_title()
+        self.publish_date = self._get_publish_date()
 
-        upload_details = f"Manga id: {self.manga_series}, chapter: {self.chapter_number}, volume: {self.volume_number}, title: {self.chapter_title}, language: {self.language}, groups: {self.groups}."
+        upload_details = f"Manga id: {self.manga_series}, chapter: {self.chapter_number}, volume: {self.volume_number}, title: {self.chapter_title}, language: {self.language}, groups: {self.groups}, publish on: {self.publish_date}."
         logging.info(f"Chapter upload details: {upload_details}")
         print(upload_details)
         return True
@@ -951,6 +970,11 @@ class ChapterUploaderProcess:
         logging.debug(f"Payload: {payload}")
 
         for commit_retries in range(self.number_upload_retry):
+            if self.processed_zip_object.publish_date is not None:
+                payload["chapterDraft"][
+                    "publishAt"
+                ] = f"{self.processed_zip_object.publish_date}T{datetime.now().strftime('%H:%M:%S')}"
+
             try:
                 chapter_commit_response = self.session.post(
                     f"{self.md_upload_api_url}/{self.upload_session_id}/commit",
