@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.8.6"
+__version__ = "0.8.7"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -164,7 +164,8 @@ def open_config_file(root_path: Path) -> configparser.RawConfigParser:
 
 config = open_config_file(root_path)
 mangadex_api_url = config["Paths"]["mangadex_api_url"]
-ratelimit_time = int(config["User Set"]["ratelimit_time"])
+RATELIMIT_TIME = int(config["User Set"]["ratelimit_time"])
+UPLOAD_RETRY = int(config["User Set"]["upload_retry"])
 
 
 def convert_json(response_to_convert: requests.Response) -> Optional[dict]:
@@ -211,7 +212,7 @@ def print_error(error_response: requests.Response) -> str:
         error_message = f"429: {http_error_codes.get(str(status_code))}"
         logging.error(error_message)
         print(error_message)
-        time.sleep(ratelimit_time * 4)
+        time.sleep(RATELIMIT_TIME * 4)
         return error_message
 
     # Api didn't return json object
@@ -318,46 +319,57 @@ class AuthMD:
 
     def _refresh_token(self) -> bool:
         """Use the refresh token to get a new session token."""
-        refresh_response = self.session.post(
-            f"{self.md_auth_api_url}/refresh", json={"token": self.refresh_token}
-        )
+        for i in range(UPLOAD_RETRY):
+            try:
+                refresh_response = self.session.post(
+                    f"{self.md_auth_api_url}/refresh",
+                    json={"token": self.refresh_token},
+                )
+            except requests.RequestException as e:
+                logging.error(e)
+                continue
 
-        if refresh_response.status_code == 200:
-            refresh_response_json = convert_json(refresh_response)
-            if refresh_response_json is not None:
-                refresh_data = refresh_response_json["token"]
+            if refresh_response.status_code == 200:
+                refresh_response_json = convert_json(refresh_response)
+                if refresh_response_json is not None:
+                    refresh_data = refresh_response_json["token"]
 
-                self._update_headers(refresh_data["session"])
-                self._save_session(refresh_data)
-                return True
-            return False
-        elif refresh_response.status_code in (401, 403):
-            error = print_error(refresh_response)
-            logging.warning(
-                f"Couldn't login using refresh token, logging in using your account. Error: {error}"
-            )
-            return self._login_using_details()
-        else:
-            error = print_error(refresh_response)
-            logging.error(f"Couldn't refresh token. Error: {error}")
-            return False
+                    self._update_headers(refresh_data["session"])
+                    self._save_session(refresh_data)
+                    return True
+                continue
+            elif refresh_response.status_code in (401, 403):
+                error = print_error(refresh_response)
+                logging.warning(
+                    f"Couldn't login using refresh token, logging in using your account. Error: {error}"
+                )
+                return self._login_using_details()
+
+        error = print_error(refresh_response)
+        logging.error(f"Couldn't refresh token. Error: {error}")
+        return False
 
     def _check_login(self) -> bool:
         """Try login using saved session token."""
-        auth_check_response = self.session.get(f"{self.md_auth_api_url}/check")
+        for i in range(UPLOAD_RETRY):
+            try:
+                auth_check_response = self.session.get(f"{self.md_auth_api_url}/check")
+            except requests.RequestException as e:
+                logging.error(e)
+                continue
 
-        if auth_check_response.status_code == 200:
-            auth_data = convert_json(auth_check_response)
-            if auth_data is not None:
-                if auth_data["isAuthenticated"]:
-                    logging.info("Already logged in.")
-                    return True
+            if auth_check_response.status_code == 200:
+                auth_data = convert_json(auth_check_response)
+                if auth_data is not None:
+                    if auth_data["isAuthenticated"]:
+                        logging.info("Already logged in.")
+                        return True
 
-        if self.refresh_token is None:
-            self.refresh_token = self._open_auth_file()
             if self.refresh_token is None:
-                return self._login_using_details()
-        return self._refresh_token()
+                self.refresh_token = self._open_auth_file()
+                if self.refresh_token is None:
+                    return self._login_using_details()
+            return self._refresh_token()
 
     def _login_using_details(self) -> bool:
         """Login using account details."""
@@ -369,18 +381,23 @@ class AuthMD:
             logging.critical(critical_message)
             raise Exception(critical_message)
 
-        login_response = self.session.post(
-            f"{self.md_auth_api_url}/login",
-            json={"username": username, "password": password},
-        )
+        for i in range(UPLOAD_RETRY):
+            try:
+                login_response = self.session.post(
+                    f"{self.md_auth_api_url}/login",
+                    json={"username": username, "password": password},
+                )
+            except requests.RequestException as e:
+                logging.error(e)
+                continue
 
-        if login_response.status_code == 200:
-            login_response_json = convert_json(login_response)
-            if login_response_json is not None:
-                login_token = login_response_json["token"]
-                self._update_headers(login_token["session"])
-                self._save_session(login_token)
-                return True
+            if login_response.status_code == 200:
+                login_response_json = convert_json(login_response)
+                if login_response_json is not None:
+                    login_token = login_response_json["token"]
+                    self._update_headers(login_token["session"])
+                    self._save_session(login_token)
+                    return True
 
         error = print_error(login_response)
         logging.error(
@@ -649,8 +666,8 @@ class ChapterUploaderProcess:
         self.images_upload_session = int(
             self.config["User Set"]["number_of_images_upload"]
         )
-        self.number_upload_retry = int(self.config["User Set"]["upload_retry"])
-        self.ratelimit_time = ratelimit_time
+        self.number_upload_retry = UPLOAD_RETRY
+        self.ratelimit_time = RATELIMIT_TIME
         self.md_upload_api_url = f"{mangadex_api_url}/upload"
 
         # Spliced list of lists
@@ -746,9 +763,14 @@ class ChapterUploaderProcess:
         failed_image_upload = False
         for image_retries in range(self.number_upload_retry):
             # Upload the images
-            image_upload_response = self.session.post(
-                f"{self.md_upload_api_url}/{self.upload_session_id}", files=image_batch
-            )
+            try:
+                image_upload_response = self.session.post(
+                    f"{self.md_upload_api_url}/{self.upload_session_id}",
+                    files=image_batch,
+                )
+            except requests.RequestException as e:
+                logging.error(e)
+                continue
 
             if image_upload_response.status_code != 200:
                 error = print_error(image_upload_response)
@@ -809,9 +831,14 @@ class ChapterUploaderProcess:
         if session_id is None:
             session_id = self.upload_session_id
 
-        self.session.delete(f"{self.md_upload_api_url}/{session_id}")
-        logging.info(f"Sent {session_id} to be deleted.")
-        time.sleep(self.ratelimit_time)
+        try:
+            self.session.delete(f"{self.md_upload_api_url}/{session_id}")
+        except requests.RequestException as e:
+            logging.error(f"Couldn't delete {session_id}: {e}")
+        else:
+            logging.info(f"Sent {session_id} to be deleted.")
+        finally:
+            time.sleep(self.ratelimit_time)
 
     def _delete_exising_upload_session(self, chapter_upload_session_retry: int):
         """Remove any exising upload sessions to not error out as mangadex only allows one upload session at a time."""
@@ -819,7 +846,11 @@ class ChapterUploaderProcess:
             return
 
         for removal_retry in range(self.number_upload_retry):
-            existing_session = self.session.get(f"{mangadex_api_url}/upload")
+            try:
+                existing_session = self.session.get(f"{mangadex_api_url}/upload")
+            except requests.RequestException as e:
+                logging.error(e)
+                continue
 
             if existing_session.status_code == 200:
                 existing_session_json = convert_json(existing_session)
@@ -845,7 +876,7 @@ class ChapterUploaderProcess:
                     f"Couldn't delete the exising upload session, retrying."
                 )
 
-            time.sleep(ratelimit_time)
+            time.sleep(RATELIMIT_TIME)
 
         logging.error("Exising upload session not deleted.")
         raise Exception(f"Couldn't delete existing upload session.")
@@ -853,16 +884,23 @@ class ChapterUploaderProcess:
     def _create_upload_session(self) -> Optional[dict]:
         """Try create an upload session 3 times."""
         chapter_upload_session_successful = False
+
+        payload = {
+            "manga": self.processed_zip_object.manga_series,
+            "groups": self.processed_zip_object.groups,
+        }
+
         for chapter_upload_session_retry in range(self.number_upload_retry):
             self._delete_exising_upload_session(chapter_upload_session_retry)
             # Start the upload session
-            upload_session_response = self.session.post(
-                f"{self.md_upload_api_url}/begin",
-                json={
-                    "manga": self.processed_zip_object.manga_series,
-                    "groups": self.processed_zip_object.groups,
-                },
-            )
+            try:
+                upload_session_response = self.session.post(
+                    f"{self.md_upload_api_url}/begin",
+                    json=payload,
+                )
+            except requests.RequestException as e:
+                logging.error(e)
+                continue
 
             if upload_session_response.status_code == 401:
                 self.md_auth_object.login()
@@ -913,10 +951,14 @@ class ChapterUploaderProcess:
         logging.debug(f"Payload: {payload}")
 
         for commit_retries in range(self.number_upload_retry):
-            chapter_commit_response = self.session.post(
-                f"{self.md_upload_api_url}/{self.upload_session_id}/commit",
-                json=payload,
-            )
+            try:
+                chapter_commit_response = self.session.post(
+                    f"{self.md_upload_api_url}/{self.upload_session_id}/commit",
+                    json=payload,
+                )
+            except requests.RequestException as e:
+                logging.error(e)
+                continue
 
             if chapter_commit_response.status_code == 200:
                 succesful_upload = True
@@ -1095,7 +1137,7 @@ def main(config: configparser.RawConfigParser):
             del uploader_process
 
             logging.debug("Sleeping between zip upload.")
-            time.sleep(ratelimit_time * 2)
+            time.sleep(RATELIMIT_TIME * 2)
         except KeyboardInterrupt:
             logging.warning("Keyboard Interrupt detected, exiting.")
             print("Keyboard interrupt detected, exiting.")
