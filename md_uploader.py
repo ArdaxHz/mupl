@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import requests
 from natsort import natsorted
 
-__version__ = "0.8.5"
+__version__ = "0.8.6"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -1048,6 +1048,7 @@ def get_zips_to_upload(config: configparser.RawConfigParser) -> Optional[List[Pa
         for x in to_upload_folder_path.iterdir()
         if bool(FILE_NAME_REGEX.match(x.name))
     ]
+    zips_to_upload = natsorted(zips_to_upload)
     zips_to_not_upload = [
         x for x in to_upload_folder_path.iterdir() if x not in zips_to_upload
     ]
