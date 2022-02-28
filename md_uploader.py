@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.8.9"
+__version__ = "0.8.91"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -577,18 +577,19 @@ class FileProcesser:
     def _get_publish_date(self):
         """Get the chapter publish date."""
         publish_date = self._zip_name_match.group("publish_date")
-        if datetime.fromisoformat(
-            f"{publish_date}T00:00:00"
-        ) > datetime.now() + timedelta(weeks=2):
-            publish_date_over_2_weeks_error = f"Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
-            logging.warning(publish_date_over_2_weeks_error)
-            print(publish_date_over_2_weeks_error)
+        if publish_date is not None:
+            if datetime.fromisoformat(
+                f"{publish_date}T00:00:00"
+            ) > datetime.now() + timedelta(weeks=2):
+                publish_date_over_2_weeks_error = f"Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
+                logging.warning(publish_date_over_2_weeks_error)
+                print(publish_date_over_2_weeks_error)
 
-        if datetime.fromisoformat(f"{publish_date}T00:00:00") < datetime.now():
-            publish_date_before_current_error = f"Chosen publish date is before the current date, not setting a publish date."
-            logging.warning(publish_date_before_current_error)
-            print(publish_date_before_current_error)
-            publish_date = None
+            if datetime.fromisoformat(f"{publish_date}T00:00:00") < datetime.now():
+                publish_date_before_current_error = f"Chosen publish date is before the current date, not setting a publish date."
+                logging.warning(publish_date_before_current_error)
+                print(publish_date_before_current_error)
+                publish_date = None
         return publish_date
 
     def _get_groups(self) -> List[str]:
