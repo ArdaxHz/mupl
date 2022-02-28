@@ -1,13 +1,14 @@
 
 ## Only accepts zip files. Files to upload must be in a `to_upload` folder.
-### Files must be named in the format `manga_title [lang] - cXXX (vYY) (chapter_title) [group]`
-#### To stop check for program update, comment [line 1169](./md_uploader.py#L1169)
+### Files must be named in the format `manga_title [lang] - cXXX (vYY) (chapter_title) {publish_date} [group]`
+#### To stop check for program update, comment [line 1236](./md_uploader.py#L1236), the check_for_update() method.
 
 - `manga_title` can either be a key to be used in the `name_id_map.json` or the manga id.
 - `[lang]` is omitted for English. Use the languages table at the bottom of this page to find out which language code to use for MangaDex. 
 - Omit the chapter prefix if the chapter is a oneshot, e.g. `cXXX` > `XXX`.
 - `(vYY)` can be omitted if the chapter has no volume.
-- `(chapter_title)` can be omitted if the chapter has no title. Use `<question_mark>` in place where there would be a `?`.
+- `(chapter_title)` can be omitted if the chapter has no title. Use `{question_mark}` in place where there would be a `?`.
+- `{publish_date}` can be omitted and MUST be in the format `YYYY-MM-DD` if included.
 - `[group]` can be a list of groups. Separate each separate group with a `+`. Groups can be a key for the `name_id_map.json` file or the group ids.
 
 
