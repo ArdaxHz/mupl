@@ -13,7 +13,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.8.91"
+__version__ = "0.8.92"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -371,6 +371,7 @@ class AuthMD:
                 if self.refresh_token is None:
                     return self._login_using_details()
             return self._refresh_token()
+        return False
 
     def _login_using_details(self) -> bool:
         """Login using account details."""
