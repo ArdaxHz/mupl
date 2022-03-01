@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import ssl
 import string
 import time
 import zipfile
@@ -326,9 +327,12 @@ class AuthMD:
                     f"{self.md_auth_api_url}/refresh",
                     json={"token": self.refresh_token},
                 )
-            except requests.RequestException as e:
+            except (requests.exceptions.SSLError, ssl.SSLEOFError) as e:
                 logging.error(e)
                 continue
+            except requests.RequestException as e:
+                logging.critical(e)
+                break
 
             if refresh_response.status_code == 200:
                 refresh_response_json = convert_json(refresh_response)
@@ -355,9 +359,12 @@ class AuthMD:
         for i in range(UPLOAD_RETRY):
             try:
                 auth_check_response = self.session.get(f"{self.md_auth_api_url}/check")
-            except requests.RequestException as e:
+            except (requests.exceptions.SSLError, ssl.SSLEOFError) as e:
                 logging.error(e)
                 continue
+            except requests.RequestException as e:
+                logging.critical(e)
+                break
 
             if auth_check_response.status_code == 200:
                 auth_data = convert_json(auth_check_response)
@@ -389,9 +396,12 @@ class AuthMD:
                     f"{self.md_auth_api_url}/login",
                     json={"username": username, "password": password},
                 )
-            except requests.RequestException as e:
+            except (requests.exceptions.SSLError, ssl.SSLEOFError) as e:
                 logging.error(e)
                 continue
+            except requests.RequestException as e:
+                logging.critical(e)
+                break
 
             if login_response.status_code == 200:
                 login_response_json = convert_json(login_response)
@@ -789,9 +799,12 @@ class ChapterUploaderProcess:
                     f"{self.md_upload_api_url}/{self.upload_session_id}",
                     files=image_batch,
                 )
-            except requests.RequestException as e:
+            except (requests.exceptions.SSLError, ssl.SSLEOFError) as e:
                 logging.error(e)
                 continue
+            except requests.RequestException as e:
+                logging.critical(e)
+                break
 
             if image_upload_response.status_code != 200:
                 error = print_error(image_upload_response)
@@ -854,7 +867,7 @@ class ChapterUploaderProcess:
 
         try:
             self.session.delete(f"{self.md_upload_api_url}/{session_id}")
-        except requests.RequestException as e:
+        except (requests.RequestException) as e:
             logging.error(f"Couldn't delete {session_id}: {e}")
         else:
             logging.info(f"Sent {session_id} to be deleted.")
@@ -869,9 +882,12 @@ class ChapterUploaderProcess:
         for removal_retry in range(self.number_upload_retry):
             try:
                 existing_session = self.session.get(f"{mangadex_api_url}/upload")
-            except requests.RequestException as e:
+            except (requests.exceptions.SSLError, ssl.SSLEOFError) as e:
                 logging.error(e)
                 continue
+            except requests.RequestException as e:
+                logging.critical(e)
+                break
 
             if existing_session.status_code == 200:
                 existing_session_json = convert_json(existing_session)
@@ -919,9 +935,12 @@ class ChapterUploaderProcess:
                     f"{self.md_upload_api_url}/begin",
                     json=payload,
                 )
-            except requests.RequestException as e:
+            except (requests.exceptions.SSLError, ssl.SSLEOFError) as e:
                 logging.error(e)
                 continue
+            except requests.RequestException as e:
+                logging.critical(e)
+                break
 
             if upload_session_response.status_code == 401:
                 self.md_auth_object.login()
@@ -982,9 +1001,12 @@ class ChapterUploaderProcess:
                     f"{self.md_upload_api_url}/{self.upload_session_id}/commit",
                     json=payload,
                 )
-            except requests.RequestException as e:
+            except (requests.exceptions.SSLError, ssl.SSLEOFError) as e:
                 logging.error(e)
                 continue
+            except requests.RequestException as e:
+                logging.critical(e)
+                break
 
             if chapter_commit_response.status_code == 200:
                 succesful_upload = True
