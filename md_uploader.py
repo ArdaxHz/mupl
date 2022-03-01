@@ -204,9 +204,11 @@ def convert_json(response_to_convert: requests.Response) -> Optional[dict]:
 def print_error(error_response: requests.Response) -> str:
     """Print the errors the site returns."""
     status_code = error_response.status_code
-    error_converting_json_log_message = "{} when converting error_response into json."
+    error_converting_json_log_message = (
+        "{} when converting the error response into json."
+    )
     error_converting_json_print_message = (
-        f"{status_code}: Couldn't convert api reposnse into json."
+        f"{status_code}: Couldn't convert api response into json."
     )
     error_message = ""
 
