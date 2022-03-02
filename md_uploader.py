@@ -14,7 +14,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.8.92"
+__version__ = "0.8.93"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -64,11 +64,15 @@ languages = [
     {"english": "Other", "md": "null", "iso": "null"},
 ]
 http_error_codes = {
-    "400": "Bad request.",
+    "400": "Bad Request.",
     "401": "Unauthorised.",
     "403": "Forbidden.",
-    "404": "Not found.",
-    "429": "Too many requests.",
+    "404": "Not Found.",
+    "429": "Too Many Requests.",
+    "500": "Internal Server Error.",
+    "502": "Bad Gateway.",
+    "503": "Service Unavailable.",
+    "504": "Gateway Timeout.",
 }
 
 
@@ -201,7 +205,12 @@ def convert_json(response_to_convert: requests.Response) -> Optional[dict]:
     return converted_response
 
 
-def print_error(error_response: requests.Response) -> str:
+def print_error(
+    error_response: requests.Response,
+    *,
+    show_error: bool = True,
+    log_error: bool = False,
+) -> str:
     """Print the errors the site returns."""
     status_code = error_response.status_code
     error_converting_json_log_message = (
@@ -214,8 +223,10 @@ def print_error(error_response: requests.Response) -> str:
 
     if status_code == 429:
         error_message = f"429: {http_error_codes.get(str(status_code))}"
-        logging.error(error_message)
-        print(error_message)
+        if log_error:
+            logging.error(error_message)
+        if show_error:
+            print(error_message)
         time.sleep(RATELIMIT_TIME * 4)
         return error_message
 
@@ -228,7 +239,7 @@ def print_error(error_response: requests.Response) -> str:
         return error_converting_json_print_message
     # Maybe already a json object
     except AttributeError:
-        logging.error(f"error_response is already a json.")
+        logging.error(f"Error response is already a json.")
         # Try load as a json object
         try:
             error_json = json.loads(error_response.content)
@@ -249,12 +260,16 @@ def print_error(error_response: requests.Response) -> str:
             errors = http_error_codes.get(str(status_code), "")
 
         error_message = f"Error: {errors}"
-        logging.warning(error_message)
-        print(error_message)
+        if log_error:
+            logging.warning(error_message)
+        if show_error:
+            print(error_message)
     except KeyError:
         error_message = f"KeyError {status_code}: {error_json}."
-        logging.warning(error_message)
-        print(error_message)
+        if log_error:
+            logging.warning(error_message)
+        if show_error:
+            print(error_message)
 
     return error_message
 
@@ -336,7 +351,7 @@ class AuthMD:
                 logging.critical(e)
                 break
 
-            if refresh_response.status_code == 200:
+            if refresh_response.status_code in range(200, 300):
                 refresh_response_json = convert_json(refresh_response)
                 if refresh_response_json is not None:
                     refresh_data = refresh_response_json["token"]
@@ -348,12 +363,12 @@ class AuthMD:
             elif refresh_response.status_code in (401, 403):
                 error = print_error(refresh_response)
                 logging.warning(
-                    f"Couldn't login using refresh token, logging in using your account. Error: {error}"
+                    f"Couldn't login using refresh token, logging in using your account. {error}"
                 )
                 return self._login_using_details()
 
         error = print_error(refresh_response)
-        logging.error(f"Couldn't refresh token. Error: {error}")
+        logging.error(f"Couldn't refresh token. {error}")
         return False
 
     def _check_login(self) -> bool:
@@ -368,7 +383,7 @@ class AuthMD:
                 logging.critical(e)
                 break
 
-            if auth_check_response.status_code == 200:
+            if auth_check_response.status_code in range(200, 300):
                 auth_data = convert_json(auth_check_response)
                 if auth_data is not None:
                     if auth_data["isAuthenticated"]:
@@ -405,7 +420,7 @@ class AuthMD:
                 logging.critical(e)
                 break
 
-            if login_response.status_code == 200:
+            if login_response.status_code in range(200, 300):
                 login_response_json = convert_json(login_response)
                 if login_response_json is not None:
                     login_token = login_response_json["token"]
@@ -415,7 +430,7 @@ class AuthMD:
 
         error = print_error(login_response)
         logging.error(
-            f"Couldn't login to mangadex using the details provided. Error: {error}."
+            f"Couldn't login to mangadex using the details provided. {error}."
         )
         return False
 
@@ -808,9 +823,9 @@ class ChapterUploaderProcess:
                 logging.critical(e)
                 break
 
-            if image_upload_response.status_code != 200:
+            if image_upload_response.status_code not in range(200, 300):
                 error = print_error(image_upload_response)
-                logging.error(f"Error uploading images. Error: {error}")
+                logging.error(f"Error uploading images. {error}")
                 failed_image_upload = True
                 continue
 
@@ -822,7 +837,7 @@ class ChapterUploaderProcess:
                 or uploaded_image_data["result"] == "error"
             ):
                 error = print_error(image_upload_response)
-                logging.warning(f"Some images errored out. Error: {error}")
+                logging.warning(f"Some images errored out. {error}")
 
             # Add successful image uploads to the image ids array
             for uploaded_image in succesful_upload_data:
@@ -891,7 +906,7 @@ class ChapterUploaderProcess:
                 logging.critical(e)
                 break
 
-            if existing_session.status_code == 200:
+            if existing_session.status_code in range(200, 300):
                 existing_session_json = convert_json(existing_session)
 
                 if existing_session_json is None:
@@ -910,7 +925,7 @@ class ChapterUploaderProcess:
                 self.md_auth_object.login()
                 # self._delete_exising_upload_session(chapter_upload_session_retry)
             else:
-                print_error(existing_session)
+                print_error(existing_session, log_error=True)
                 logging.warning(
                     f"Couldn't delete the exising upload session, retrying."
                 )
@@ -946,14 +961,14 @@ class ChapterUploaderProcess:
 
             if upload_session_response.status_code == 401:
                 self.md_auth_object.login()
-            elif upload_session_response.status_code != 200:
+            elif upload_session_response.status_code not in range(200, 300):
                 error = print_error(upload_session_response)
                 logging.error(
-                    f"Couldn't create upload draft for {self.zip_name}. Error: {error}"
+                    f"Couldn't create upload draft for {self.zip_name}. {error}"
                 )
                 print(f"Error creating draft for {self.zip_name}.")
 
-            if upload_session_response.status_code == 200:
+            if upload_session_response.status_code in range(200, 300):
                 upload_session_response_json = convert_json(upload_session_response)
 
                 if upload_session_response_json is not None:
@@ -1010,7 +1025,7 @@ class ChapterUploaderProcess:
                 logging.critical(e)
                 break
 
-            if chapter_commit_response.status_code == 200:
+            if chapter_commit_response.status_code in range(200, 300):
                 succesful_upload = True
                 chapter_commit_response_json = convert_json(chapter_commit_response)
 
@@ -1070,7 +1085,7 @@ class ChapterUploaderProcess:
 
         if not succesful_upload:
             if chapter_commit_response is not None:
-                print_error(chapter_commit_response)
+                print_error(chapter_commit_response, log_error=True)
             commit_error_message = (
                 f"Failed to commit {self.zip_name}, removing upload draft."
             )
@@ -1115,6 +1130,9 @@ class ChapterUploaderProcess:
         for images_array in self.valid_images_to_upload:
             images_to_upload = self._get_images_to_upload(images_array)
             failed_image_upload = self._upload_images(images_to_upload)
+
+            if failed_image_upload:
+                break
 
         if not self.folder_upload:
             self.myzip.close()
