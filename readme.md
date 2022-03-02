@@ -1,7 +1,9 @@
 
-## Only accepts zip files. Files to upload must be in a `to_upload` folder.
-### Files must be named in the format `manga_title [lang] - cXXX (vYY) (chapter_title) {publish_date} [group]`
+## Accepts zip files and folders. Files and folders to upload must be in a `to_upload` folder.
+### File names **MUST** be in the format `manga_title [lang] - cXXX (vYY) (chapter_title) {publish_date} [group]`
 #### To stop check for program update, comment the check_for_update() method call.
+
+----
 
 - `manga_title` can either be a key to be used in the `name_id_map.json` or the manga id.
 - `[lang]` is omitted for English. Use the languages table at the bottom of this page to find out which language code to use for MangaDex. 
@@ -11,6 +13,9 @@
 - `{publish_date}` can be omitted and **MUST** be in the format `YYYY-MM-DD` if included.
 - `[group]` can be a list of groups. Separate each separate group with a `+`. Groups can be a key for the `name_id_map.json` file or the group ids.
 
+Images can be named whatever you like as they will be sorted naturally, but images **MUST** be either `png`, `jpg` or `gif`, anything else will not be accepted.
+
+----
 
 Copy the `config.ini.example` file and remove the `.example`. Put the respective details next to the equals sign.
 - `GROUP_FALLBACK_ID` will be used if the upload file has no groups, you can leave this blank if you do not wish to upload to any group.
@@ -19,6 +24,7 @@ Copy the `config.ini.example` file and remove the `.example`. Put the respective
 
 In the `name_id_map.json` file, replace `series1_name` with the `manga_title` used in your zip file and `series1_id` with the MangaDex id of the series. You can add more series by adding new lines under `series1_name` following the same format as the `series1_name` line. If adding more lines, each line except the last, must end with a `,`. You can do the same for the group names and ids.
 
+----
 
 ## Examples
 Take `takamine - c025 (v04) [XuN].cbz` as the chapter I want to upload. In my `name_id_map.json`, I would have 
@@ -35,6 +41,7 @@ The progam would then look through this file for the `takamine` key and for the 
 
 If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-san) [XuN+00e03853-1b96-4f41-9542-c71b8692033b]`, the progam would take the manga id directly from the file, the language as Spanish with the code `es`, chapter number Oneshot and no volume number, chapter title as `Momi-san` with groups `XuN` (id taken form `name_id_map.json`) and `00e03853-1b96-4f41-9542-c71b8692033b`.
 
+----
 
 ## Languages
 
