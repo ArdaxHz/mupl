@@ -277,6 +277,7 @@ def print_error(
 def make_session(headers: dict = {}) -> requests.Session:
     """Make a new requests session and update the headers if provided."""
     session = requests.Session()
+    session.headers.update({"User-Agent": f"md_uploader/{__version__}"})
     session.headers.update(headers)
     return session
 
