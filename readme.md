@@ -1,7 +1,7 @@
 
 ## Accepts zip files and folders. Files and folders to upload must be in a `to_upload` folder.
 ### File names **MUST** be in the format `manga_title [lang] - cXXX (vYY) (chapter_title) {publish_date} [group]`
-#### To stop check for program update, comment the check_for_update() method call.
+#### To stop check for program update, add the `--update` or `-u` command line argument.
 
 ----
 

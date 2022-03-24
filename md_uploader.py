@@ -1,3 +1,4 @@
+import argparse
 import configparser
 import json
 import logging
@@ -14,7 +15,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.8.93"
+__version__ = "0.8.94"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -315,11 +316,12 @@ class AuthMD:
         self.md_auth_api_url = f"{mangadex_api_url}/auth"
 
     def _open_auth_file(self) -> Optional[str]:
+        """Open mdauth file and read the refresh token saved."""
         try:
             with open(self.token_file, "r") as login_file:
                 token = json.load(login_file)
 
-            refresh_token = token["refresh"]
+            refresh_token = token.get("refresh")
             return refresh_token
         except (FileNotFoundError, json.JSONDecodeError):
             logging.error(
@@ -466,7 +468,10 @@ class AuthMD:
 
 class FileProcesser:
     def __init__(
-        self, to_upload: Path, names_to_ids: dict, config: configparser.RawConfigParser
+        self,
+        to_upload: Path,
+        names_to_ids: dict,
+        config: configparser.RawConfigParser,
     ) -> None:
         self._to_upload = to_upload
         self._zip_name = to_upload.name
@@ -480,7 +485,6 @@ class FileProcesser:
 
     def _match_file_name(self) -> Optional[re.Match[str]]:
         """Check for a full regex match of the file."""
-        # Check if the zip name is in the correct format
         zip_name_match = self._file_name_regex.match(self._zip_name)
         if not zip_name_match:
             logging.error(f"Zip {self._zip_name} isn't in the correct naming format.")
@@ -489,31 +493,32 @@ class FileProcesser:
         return zip_name_match
 
     def _get_manga_series(self) -> Optional[str]:
-        """Get the series title, use the id map if zip file doesn't have the uuid already."""
+        """Get the series title, can be a name or uuid,
+        use the id map if zip file doesn't have the uuid already."""
         manga_series = self._zip_name_match.group("title")
-        if not self._uuid_regex.match(manga_series):
-            try:
-                manga_series = self._names_to_ids["manga"].get(manga_series, None)
-            except KeyError:
-                manga_series = None
-                logging.warning(f"No manga id found for {manga_series}.")
+        if manga_series is not None:
+            manga_series = manga_series.strip()
+            if not self._uuid_regex.match(manga_series):
+                try:
+                    manga_series = self._names_to_ids["manga"].get(manga_series, None)
+                except KeyError:
+                    manga_series = None
+
+        if manga_series is None:
+            logging.warning(f"No manga id found for {manga_series}.")
         return manga_series
 
     def _get_language(self) -> str:
-        """Convert the inputted language into the format MangaDex uses
-
-        Args:
-            language (str): Can be the full language name, ISO 639-2 or ISO 639-3 codes.
-
-        Returns:
-            str: ISO 639-2 code, which MangaDex uses for languages.
-        """
+        """Convert the language specified into the format MangaDex uses (ISO 639-2)."""
         language = self._zip_name_match.group("language")
 
-        # Chapter language is English
+        # Language is missing in file, upload as English
         if language is None:
             return "en"
-        elif language.lower() in ("eng", "en"):
+
+        language = language.strip()
+
+        if language.lower() in ("eng", "en"):
             return "en"
         elif len(language) < 2:
             logging.warning(f"Language selected, {language} isn't in ISO format.")
@@ -531,8 +536,7 @@ class FileProcesser:
                 return available_langs[0]
             return "null"
         else:
-            # Language is a word instead of code, look for language and use that
-            # code
+            # Language is a word instead of code, look for language and use that code
             languages_match = [
                 l for l in languages if language.lower() in l["english"].lower()
             ]
@@ -543,13 +547,13 @@ class FileProcesser:
                 )
 
                 for count, item in enumerate(languages_match, start=1):
-                    print(f'{count}: {item["english"]}')
+                    print(f"{count}: {item['english']}")
 
                 try:
                     lang = int(
                         input(
                             f"Choose a number matching the position of the language: "
-                        )
+                        ).strip()
                     )
                 except ValueError:
                     logging.warning(
@@ -574,7 +578,10 @@ class FileProcesser:
         use None for the number if the chapter is a prefix."""
         chapter_number = self._zip_name_match.group("chapter")
         if chapter_number is not None:
+            chapter_number = chapter_number.strip()
+            # Split the chapter number to remove the zeropad
             parts = re.split(r"\.|\-|\,", chapter_number)
+            # Re-add 0 if the after removing the 0 the string length is 0
             parts[0] = "0" if len(parts[0].lstrip("0")) == 0 else parts[0].lstrip("0")
 
             chapter_number = ".".join(parts)
@@ -589,8 +596,8 @@ class FileProcesser:
         """Get the volume number from the file if it exists."""
         volume_number = self._zip_name_match.group("volume")
         if volume_number is not None:
-            volume_number = volume_number.lstrip("0")
-            # Volume 0
+            volume_number = volume_number.strip().lstrip("0")
+            # Volume 0, re-add 0
             if len(volume_number) == 0:
                 volume_number = "0"
         return volume_number
@@ -600,13 +607,14 @@ class FileProcesser:
         chapter_title = self._zip_name_match.group("chapter_title")
         if chapter_title is not None:
             # Add the question mark back to the chapter title
-            chapter_title = chapter_title.replace(r"{question_mark}", "?")
+            chapter_title = chapter_title.strip().replace(r"{question_mark}", "?")
         return chapter_title
 
     def _get_publish_date(self):
         """Get the chapter publish date."""
         publish_date = self._zip_name_match.group("publish_date")
         if publish_date is not None:
+            publish_date = publish_date.strip()
             if datetime.fromisoformat(
                 f"{publish_date}T00:00:00"
             ) > datetime.now() + timedelta(weeks=2):
@@ -626,13 +634,11 @@ class FileProcesser:
         groups = []
         groups_match = self._zip_name_match.group("group")
         if groups_match is not None:
-            # Split the zip name groups into an array and remove any
-            # leading/trailing whitespace
+            # Split the zip name groups into an array and remove any leading/trailing whitespace
             groups_array = groups_match.split("+")
             groups_array = [g.strip() for g in groups_array]
 
-            # Check if the groups are using uuids, if not, use the id map for
-            # the id
+            # Check if the groups are using uuids, if not, use the id map for the id
             for group in groups_array:
                 if not self._uuid_regex.match(group):
                     try:
@@ -681,7 +687,15 @@ class FileProcesser:
         self.chapter_title = self._get_chapter_title()
         self.publish_date = self._get_publish_date()
 
-        upload_details = f"Manga id: {self.manga_series}, chapter: {self.chapter_number}, volume: {self.volume_number}, title: {self.chapter_title}, language: {self.language}, groups: {self.groups}, publish on: {self.publish_date}."
+        upload_details = (
+            f"Manga id: {self.manga_series}, "
+            f"chapter: {self.chapter_number}, "
+            f"volume: {self.volume_number}, "
+            f"title: {self.chapter_title}, "
+            f"language: {self.language}, "
+            f"groups: {self.groups}, "
+            f"publish on: {self.publish_date}."
+        )
         logging.info(f"Chapter upload details: {upload_details}")
         print(upload_details)
         return True
@@ -697,7 +711,6 @@ class ChapterUploaderProcess:
         failed_uploads: list,
         md_auth_object: AuthMD,
     ):
-
         self.to_upload = to_upload
         self.session = session
         self.names_to_ids = names_to_ids
@@ -707,6 +720,7 @@ class ChapterUploaderProcess:
         self.zip_name = to_upload.name
         self.zip_extension = to_upload.suffix
         self.folder_upload = False
+        # Check if the upload file path is a folder
         if self.to_upload.is_dir():
             self.folder_upload = True
             self.zip_extension = None
@@ -734,12 +748,14 @@ class ChapterUploaderProcess:
         self.info_list = self._get_valid_images()
 
     def _key(self, x: str) -> Union[Literal[0], str]:
+        """Give a higher priority in sorting for images with their first character a punctuation."""
         if Path(x).name[0] in string.punctuation:
             return 0
         else:
             return x
 
     def _read_image_data(self, image: str) -> bytes:
+        """Read the image data from the zip or from the folder."""
         if self.folder_upload:
             image_path = self.to_upload.joinpath(image)
             return image_path.read_bytes()
@@ -748,28 +764,33 @@ class ChapterUploaderProcess:
                 return myfile.read()
 
     def _read_zip(self) -> zipfile.ZipFile:
-        # Open zip file and read the data
+        """Open zip file in read only mode."""
         return zipfile.ZipFile(self.to_upload)
 
     def _get_image_mime_type(self, image: str) -> bool:
         """Returns the image type from the first few bytes."""
         image_data = self._read_image_data(image)
 
+        # png image
         if image_data.startswith(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"):
             return True
+        # jpg image
         elif image_data[0:3] == b"\xff\xd8\xff" or image_data[6:10] in (
             b"JFIF",
             b"Exif",
         ):
             return True
+        # gif image
         elif image_data.startswith(
             (b"\x47\x49\x46\x38\x37\x61", b"\x47\x49\x46\x38\x39\x61")
         ):
             return True
-        else:
-            return False
+        return False
 
     def _get_valid_images(self):
+        """Validate the files in the archive.
+        Check if all the files are images.
+        Sorts the images using natural sort."""
         if self.folder_upload:
             to_iter = [x.name for x in self.to_upload.iterdir()]
         else:
@@ -787,17 +808,20 @@ class ChapterUploaderProcess:
     def _get_images_to_upload(self, images_to_read: List[str]) -> Dict[str, bytes]:
         """Read the image data from the zip as list."""
         logging.info(f"Images to upload: {images_to_read}")
+        # Dictionary to store the image index to the image bytes
         files: Dict[str, bytes] = {}
-        # Read the image data and add to files dict
         for array_index, image in enumerate(images_to_read, start=1):
             image_filename = str(Path(image).name)
+            # Get index of the image in the images array
             renamed_file = str(self.info_list.index(image))
+            # Keeps track of which image index belongs to which image name
             self.images_to_upload_names.update({renamed_file: image_filename})
             files.update({renamed_file: self._read_image_data(image)})
         return files
 
     def _upload_images(self, image_batch: Dict[str, bytes]) -> bool:
         """Try to upload every 10 (default) images to the upload session."""
+        # No images to upload
         if not image_batch:
             return True
 
@@ -854,6 +878,7 @@ class ChapterUploaderProcess:
                 succesful_upload_message = f"Success: Uploaded page {self.images_to_upload_names[original_filename]}, size: {file_size} bytes."
                 print(succesful_upload_message)
 
+            # Length of images array returned from the api is the same as the array sent to the api
             if len(succesful_upload_data) == len(image_batch):
                 logging.info(
                     f"Uploaded images {int(image_batch_list[0])+1} to {int(image_batch_list[-1])+1}."
@@ -861,6 +886,7 @@ class ChapterUploaderProcess:
                 failed_image_upload = False
                 break
             else:
+                # Update the images to upload dictionary with the images that failed
                 image_batch = {
                     k: v
                     for (k, v) in image_batch.items()
@@ -894,6 +920,7 @@ class ChapterUploaderProcess:
 
     def _delete_exising_upload_session(self, chapter_upload_session_retry: int):
         """Remove any exising upload sessions to not error out as mangadex only allows one upload session at a time."""
+        # Skip deleting if not the first try to start an upload session/delete the session
         if chapter_upload_session_retry > 0:
             return
 
@@ -924,7 +951,6 @@ class ChapterUploaderProcess:
             elif existing_session.status_code == 401:
                 logging.warning("Not logged in, logging in and retrying.")
                 self.md_auth_object.login()
-                # self._delete_exising_upload_session(chapter_upload_session_retry)
             else:
                 print_error(existing_session, log_error=True)
                 logging.warning(
@@ -1006,7 +1032,7 @@ class ChapterUploaderProcess:
             "pageOrder": self.images_to_upload_ids,
         }
 
-        logging.debug(f"Payload: {payload}")
+        logging.debug(f"Commit payload: {payload}")
 
         for commit_retries in range(self.number_upload_retry):
             if self.processed_zip_object.publish_date is not None:
@@ -1045,6 +1071,7 @@ class ChapterUploaderProcess:
 
                 # Move the uploaded zips to a different folder
                 self.uploaded_files_path.mkdir(parents=True, exist_ok=True)
+                # Folders don't have an extension
                 if self.folder_upload:
                     zip_name = self.zip_name
                 else:
@@ -1053,6 +1080,8 @@ class ChapterUploaderProcess:
                 zip_path_str = f"{zip_name}{zip_extension}"
                 version = 1
 
+                # If a file/folder with that name exists already in the uploaded files path
+                # Add a version number to the end before moving
                 while True:
                     version += 1
                     if zip_path_str in os.listdir(self.uploaded_files_path):
@@ -1104,13 +1133,16 @@ class ChapterUploaderProcess:
             )
             print(no_valid_images_found_error_message)
             logging.error(no_valid_images_found_error_message)
+            self.failed_uploads.append(self.to_upload)
             return
 
         self.processed_zip_object = FileProcesser(
             self.to_upload, self.names_to_ids, self.config
         )
+        # Skip as zip name has missing details
         processed_zip = self.processed_zip_object.process_zip_name()
         if not processed_zip:
+            self.failed_uploads.append(self.to_upload)
             return
 
         self.md_auth_object.login(False)
@@ -1132,6 +1164,7 @@ class ChapterUploaderProcess:
             images_to_upload = self._get_images_to_upload(images_array)
             failed_image_upload = self._upload_images(images_to_upload)
 
+            # Don't upload rest of the chapter's images if the images before failed
             if failed_image_upload:
                 break
 
@@ -1151,7 +1184,9 @@ class ChapterUploaderProcess:
         successful_upload = self._commit_chapter()
 
 
-def get_zips_to_upload(config: configparser.RawConfigParser) -> Optional[List[Path]]:
+def get_zips_to_upload(
+    config: configparser.RawConfigParser,
+) -> Optional[List[Path]]:
     """Get a list of files that end with a zip/cbz extension for uploading."""
     to_upload_folder_path = Path(config["Paths"]["uploads_folder"])
     zips_to_upload = [
@@ -1159,6 +1194,7 @@ def get_zips_to_upload(config: configparser.RawConfigParser) -> Optional[List[Pa
         for x in to_upload_folder_path.iterdir()
         if bool(FILE_NAME_REGEX.match(x.name))
     ]
+    # Sort the array to mirror your system's file explorer
     zips_to_upload = natsort.os_sorted(zips_to_upload)
     zips_to_not_upload = [
         x for x in to_upload_folder_path.iterdir() if x not in zips_to_upload
@@ -1188,21 +1224,28 @@ def main(config: configparser.RawConfigParser):
     session = make_session()
     md_auth_object = AuthMD(session, config)
     names_to_ids = open_manga_series_map(config, root_path)
-    failed_uploads = []
+    failed_uploads: List[Path] = []
 
     for index, to_upload in enumerate(zips_to_upload, start=1):
         try:
             uploader_process = ChapterUploaderProcess(
-                to_upload, session, names_to_ids, config, failed_uploads, md_auth_object
+                to_upload,
+                session,
+                names_to_ids,
+                config,
+                failed_uploads,
+                md_auth_object,
             )
             uploader_process.start_chapter_upload()
             if not uploader_process.folder_upload:
                 uploader_process.myzip.close()
 
             if index % 5 == 0:
+                # Remake session, large amounts of uploads can cause timeouts and other requests errors
                 md_auth_object.session = session = make_session()
                 md_auth_object.login()
 
+            # Delete to save memory on large amounts of uploads
             del uploader_process
 
             logging.debug("Sleeping between zip upload.")
@@ -1218,14 +1261,14 @@ def main(config: configparser.RawConfigParser):
             except UnboundLocalError:
                 pass
             else:
-                failed_uploads.append(zips_to_upload[zips_to_upload.index(to_upload)])
+                failed_uploads.append(to_upload)
             break
 
     if failed_uploads:
         logging.info(f"Failed uploads: {failed_uploads}")
         print(f"Failed uploads:")
         for fail in failed_uploads:
-            print(fail)
+            print("Folder" if fail.is_dir() else "Archive" f": {fail.name}")
 
 
 def check_for_update():
@@ -1243,8 +1286,12 @@ def check_for_update():
         match = ver_regex.search(remote_version_info)
         remote_number = match.group(1)
 
-        local_version = int(__version__.replace(".", ""))
-        remote_version = int(remote_number.replace(".", ""))
+        local_version = float(
+            f"{__version__.split('.')[0]}.{''.join(__version__.split('.')[1:])}"
+        )
+        remote_version = float(
+            f"{remote_number.split('.')[0]}.{''.join(remote_number.split('.')[1:])}"
+        )
         logging.warning(
             f"GitHub version: {remote_number}, local version: {__version__}."
         )
@@ -1253,7 +1300,7 @@ def check_for_update():
             download_update = input(
                 f"""Looks like update {remote_number} is available, you're on {__version__}, do you want to download?
                 "y" or "n" """
-            )
+            ).strip()
 
             if download_update.lower() == "y":
                 with open(
@@ -1278,5 +1325,20 @@ def check_for_update():
 
 if __name__ == "__main__":
 
-    check_for_update()
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--update",
+        "-u",
+        default=True,
+        const=False,
+        nargs="?",
+        help="Check for progam update.",
+    )
+
+    vargs = vars(parser.parse_args())
+
+    if vargs.get("update", True):
+        check_for_update()
+
     main(config)
