@@ -15,7 +15,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.8.94"
+__version__ = "0.9.0"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -473,8 +473,9 @@ class FileProcesser:
         names_to_ids: dict,
         config: configparser.RawConfigParser,
     ) -> None:
-        self._to_upload = to_upload
-        self._zip_name = to_upload.name
+        self.to_upload = to_upload
+        self.zip_name = self.to_upload.name
+        self.zip_extension = self.to_upload.suffix
         self._names_to_ids = names_to_ids
         self._config = config
         self._uuid_regex = re.compile(
@@ -483,12 +484,21 @@ class FileProcesser:
         )
         self._file_name_regex = FILE_NAME_REGEX
 
+        self._zip_name_match = None
+        self.manga_series = None
+        self.language = None
+        self.chapter_number = None
+        self.volume_number = None
+        self.groups = None
+        self.chapter_title = None
+        self.publish_date = None
+
     def _match_file_name(self) -> Optional[re.Match[str]]:
         """Check for a full regex match of the file."""
-        zip_name_match = self._file_name_regex.match(self._zip_name)
+        zip_name_match = self._file_name_regex.match(self.zip_name)
         if not zip_name_match:
-            logging.error(f"Zip {self._zip_name} isn't in the correct naming format.")
-            print(f"{self._zip_name} not in the correct naming format, skipping.")
+            logging.error(f"{self.zip_name} isn't in the correct naming format.")
+            print(f"{self.zip_name} not in the correct naming format, skipping.")
             return
         return zip_name_match
 
@@ -610,7 +620,7 @@ class FileProcesser:
             chapter_title = chapter_title.strip().replace(r"{question_mark}", "?")
         return chapter_title
 
-    def _get_publish_date(self):
+    def _get_publish_date(self) -> Optional[str]:
         """Get the chapter publish date."""
         publish_date = self._zip_name_match.group("publish_date")
         if publish_date is not None:
@@ -670,14 +680,14 @@ class FileProcesser:
         """Extract the respective chapter data from the file name."""
         self._zip_name_match = self._match_file_name()
         if self._zip_name_match is None:
-            logging.error(f"No values processed from {self._to_upload}, skipping.")
+            logging.error(f"No values processed from {self.to_upload}, skipping.")
             return False
 
         self.manga_series = self._get_manga_series()
 
         if self.manga_series is None:
-            logging.error(f"Couldn't find a manga id for {self._zip_name}, skipping.")
-            print(f"Skipped {self._zip_name}, no manga id found.")
+            logging.error(f"Couldn't find a manga id for {self.zip_name}, skipping.")
+            print(f"Skipped {self.zip_name}, no manga id found.")
             return False
 
         self.language = self._get_language()
@@ -687,38 +697,28 @@ class FileProcesser:
         self.chapter_title = self._get_chapter_title()
         self.publish_date = self._get_publish_date()
 
-        upload_details = (
-            f"Manga id: {self.manga_series}, "
-            f"chapter: {self.chapter_number}, "
-            f"volume: {self.volume_number}, "
-            f"title: {self.chapter_title}, "
-            f"language: {self.language}, "
-            f"groups: {self.groups}, "
-            f"publish on: {self.publish_date}."
-        )
-        logging.info(f"Chapter upload details: {upload_details}")
-        print(upload_details)
         return True
 
 
 class ChapterUploaderProcess:
     def __init__(
         self,
-        to_upload: Path,
+        file_name_obj: FileProcesser,
         session: requests.Session,
         names_to_ids: dict,
         config: configparser.RawConfigParser,
         failed_uploads: list,
         md_auth_object: AuthMD,
     ):
-        self.to_upload = to_upload
+        self.file_name_obj = file_name_obj
+        self.to_upload = self.file_name_obj.to_upload
         self.session = session
         self.names_to_ids = names_to_ids
         self.config = config
         self.failed_uploads = failed_uploads
         self.md_auth_object = md_auth_object
-        self.zip_name = to_upload.name
-        self.zip_extension = to_upload.suffix
+        self.zip_name = self.to_upload.name
+        self.zip_extension = self.to_upload.suffix
         self.folder_upload = False
         # Check if the upload file path is a folder
         if self.to_upload.is_dir():
@@ -967,8 +967,8 @@ class ChapterUploaderProcess:
         chapter_upload_session_successful = False
 
         payload = {
-            "manga": self.processed_zip_object.manga_series,
-            "groups": self.processed_zip_object.groups,
+            "manga": self.file_name_obj.manga_series,
+            "groups": self.file_name_obj.groups,
         }
 
         for chapter_upload_session_retry in range(self.number_upload_retry):
@@ -1002,7 +1002,7 @@ class ChapterUploaderProcess:
                     chapter_upload_session_successful = True
                     return upload_session_response_json
                 else:
-                    upload_session_response_json_message = f"Couldn't convert successful upload session creation for {self.to_upload} into a json, retrying."
+                    upload_session_response_json_message = f"Couldn't convert successful upload session creation for {self.zip_name} into a json, retrying."
                     logging.error(upload_session_response_json_message)
                     print(upload_session_response_json_message)
 
@@ -1011,7 +1011,7 @@ class ChapterUploaderProcess:
         # Couldn't create an upload session, skip the chapter
         if not chapter_upload_session_successful:
             upload_session_response_json_message = (
-                f"Couldn't create an upload session for {self.to_upload}."
+                f"Couldn't create an upload session for {self.zip_name}."
             )
             logging.error(upload_session_response_json_message)
             print(upload_session_response_json_message)
@@ -1024,10 +1024,10 @@ class ChapterUploaderProcess:
         chapter_commit_response: Optional[requests.Response] = None
         payload = {
             "chapterDraft": {
-                "volume": self.processed_zip_object.volume_number,
-                "chapter": self.processed_zip_object.chapter_number,
-                "title": self.processed_zip_object.chapter_title,
-                "translatedLanguage": self.processed_zip_object.language,
+                "volume": self.file_name_obj.volume_number,
+                "chapter": self.file_name_obj.chapter_number,
+                "title": self.file_name_obj.chapter_title,
+                "translatedLanguage": self.file_name_obj.language,
             },
             "pageOrder": self.images_to_upload_ids,
         }
@@ -1035,10 +1035,10 @@ class ChapterUploaderProcess:
         logging.debug(f"Commit payload: {payload}")
 
         for commit_retries in range(self.number_upload_retry):
-            if self.processed_zip_object.publish_date is not None:
+            if self.file_name_obj.publish_date is not None:
                 payload["chapterDraft"][
                     "publishAt"
-                ] = f"{self.processed_zip_object.publish_date}T{datetime.now().strftime('%H:%M:%S')}"
+                ] = f"{self.file_name_obj.publish_date}T{datetime.now().strftime('%H:%M:%S')}"
 
             try:
                 chapter_commit_response = self.session.post(
@@ -1127,21 +1127,24 @@ class ChapterUploaderProcess:
 
     def start_chapter_upload(self):
         """Process the zip for uploading."""
+        upload_details = (
+            f"Manga id: {self.file_name_obj.manga_series}, "
+            f"chapter: {self.file_name_obj.chapter_number}, "
+            f"volume: {self.file_name_obj.volume_number}, "
+            f"title: {self.file_name_obj.chapter_title}, "
+            f"language: {self.file_name_obj.language}, "
+            f"groups: {self.file_name_obj.groups}, "
+            f"publish on: {self.file_name_obj.publish_date}."
+        )
+        logging.info(f"Chapter upload details: {upload_details}")
+        print(upload_details)
+
         if not self.valid_images_to_upload:
             no_valid_images_found_error_message = (
                 f"{self.zip_name} has no valid images to upload, skipping."
             )
             print(no_valid_images_found_error_message)
             logging.error(no_valid_images_found_error_message)
-            self.failed_uploads.append(self.to_upload)
-            return
-
-        self.processed_zip_object = FileProcesser(
-            self.to_upload, self.names_to_ids, self.config
-        )
-        # Skip as zip name has missing details
-        processed_zip = self.processed_zip_object.process_zip_name()
-        if not processed_zip:
             self.failed_uploads.append(self.to_upload)
             return
 
@@ -1185,25 +1188,40 @@ class ChapterUploaderProcess:
 
 
 def get_zips_to_upload(
-    config: configparser.RawConfigParser,
-) -> Optional[List[Path]]:
+    config: configparser.RawConfigParser, names_to_ids: dict
+) -> Optional[List[FileProcesser]]:
     """Get a list of files that end with a zip/cbz extension for uploading."""
     to_upload_folder_path = Path(config["Paths"]["uploads_folder"])
-    zips_to_upload = [
-        x
-        for x in to_upload_folder_path.iterdir()
-        if bool(FILE_NAME_REGEX.match(x.name))
-    ]
+    zips_to_upload: List[FileProcesser] = []
+    zips_invalid_file_name = []
+    zips_no_manga_id = []
+
+    for archive in to_upload_folder_path.iterdir():
+        zip_obj = FileProcesser(archive, names_to_ids, config)
+        zip_name_process = zip_obj.process_zip_name()
+        if zip_name_process:
+            zips_to_upload.append(zip_obj)
+
+        if zip_obj._zip_name_match is None:
+            zips_invalid_file_name.append(archive)
+
+        if zip_obj.manga_series is None and zip_obj._zip_name_match is not None:
+            zips_no_manga_id.append(archive)
+
     # Sort the array to mirror your system's file explorer
     zips_to_upload = natsort.os_sorted(zips_to_upload)
-    zips_to_not_upload = [
-        x for x in to_upload_folder_path.iterdir() if x not in zips_to_upload
-    ]
 
-    if zips_to_not_upload:
+    if zips_invalid_file_name:
         logging.warning(
-            f"Skipping {len(zips_to_not_upload)} files as they don't match the FILE_NAME_REGEX pattern: {zips_to_not_upload}"
+            f"Skipping {len(zips_invalid_file_name)} files as they don't match the FILE_NAME_REGEX pattern: {zips_invalid_file_name}"
         )
+
+    if zips_no_manga_id:
+        zips_no_manga_id_skip_message = (
+            f"Skipping {len(zips_no_manga_id)} files as they have a missing manga id"
+        )
+        logging.warning(f"{zips_no_manga_id_skip_message}: {zips_no_manga_id}")
+        print(f"{zips_no_manga_id_skip_message}, check the logs for the file names.")
 
     if not zips_to_upload:
         no_zips_found_error_message = "No valid files found to upload, exiting."
@@ -1217,19 +1235,19 @@ def get_zips_to_upload(
 
 def main(config: configparser.RawConfigParser):
     """Run the uploader on each zip."""
-    zips_to_upload = get_zips_to_upload(config)
+    names_to_ids = open_manga_series_map(config, root_path)
+    zips_to_upload = get_zips_to_upload(config, names_to_ids)
     if zips_to_upload is None:
         return
 
     session = make_session()
     md_auth_object = AuthMD(session, config)
-    names_to_ids = open_manga_series_map(config, root_path)
     failed_uploads: List[Path] = []
 
-    for index, to_upload in enumerate(zips_to_upload, start=1):
+    for index, file_name_obj in enumerate(zips_to_upload, start=1):
         try:
             uploader_process = ChapterUploaderProcess(
-                to_upload,
+                file_name_obj,
                 session,
                 names_to_ids,
                 config,
@@ -1261,14 +1279,15 @@ def main(config: configparser.RawConfigParser):
             except UnboundLocalError:
                 pass
             else:
-                failed_uploads.append(to_upload)
+                failed_uploads.append(file_name_obj.to_upload)
             break
 
     if failed_uploads:
         logging.info(f"Failed uploads: {failed_uploads}")
         print(f"Failed uploads:")
         for fail in failed_uploads:
-            print("Folder" if fail.is_dir() else "Archive" f": {fail.name}")
+            prefix = "Folder" if fail.is_dir() else "Archive"
+            print(f"{prefix}: {fail.name}")
 
 
 def check_for_update():
