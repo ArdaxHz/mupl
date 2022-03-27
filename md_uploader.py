@@ -15,7 +15,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.9.0"
+__version__ = "0.9.10"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -1187,6 +1187,11 @@ class ChapterUploaderProcess:
         successful_upload = self._commit_chapter()
 
 
+def os_sort_key(x: FileProcesser):
+    """Return the Path of the upload file."""
+    return x.to_upload
+
+
 def get_zips_to_upload(
     config: configparser.RawConfigParser, names_to_ids: dict
 ) -> Optional[List[FileProcesser]]:
@@ -1209,7 +1214,7 @@ def get_zips_to_upload(
             zips_no_manga_id.append(archive)
 
     # Sort the array to mirror your system's file explorer
-    zips_to_upload = natsort.os_sorted(zips_to_upload)
+    zips_to_upload = natsort.os_sorted(zips_to_upload, key=os_sort_key)
 
     if zips_invalid_file_name:
         logging.warning(
