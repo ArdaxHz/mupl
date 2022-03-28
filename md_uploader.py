@@ -15,7 +15,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.9.10"
+__version__ = "0.9.11"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -1069,37 +1069,7 @@ class ChapterUploaderProcess:
                     logging.error(chapter_commit_response_json_message)
                     print(chapter_commit_response_json_message)
 
-                # Move the uploaded zips to a different folder
-                self.uploaded_files_path.mkdir(parents=True, exist_ok=True)
-                # Folders don't have an extension
-                if self.folder_upload:
-                    zip_name = self.zip_name
-                else:
-                    zip_name = self.zip_name.rsplit(".", 1)[0]
-                zip_extension = self.zip_extension or ""
-                zip_path_str = f"{zip_name}{zip_extension}"
-                version = 1
-
-                # If a file/folder with that name exists already in the uploaded files path
-                # Add a version number to the end before moving
-                while True:
-                    version += 1
-                    if zip_path_str in os.listdir(self.uploaded_files_path):
-                        if self.folder_upload:
-                            zip_name_unformat = self.zip_name
-                        else:
-                            zip_name_unformat = self.zip_name.rsplit(".", 1)[0]
-
-                        zip_name = f"{zip_name_unformat}{{v{version}}}"
-                        zip_path_str = f"{zip_name}{zip_extension}"
-                        continue
-                    else:
-                        break
-
-                new_uploaded_zip_path = self.to_upload.rename(
-                    os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}")
-                )
-                logging.info(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
+                self._move_files()
                 break
             elif chapter_commit_response.status_code == 401:
                 self.md_auth_object.login()
@@ -1124,6 +1094,39 @@ class ChapterUploaderProcess:
             self.remove_upload_session()
             self.failed_uploads.append(self.to_upload)
         return succesful_upload
+
+    def _move_files(self):
+        """Move the uploaded chapters to a different folder."""
+        self.uploaded_files_path.mkdir(parents=True, exist_ok=True)
+        # Folders don't have an extension
+        if self.folder_upload:
+            zip_name = self.zip_name
+        else:
+            zip_name = self.zip_name.rsplit(".", 1)[0]
+        zip_extension = self.zip_extension or ""
+        zip_path_str = f"{zip_name}{zip_extension}"
+        version = 1
+
+        # If a file/folder with that name exists already in the uploaded files path
+        # Add a version number to the end before moving
+        while True:
+            version += 1
+            if zip_path_str in os.listdir(self.uploaded_files_path):
+                if self.folder_upload:
+                    zip_name_unformat = self.zip_name
+                else:
+                    zip_name_unformat = self.zip_name.rsplit(".", 1)[0]
+
+                zip_name = f"{zip_name_unformat}{{v{version}}}"
+                zip_path_str = f"{zip_name}{zip_extension}"
+                continue
+            else:
+                break
+
+        new_uploaded_zip_path = self.to_upload.rename(
+            os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}")
+        )
+        logging.info(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
 
     def start_chapter_upload(self):
         """Process the zip for uploading."""
