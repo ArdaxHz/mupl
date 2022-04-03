@@ -15,7 +15,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.9.11"
+__version__ = "0.9.12"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -62,6 +62,7 @@ languages = [
     {"english": "Hebrew", "md": "he", "iso": "heb"},
     {"english": "Hindi", "md": "hi", "iso": "hin"},
     {"english": "Norwegian", "md": "no", "iso": "nor"},
+    {"english": "Latin", "md": "la", "iso": "lat"},
     {"english": "Other", "md": "null", "iso": "null"},
 ]
 http_error_codes = {
@@ -749,7 +750,7 @@ class ChapterUploaderProcess:
 
     def _key(self, x: str) -> Union[Literal[0], str]:
         """Give a higher priority in sorting for images with their first character a punctuation."""
-        if Path(x).name[0] in string.punctuation:
+        if Path(x).name[0].lower() in string.punctuation:
             return 0
         else:
             return x
@@ -1190,11 +1191,6 @@ class ChapterUploaderProcess:
         successful_upload = self._commit_chapter()
 
 
-def os_sort_key(x: FileProcesser):
-    """Return the Path of the upload file."""
-    return x.to_upload
-
-
 def get_zips_to_upload(
     config: configparser.RawConfigParser, names_to_ids: dict
 ) -> Optional[List[FileProcesser]]:
@@ -1217,7 +1213,7 @@ def get_zips_to_upload(
             zips_no_manga_id.append(archive)
 
     # Sort the array to mirror your system's file explorer
-    zips_to_upload = natsort.os_sorted(zips_to_upload, key=os_sort_key)
+    zips_to_upload = natsort.os_sorted(zips_to_upload, key=lambda x: x.to_upload)
 
     if zips_invalid_file_name:
         logging.warning(
