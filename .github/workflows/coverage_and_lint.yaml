@@ -19,15 +19,15 @@ jobs:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: Setup python 3.9
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
+      # - name: Setup python 3.9
+      #   uses: actions/setup-python@v2
+      #   with:
+      #     python-version: 3.9
 
-      - name: Run isort
-        uses: isort/isort-action@master
-        with:
-            requirementsFiles: "requirements.txt"
+      # - name: Run isort
+      #   uses: isort/isort-action@master
+      #   with:
+      #       requirementsFiles: "requirements.txt"
       
       - name: Check files using the black formatter
         if: always()
