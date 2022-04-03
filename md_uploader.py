@@ -105,7 +105,7 @@ FILE_NAME_REGEX = re.compile(
 )
 
 
-def load_config_info(config: configparser.RawConfigParser):
+def load_config_info(config: 'configparser.RawConfigParser'):
     """Check if the config file has the needed data, if not, use the default values."""
     if config["Paths"].get("mangadex_api_url", "") == "":
         logging.warning("Mangadex api path empty, using default.")
@@ -154,7 +154,7 @@ def load_config_info(config: configparser.RawConfigParser):
         config["User Set"]["ratelimit_time"] = str(2)
 
 
-def open_config_file(root_path: Path) -> configparser.RawConfigParser:
+def open_config_file(root_path: 'Path') -> 'configparser.RawConfigParser':
     """Try to open the config file if it exists."""
     config_file_path = root_path.joinpath("config").with_suffix(".ini")
     # Open config file and read values
@@ -176,7 +176,7 @@ RATELIMIT_TIME = int(config["User Set"]["ratelimit_time"])
 UPLOAD_RETRY = int(config["User Set"]["upload_retry"])
 
 
-def convert_json(response_to_convert: requests.Response) -> Optional[dict]:
+def convert_json(response_to_convert: 'requests.Response') -> 'Optional[dict]':
     """Convert the api response into a parsable json."""
     critical_decode_error_message = (
         "Couldn't convert mangadex api response into a json."
@@ -208,10 +208,10 @@ def convert_json(response_to_convert: requests.Response) -> Optional[dict]:
 
 
 def print_error(
-    error_response: requests.Response,
+    error_response: 'requests.Response',
     *,
-    show_error: bool = True,
-    log_error: bool = False,
+    show_error: 'bool' = True,
+    log_error: 'bool' = False,
 ) -> str:
     """Print the errors the site returns."""
     status_code = error_response.status_code
@@ -276,7 +276,7 @@ def print_error(
     return error_message
 
 
-def make_session(headers: dict = {}) -> requests.Session:
+def make_session(headers: 'dict' = {}) -> 'requests.Session':
     """Make a new requests session and update the headers if provided."""
     session = requests.Session()
     session.headers.update({"User-Agent": f"md_uploader/{__version__}"})
@@ -285,8 +285,8 @@ def make_session(headers: dict = {}) -> requests.Session:
 
 
 def open_manga_series_map(
-    config: configparser.RawConfigParser, files_path: Path
-) -> dict:
+    config: 'configparser.RawConfigParser', files_path: 'Path'
+) -> 'dict':
     """Get the manga-name-to-id map."""
     try:
         with open(
@@ -307,7 +307,7 @@ def open_manga_series_map(
 
 
 class AuthMD:
-    def __init__(self, session: requests.Session, config: configparser.RawConfigParser):
+    def __init__(self, session: 'requests.Session', config: 'configparser.RawConfigParser'):
         self.session = session
         self.config = config
         self.first_login = True
@@ -316,7 +316,7 @@ class AuthMD:
         self.token_file = root_path.joinpath(config["Paths"]["mdauth_path"])
         self.md_auth_api_url = f"{mangadex_api_url}/auth"
 
-    def _open_auth_file(self) -> Optional[str]:
+    def _open_auth_file(self) -> 'Optional[str]':
         """Open mdauth file and read the refresh token saved."""
         try:
             with open(self.token_file, "r") as login_file:
@@ -330,17 +330,17 @@ class AuthMD:
             )
             return None
 
-    def _save_session(self, token: dict):
+    def _save_session(self, token: 'dict'):
         """Save the session and refresh tokens."""
         with open(self.token_file, "w") as login_file:
             login_file.write(json.dumps(token, indent=4))
         logging.debug("Saved .mdauth file.")
 
-    def _update_headers(self, session_token: str):
+    def _update_headers(self, session_token: 'str'):
         """Update the session headers to include the auth token."""
         self.session.headers = {"Authorization": f"Bearer {session_token}"}
 
-    def _refresh_token(self) -> bool:
+    def _refresh_token(self) -> 'bool':
         """Use the refresh token to get a new session token."""
         for i in range(UPLOAD_RETRY):
             try:
@@ -375,7 +375,7 @@ class AuthMD:
         logging.error(f"Couldn't refresh token. {error}")
         return False
 
-    def _check_login(self) -> bool:
+    def _check_login(self) -> 'bool':
         """Try login using saved session token."""
         for i in range(UPLOAD_RETRY):
             try:
@@ -401,7 +401,7 @@ class AuthMD:
             return self._refresh_token()
         return False
 
-    def _login_using_details(self) -> bool:
+    def _login_using_details(self) -> 'bool':
         """Login using account details."""
         username = self.config["MangaDex Credentials"]["mangadex_username"]
         password = self.config["MangaDex Credentials"]["mangadex_password"]
@@ -470,9 +470,9 @@ class AuthMD:
 class FileProcesser:
     def __init__(
         self,
-        to_upload: Path,
-        names_to_ids: dict,
-        config: configparser.RawConfigParser,
+        to_upload: 'Path',
+        names_to_ids: 'dict',
+        config: 'configparser.RawConfigParser',
     ) -> None:
         self.to_upload = to_upload
         self.zip_name = self.to_upload.name
@@ -494,7 +494,7 @@ class FileProcesser:
         self.chapter_title = None
         self.publish_date = None
 
-    def _match_file_name(self) -> Optional[re.Match[str]]:
+    def _match_file_name(self) -> 'Optional[re.Match[str]]':
         """Check for a full regex match of the file."""
         zip_name_match = self._file_name_regex.match(self.zip_name)
         if not zip_name_match:
@@ -503,7 +503,7 @@ class FileProcesser:
             return
         return zip_name_match
 
-    def _get_manga_series(self) -> Optional[str]:
+    def _get_manga_series(self) -> 'Optional[str]':
         """Get the series title, can be a name or uuid,
         use the id map if zip file doesn't have the uuid already."""
         manga_series = self._zip_name_match.group("title")
@@ -584,7 +584,7 @@ class FileProcesser:
                 return lang_to_use["md"]
             return languages_match[0]["md"]
 
-    def _get_chapter_number(self) -> Optional[str]:
+    def _get_chapter_number(self) -> 'Optional[str]':
         """Get the chapter number from the file,
         use None for the number if the chapter is a prefix."""
         chapter_number = self._zip_name_match.group("chapter")
@@ -603,7 +603,7 @@ class FileProcesser:
             logging.info("No chapter number prefix found, uploading as oneshot.")
         return chapter_number
 
-    def _get_volume_number(self) -> Optional[str]:
+    def _get_volume_number(self) -> 'Optional[str]':
         """Get the volume number from the file if it exists."""
         volume_number = self._zip_name_match.group("volume")
         if volume_number is not None:
@@ -613,7 +613,7 @@ class FileProcesser:
                 volume_number = "0"
         return volume_number
 
-    def _get_chapter_title(self) -> Optional[str]:
+    def _get_chapter_title(self) -> 'Optional[str]':
         """Get the chapter title from the file if it exists."""
         chapter_title = self._zip_name_match.group("chapter_title")
         if chapter_title is not None:
@@ -621,7 +621,7 @@ class FileProcesser:
             chapter_title = chapter_title.strip().replace(r"{question_mark}", "?")
         return chapter_title
 
-    def _get_publish_date(self) -> Optional[str]:
+    def _get_publish_date(self) -> 'Optional[str]':
         """Get the chapter publish date."""
         publish_date = self._zip_name_match.group("publish_date")
         if publish_date is not None:
@@ -640,7 +640,7 @@ class FileProcesser:
                 publish_date = None
         return publish_date
 
-    def _get_groups(self) -> List[str]:
+    def _get_groups(self) -> 'List[str]':
         """Get the group ids from the file, use the group fallback if the file has no gorups."""
         groups = []
         groups_match = self._zip_name_match.group("group")
@@ -677,7 +677,7 @@ class FileProcesser:
                 print("Group fallback not found, uploading without a group.")
         return groups
 
-    def process_zip_name(self) -> bool:
+    def process_zip_name(self) -> 'bool':
         """Extract the respective chapter data from the file name."""
         self._zip_name_match = self._match_file_name()
         if self._zip_name_match is None:
@@ -704,12 +704,12 @@ class FileProcesser:
 class ChapterUploaderProcess:
     def __init__(
         self,
-        file_name_obj: FileProcesser,
-        session: requests.Session,
-        names_to_ids: dict,
-        config: configparser.RawConfigParser,
-        failed_uploads: list,
-        md_auth_object: AuthMD,
+        file_name_obj: 'FileProcesser',
+        session: 'requests.Session',
+        names_to_ids: 'dict',
+        config: 'configparser.RawConfigParser',
+        failed_uploads: 'list',
+        md_auth_object: 'AuthMD',
     ):
         self.file_name_obj = file_name_obj
         self.to_upload = self.file_name_obj.to_upload
@@ -735,12 +735,12 @@ class ChapterUploaderProcess:
         self.md_upload_api_url = f"{mangadex_api_url}/upload"
 
         # Spliced list of lists
-        self.valid_images_to_upload: List[List[str]] = []
+        self.valid_images_to_upload: 'List[List[str]]' = []
         # Renamed file to original file name
-        self.images_to_upload_names: Dict[str, str] = {}
+        self.images_to_upload_names: 'Dict[str, str]' = {}
         # Images to include with chapter commit
-        self.images_to_upload_ids: List[str] = []
-        self.upload_session_id: Optional[str] = None
+        self.images_to_upload_ids: 'List[str]' = []
+        self.upload_session_id: 'Optional[str]' = None
 
         self.myzip = None
         if not self.folder_upload:
@@ -748,14 +748,14 @@ class ChapterUploaderProcess:
 
         self.info_list = self._get_valid_images()
 
-    def _key(self, x: str) -> Union[Literal[0], str]:
+    def _key(self, x: str) -> 'Union[Literal[0], str]':
         """Give a higher priority in sorting for images with their first character a punctuation."""
         if Path(x).name[0].lower() in string.punctuation:
             return 0
         else:
             return x
 
-    def _read_image_data(self, image: str) -> bytes:
+    def _read_image_data(self, image: 'str') -> 'bytes':
         """Read the image data from the zip or from the folder."""
         if self.folder_upload:
             image_path = self.to_upload.joinpath(image)
@@ -764,11 +764,11 @@ class ChapterUploaderProcess:
             with self.myzip.open(image) as myfile:
                 return myfile.read()
 
-    def _read_zip(self) -> zipfile.ZipFile:
+    def _read_zip(self) -> 'zipfile.ZipFile':
         """Open zip file in read only mode."""
         return zipfile.ZipFile(self.to_upload)
 
-    def _get_image_mime_type(self, image: str) -> bool:
+    def _get_image_mime_type(self, image: 'str') -> 'bool':
         """Returns the image type from the first few bytes."""
         image_data = self._read_image_data(image)
 
@@ -806,11 +806,11 @@ class ChapterUploaderProcess:
         ]
         return info_list_images_only
 
-    def _get_images_to_upload(self, images_to_read: List[str]) -> Dict[str, bytes]:
+    def _get_images_to_upload(self, images_to_read: 'List[str]') -> 'Dict[str, bytes]':
         """Read the image data from the zip as list."""
         logging.info(f"Images to upload: {images_to_read}")
         # Dictionary to store the image index to the image bytes
-        files: Dict[str, bytes] = {}
+        files: 'Dict[str, bytes]' = {}
         for array_index, image in enumerate(images_to_read, start=1):
             image_filename = str(Path(image).name)
             # Get index of the image in the images array
@@ -820,7 +820,7 @@ class ChapterUploaderProcess:
             files.update({renamed_file: self._read_image_data(image)})
         return files
 
-    def _upload_images(self, image_batch: Dict[str, bytes]) -> bool:
+    def _upload_images(self, image_batch: 'Dict[str, bytes]') -> 'bool':
         """Try to upload every 10 (default) images to the upload session."""
         # No images to upload
         if not image_batch:
@@ -905,7 +905,7 @@ class ChapterUploaderProcess:
 
         return failed_image_upload
 
-    def remove_upload_session(self, session_id: Optional[str] = None):
+    def remove_upload_session(self, session_id: 'Optional[str]' = None):
         """Delete the upload session."""
         if session_id is None:
             session_id = self.upload_session_id
@@ -919,7 +919,7 @@ class ChapterUploaderProcess:
         finally:
             time.sleep(self.ratelimit_time)
 
-    def _delete_exising_upload_session(self, chapter_upload_session_retry: int):
+    def _delete_exising_upload_session(self, chapter_upload_session_retry: 'int'):
         """Remove any exising upload sessions to not error out as mangadex only allows one upload session at a time."""
         # Skip deleting if not the first try to start an upload session/delete the session
         if chapter_upload_session_retry > 0:
@@ -963,7 +963,7 @@ class ChapterUploaderProcess:
         logging.error("Exising upload session not deleted.")
         raise Exception(f"Couldn't delete existing upload session.")
 
-    def _create_upload_session(self) -> Optional[dict]:
+    def _create_upload_session(self) -> 'Optional[dict]':
         """Try create an upload session 3 times."""
         chapter_upload_session_successful = False
 
@@ -1019,10 +1019,10 @@ class ChapterUploaderProcess:
             self.failed_uploads.append(self.to_upload)
             return
 
-    def _commit_chapter(self) -> bool:
+    def _commit_chapter(self) -> 'bool':
         """Try commit the chapter to mangadex."""
         succesful_upload = False
-        chapter_commit_response: Optional[requests.Response] = None
+        chapter_commit_response: 'Optional[requests.Response]' = None
         payload = {
             "chapterDraft": {
                 "volume": self.file_name_obj.volume_number,
@@ -1190,13 +1190,12 @@ class ChapterUploaderProcess:
         logging.info("Uploaded all of the chapter's images.")
         successful_upload = self._commit_chapter()
 
-
 def get_zips_to_upload(
-    config: configparser.RawConfigParser, names_to_ids: dict
-) -> Optional[List[FileProcesser]]:
+    config: 'configparser.RawConfigParser', names_to_ids: 'dict'
+) -> 'Optional[List[FileProcesser]]':
     """Get a list of files that end with a zip/cbz extension for uploading."""
     to_upload_folder_path = Path(config["Paths"]["uploads_folder"])
-    zips_to_upload: List[FileProcesser] = []
+    zips_to_upload: 'List[FileProcesser]' = []
     zips_invalid_file_name = []
     zips_no_manga_id = []
 
@@ -1237,7 +1236,7 @@ def get_zips_to_upload(
     return zips_to_upload
 
 
-def main(config: configparser.RawConfigParser):
+def main(config: 'configparser.RawConfigParser'):
     """Run the uploader on each zip."""
     names_to_ids = open_manga_series_map(config, root_path)
     zips_to_upload = get_zips_to_upload(config, names_to_ids)
@@ -1246,7 +1245,7 @@ def main(config: configparser.RawConfigParser):
 
     session = make_session()
     md_auth_object = AuthMD(session, config)
-    failed_uploads: List[Path] = []
+    failed_uploads: 'List[Path]' = []
 
     for index, file_name_obj in enumerate(zips_to_upload, start=1):
         try:
