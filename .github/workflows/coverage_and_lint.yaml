@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
   job:
     code_linting:
-      name: Lint Code Base
+      name: Lint and Format
       runs-on: ubuntu-latest
       steps:
         - name: Checkout Code
@@ -19,29 +19,23 @@ jobs:
             VALIDATE_ALL_CODEBASE: false
             DEFAULT_BRANCH: main
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    import_sorting:
-    name: isort
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v2
+        
+        - name: Setup python 3.9
         - uses: actions/setup-python@v2
           with:
             python-version: 3.9
+
+        - name: Run isort
         - uses: isort/isort-action@master
           with:
               requirementsFiles: "requirements.txt"
-
-    black_formatting:
-      name: Black Format
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v2
+        
         - name: Check files using the black formatter
           uses: rickstaa/action-black@v1
           id: action_black
           with:
             black_args: "."
+                    
         # - name: Annotate diff changes using reviewdog
         #   if: steps.action_black.outputs.is_formatted == 'true'
         #   uses: reviewdog/action-suggester@v1
