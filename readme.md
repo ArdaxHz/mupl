@@ -1,5 +1,5 @@
 
-## Accepts zip files and folders. Files and folders to upload must be in a `to_upload` folder.
+## Accepts zip files and folders. Files and folders to upload must be in a `to_upload` folder. Code is tested for Python 3.9.
 ### File names **MUST** be in the format `manga_title [lang] - cXXX (vYY) (chapter_title) {publish_date} [group]`
 #### To stop check for program update, add the `--update` or `-u` command line argument.
 
