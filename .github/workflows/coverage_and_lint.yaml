@@ -8,12 +8,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
       - name: Lint Code Base
-        uses: github/super-linter@v4
+      - uses: github/super-linter@v4
         env:
           VALIDATE_ALL_CODEBASE: false
           DEFAULT_BRANCH: main
@@ -30,7 +30,7 @@ jobs:
             requirementsFiles: "requirements.txt"
       
       - name: Check files using the black formatter
-        uses: rickstaa/action-black@v1
+      - uses: rickstaa/action-black@v1
         id: action_black
         with:
           black_args: "."
