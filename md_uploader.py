@@ -16,7 +16,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.9.13"
+__version__ = "0.9.14"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -367,9 +367,7 @@ class AuthMD:
             return self._login_using_details()
 
         refresh_response = self.session.post(
-            f"{self.md_auth_api_url}/refresh",
-            json={"token": self.refresh_token},
-            verify=False,
+            f"{self.md_auth_api_url}/refresh", json={"token": self.refresh_token}
         )
 
         if refresh_response.status_code == 200:
@@ -395,9 +393,7 @@ class AuthMD:
 
     def _check_login(self) -> "bool":
         """Try login using saved session token."""
-        auth_check_response = self.session.get(
-            f"{self.md_auth_api_url}/check", verify=False
-        )
+        auth_check_response = self.session.get(f"{self.md_auth_api_url}/check")
 
         if auth_check_response.status_code == 200:
             auth_data = convert_json(auth_check_response)
@@ -423,7 +419,6 @@ class AuthMD:
         login_response = self.session.post(
             f"{self.md_auth_api_url}/login",
             json={"username": username, "password": password},
-            verify=False,
         )
 
         if login_response.status_code == 200:
