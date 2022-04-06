@@ -68,3 +68,8 @@ If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-s
 | Hindi           | hi            | hin           | Turkish         | tr            | tur           |
 | Hungarian       | hu            | hun           | Ukrainian       | uk            | ukr           |
 | Indonesian      | id            | ind           | Vietnamese      | vi            | vie           |
+
+
+## Contribution
+- Make sure there aren't any duplicate issues opened before opening one
+- Pull requests are free to be opened if you think it is needed, but please format any code with Python Black with the default settings before doing so.
