@@ -95,7 +95,7 @@ FILE_NAME_REGEX = re.compile(
     r"^(?:\[(?P<artist>.+?)?\])?\s?"  # Artist
     r"(?P<title>.+?)"  # Manga title
     r"(?:\s?\[(?P<language>[a-z]{2}(?:-[a-z]{2})?|[a-zA-Z]{3}|[a-zA-Z]+)?\])?\s-\s"  # Language
-    r"(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)?"  # Chapter number and prefix
+    r"(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)"  # Chapter number and prefix
     r"(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?"  # Volume number
     r"(?:\s?\((?P<chapter_title>.+)\))?"  # Chapter title
     r"(?:\s?\{(?P<publish_date>\d{4}-[0-1]\d-(?:[0-2]\d|3[0-1]))\})?"  # Publish date
@@ -509,6 +509,7 @@ class FileProcesser:
             re.IGNORECASE,
         )
         self._file_name_regex = FILE_NAME_REGEX
+        self.oneshot = False
 
         self._zip_name_match = None
         self.manga_series = None
@@ -625,6 +626,7 @@ class FileProcesser:
         # Chapter is a oneshot
         if self._zip_name_match.group("prefix") is None:
             chapter_number = None
+            self.oneshot = True
             logging.info("No chapter number prefix found, uploading as oneshot.")
         return chapter_number
 
@@ -726,50 +728,30 @@ class FileProcesser:
         return True
 
 
-class ChapterUploaderProcess:
+class ImageProcessor:
     def __init__(
         self,
         file_name_obj: "FileProcesser",
-        session: "requests.Session",
-        names_to_ids: "dict",
         config: "configparser.RawConfigParser",
-        failed_uploads: "list",
-        md_auth_object: "AuthMD",
-    ):
+        folder_upload: "bool",
+    ) -> None:
         self.file_name_obj = file_name_obj
         self.to_upload = self.file_name_obj.to_upload
-        self.session = session
-        self.names_to_ids = names_to_ids
         self.config = config
-        self.failed_uploads = failed_uploads
-        self.md_auth_object = md_auth_object
-        self.zip_name = self.to_upload.name
-        self.zip_extension = self.to_upload.suffix
-        self.folder_upload = False
-        # Check if the upload file path is a folder
-        if self.to_upload.is_dir():
-            self.folder_upload = True
-            self.zip_extension = None
+        self.folder_upload = folder_upload
 
-        self.uploaded_files_path = Path(self.config["Paths"]["uploaded_files"])
-        self.images_upload_session = int(
-            self.config["User Set"]["number_of_images_upload"]
-        )
-        self.number_upload_retry = UPLOAD_RETRY
-        self.ratelimit_time = RATELIMIT_TIME
-        self.md_upload_api_url = f"{mangadex_api_url}/upload"
+        self.myzip = None
+        if not self.folder_upload:
+            self.myzip = self._read_zip()
 
         # Spliced list of lists
         self.valid_images_to_upload: "List[List[str]]" = []
         # Renamed file to original file name
         self.images_to_upload_names: "Dict[str, str]" = {}
-        # Images to include with chapter commit
-        self.images_to_upload_ids: "List[str]" = []
-        self.upload_session_id: "Optional[str]" = None
 
-        self.myzip = None
-        if not self.folder_upload:
-            self.myzip = self._read_zip()
+        self.images_upload_session = int(
+            self.config["User Set"]["number_of_images_upload"]
+        )
 
         self.info_list = self._get_valid_images()
 
@@ -829,11 +811,12 @@ class ChapterUploaderProcess:
             info_list_images_only[l : l + self.images_upload_session]
             for l in range(0, len(info_list_images_only), self.images_upload_session)
         ]
+        logging.info(f"Images to upload: {self.valid_images_to_upload}")
         return info_list_images_only
 
     def _get_images_to_upload(self, images_to_read: "List[str]") -> "Dict[str, bytes]":
         """Read the image data from the zip as list."""
-        logging.info(f"Images to upload: {images_to_read}")
+        logging.info(f"Reading data for images: {images_to_read}")
         # Dictionary to store the image index to the image bytes
         files: "Dict[str, bytes]" = {}
         for array_index, image in enumerate(images_to_read, start=1):
@@ -844,6 +827,47 @@ class ChapterUploaderProcess:
             self.images_to_upload_names.update({renamed_file: image_filename})
             files.update({renamed_file: self._read_image_data(image)})
         return files
+
+
+class ChapterUploaderProcess:
+    def __init__(
+        self,
+        file_name_obj: "FileProcesser",
+        session: "requests.Session",
+        names_to_ids: "dict",
+        config: "configparser.RawConfigParser",
+        failed_uploads: "list",
+        md_auth_object: "AuthMD",
+    ):
+        self.file_name_obj = file_name_obj
+        self.to_upload = self.file_name_obj.to_upload
+        self.session = session
+        self.names_to_ids = names_to_ids
+        self.config = config
+        self.failed_uploads = failed_uploads
+        self.md_auth_object = md_auth_object
+        self.zip_name = self.to_upload.name
+        self.zip_extension = self.to_upload.suffix
+        self.folder_upload = False
+        # Check if the upload file path is a folder
+        if self.to_upload.is_dir():
+            self.folder_upload = True
+            self.zip_extension = None
+
+        self.uploaded_files_path = Path(self.config["Paths"]["uploaded_files"])
+        self.number_upload_retry = UPLOAD_RETRY
+        self.ratelimit_time = RATELIMIT_TIME
+        self.md_upload_api_url = f"{mangadex_api_url}/upload"
+
+        # Images to include with chapter commit
+        self.images_to_upload_ids: "List[str]" = []
+        self.upload_session_id: "Optional[str]" = None
+        self.failed_image_upload = False
+
+        self.image_uploader_process = ImageProcessor(
+            self.file_name_obj, self.config, self.folder_upload
+        )
+        self.myzip = self.image_uploader_process.myzip
 
     def _upload_images(self, image_batch: "Dict[str, bytes]") -> "bool":
         """Try to upload every 10 (default) images to the upload session."""
@@ -859,7 +883,6 @@ class ChapterUploaderProcess:
             f"Uploading images {int(image_batch_list[0])+1} to {int(image_batch_list[-1])+1}."
         )
 
-        failed_image_upload = False
         for image_retries in range(self.number_upload_retry):
             # Upload the images
             try:
@@ -872,12 +895,12 @@ class ChapterUploaderProcess:
                 continue
             except requests.RequestException as e:
                 logging.critical(e)
-                break
+                continue
 
             if image_upload_response.status_code not in range(200, 300):
                 error = print_error(image_upload_response)
                 logging.error(f"Error uploading images. {error}")
-                failed_image_upload = True
+                self.failed_image_upload = True
                 continue
 
             # Some images returned errors
@@ -901,7 +924,7 @@ class ChapterUploaderProcess:
                 self.images_to_upload_ids.insert(
                     int(original_filename), uploaded_image["id"]
                 )
-                succesful_upload_message = f"Success: Uploaded page {self.images_to_upload_names[original_filename]}, size: {file_size} bytes."
+                succesful_upload_message = f"Success: Uploaded page {self.image_uploader_process.images_to_upload_names[original_filename]}, size: {file_size} bytes."
                 print(succesful_upload_message)
 
             # Length of images array returned from the api is the same as the array sent to the api
@@ -909,7 +932,7 @@ class ChapterUploaderProcess:
                 logging.info(
                     f"Uploaded images {int(image_batch_list[0])+1} to {int(image_batch_list[-1])+1}."
                 )
-                failed_image_upload = False
+                self.failed_image_upload = False
                 break
             else:
                 # Update the images to upload dictionary with the images that failed
@@ -925,10 +948,10 @@ class ChapterUploaderProcess:
                 logging.warning(
                     f"Some images didn't upload, retrying. Failed images: {image_batch}"
                 )
-                failed_image_upload = True
+                self.failed_image_upload = True
                 continue
 
-        return failed_image_upload
+        return self.failed_image_upload
 
     def remove_upload_session(self, session_id: "Optional[str]" = None):
         """Delete the upload session."""
@@ -958,7 +981,7 @@ class ChapterUploaderProcess:
                 continue
             except requests.RequestException as e:
                 logging.critical(e)
-                break
+                continue
 
             if existing_session.status_code in range(200, 300):
                 existing_session_json = convert_json(existing_session)
@@ -1011,7 +1034,7 @@ class ChapterUploaderProcess:
                 continue
             except requests.RequestException as e:
                 logging.critical(e)
-                break
+                continue
 
             if upload_session_response.status_code == 401:
                 self.md_auth_object.login()
@@ -1078,7 +1101,7 @@ class ChapterUploaderProcess:
                 continue
             except requests.RequestException as e:
                 logging.critical(e)
-                break
+                continue
 
             if chapter_commit_response.status_code in range(200, 300):
                 succesful_upload = True
@@ -1171,7 +1194,7 @@ class ChapterUploaderProcess:
         logging.info(f"Chapter upload details: {upload_details}")
         print(upload_details)
 
-        if not self.valid_images_to_upload:
+        if not self.image_uploader_process.valid_images_to_upload:
             no_valid_images_found_error_message = (
                 f"{self.zip_name} has no valid images to upload, skipping."
             )
@@ -1193,21 +1216,25 @@ class ChapterUploaderProcess:
         )
         logging.info(upload_session_id_message)
         print(upload_session_id_message)
-        failed_image_upload = False
+        print(
+            f"{len(self.image_uploader_process.valid_images_to_upload)} images to upload."
+        )
 
-        for images_array in self.valid_images_to_upload:
-            images_to_upload = self._get_images_to_upload(images_array)
-            failed_image_upload = self._upload_images(images_to_upload)
+        for images_array in self.image_uploader_process.valid_images_to_upload:
+            images_to_upload = self.image_uploader_process._get_images_to_upload(
+                images_array
+            )
+            self._upload_images(images_to_upload)
 
             # Don't upload rest of the chapter's images if the images before failed
-            if failed_image_upload:
+            if self.failed_image_upload:
                 break
 
         if not self.folder_upload:
             self.myzip.close()
 
         # Skip chapter upload and delete upload session
-        if failed_image_upload:
+        if self.failed_image_upload:
             failed_image_upload_message = f"Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}."
             print(failed_image_upload_message)
             logging.error(failed_image_upload_message)
