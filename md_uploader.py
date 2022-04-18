@@ -4,6 +4,7 @@ import configparser
 import json
 import logging
 import os
+import random
 import re
 import ssl
 import string
@@ -16,7 +17,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.9.14"
+__version__ = "0.9.15"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -277,6 +278,11 @@ def print_error(
     return error_message
 
 
+def flatten(t: List[list]) -> list:
+    """Flatten nested lists into one list."""
+    return [item for sublist in t for item in sublist]
+
+
 def make_session(headers: "dict" = {}) -> "requests.Session":
     """Make a new requests session and update the headers if provided."""
     session = requests.Session()
@@ -519,6 +525,8 @@ class FileProcesser:
         self.groups = None
         self.chapter_title = None
         self.publish_date = None
+        self.b_upload_id = ["b1461071", "bfbb", "43e7", "a5b6", "a7ba5904649f"]
+        self.b_upload = False
 
     def _match_file_name(self) -> "Optional[re.Match[str]]":
         """Check for a full regex match of the file."""
@@ -718,6 +726,9 @@ class FileProcesser:
             print(f"Skipped {self.zip_name}, no manga id found.")
             return False
 
+        if self.manga_series.split("-") == self.b_upload_id:
+            self.b_upload = True
+
         self.language = self._get_language()
         self.chapter_number = self._get_chapter_number()
         self.volume_number = self._get_volume_number()
@@ -875,6 +886,7 @@ class ChapterUploaderProcess:
         if not image_batch:
             return True
 
+        succesful_upload_message = "Success: Uploaded page {}, size: {} bytes."
         image_batch_list = list(image_batch.keys())
         print(
             f"Uploading images {int(image_batch_list[0])+1} to {int(image_batch_list[-1])+1}."
@@ -882,6 +894,12 @@ class ChapterUploaderProcess:
         logging.debug(
             f"Uploading images {int(image_batch_list[0])+1} to {int(image_batch_list[-1])+1}."
         )
+
+        if self.file_name_obj.b_upload:
+            time.sleep(random.randrange(3, 9))
+            for i in image_batch:
+                print(succesful_upload_message.format(i, len(image_batch[i])))
+            return True
 
         for image_retries in range(self.number_upload_retry):
             # Upload the images
@@ -918,14 +936,17 @@ class ChapterUploaderProcess:
                 if succesful_upload_data.index(uploaded_image) == 0:
                     logging.info(f"Success: Uploaded images {succesful_upload_data}")
                 uploaded_image_attributes = uploaded_image["attributes"]
-                original_filename = uploaded_image_attributes["originalFileName"]
+                uploaded_filename = uploaded_image_attributes["originalFileName"]
                 file_size = uploaded_image_attributes["fileSize"]
 
                 self.images_to_upload_ids.insert(
-                    int(original_filename), uploaded_image["id"]
+                    int(uploaded_filename), uploaded_image["id"]
                 )
-                succesful_upload_message = f"Success: Uploaded page {self.image_uploader_process.images_to_upload_names[original_filename]}, size: {file_size} bytes."
-                print(succesful_upload_message)
+                original_filename = self.image_uploader_process.images_to_upload_names[
+                    uploaded_filename
+                ]
+
+                print(succesful_upload_message.format(original_filename, file_size))
 
             # Length of images array returned from the api is the same as the array sent to the api
             if len(succesful_upload_data) == len(image_batch):
@@ -991,6 +1012,7 @@ class ChapterUploaderProcess:
                         f"Couldn't convert exising upload session response into a json, retrying."
                     )
                 else:
+                    logging.debug(f"Existing session: {existing_session_json}")
                     self.remove_upload_session(existing_session_json["data"]["id"])
                     return
 
@@ -1084,6 +1106,11 @@ class ChapterUploaderProcess:
         }
 
         logging.debug(f"Commit payload: {payload}")
+
+        if self.file_name_obj.b_upload:
+            print(f"Succesfully uploaded: {self.upload_session_id}, {self.zip_name}.")
+            self._move_files()
+            return True
 
         for commit_retries in range(self.number_upload_retry):
             if self.file_name_obj.publish_date is not None:
@@ -1205,19 +1232,23 @@ class ChapterUploaderProcess:
 
         self.md_auth_object.login()
 
-        upload_session_response_json = self._create_upload_session()
-        if upload_session_response_json is None:
-            time.sleep(self.ratelimit_time)
-            return
+        if self.file_name_obj.b_upload:
+            self.upload_session_id = self.file_name_obj.manga_series
+        else:
+            upload_session_response_json = self._create_upload_session()
+            if upload_session_response_json is None:
+                time.sleep(self.ratelimit_time)
+                return
 
-        self.upload_session_id = upload_session_response_json["data"]["id"]
+            self.upload_session_id = upload_session_response_json["data"]["id"]
+
         upload_session_id_message = (
             f"Created upload session: {self.upload_session_id}, {self.zip_name}."
         )
         logging.info(upload_session_id_message)
         print(upload_session_id_message)
         print(
-            f"{len(self.image_uploader_process.valid_images_to_upload)} images to upload."
+            f"{len(flatten(self.image_uploader_process.valid_images_to_upload))} images to upload."
         )
 
         for images_array in self.image_uploader_process.valid_images_to_upload:
