@@ -1274,7 +1274,7 @@ class ChapterUploaderProcess:
             return
 
         logging.info("Uploaded all of the chapter's images.")
-        successful_upload = self._commit_chapter()
+        self._commit_chapter()
 
 
 def get_zips_to_upload(
