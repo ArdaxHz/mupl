@@ -17,7 +17,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.9.15"
+__version__ = "0.9.16"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -525,8 +525,6 @@ class FileProcesser:
         self.groups = None
         self.chapter_title = None
         self.publish_date = None
-        self.b_upload_id = ["b1461071", "bfbb", "43e7", "a5b6", "a7ba5904649f"]
-        self.b_upload = False
 
     def _match_file_name(self) -> "Optional[re.Match[str]]":
         """Check for a full regex match of the file."""
@@ -726,9 +724,6 @@ class FileProcesser:
             print(f"Skipped {self.zip_name}, no manga id found.")
             return False
 
-        if self.manga_series.split("-") == self.b_upload_id:
-            self.b_upload = True
-
         self.language = self._get_language()
         self.chapter_number = self._get_chapter_number()
         self.volume_number = self._get_volume_number()
@@ -894,12 +889,6 @@ class ChapterUploaderProcess:
         logging.debug(
             f"Uploading images {int(image_batch_list[0])+1} to {int(image_batch_list[-1])+1}."
         )
-
-        if self.file_name_obj.b_upload:
-            time.sleep(random.randrange(3, 9))
-            for i in image_batch:
-                print(succesful_upload_message.format(i, len(image_batch[i])))
-            return True
 
         for image_retries in range(self.number_upload_retry):
             # Upload the images
@@ -1107,11 +1096,6 @@ class ChapterUploaderProcess:
 
         logging.debug(f"Commit payload: {payload}")
 
-        if self.file_name_obj.b_upload:
-            print(f"Succesfully uploaded: {self.upload_session_id}, {self.zip_name}.")
-            self._move_files()
-            return True
-
         for commit_retries in range(self.number_upload_retry):
             if self.file_name_obj.publish_date is not None:
                 payload["chapterDraft"][
@@ -1232,15 +1216,12 @@ class ChapterUploaderProcess:
 
         self.md_auth_object.login()
 
-        if self.file_name_obj.b_upload:
-            self.upload_session_id = self.file_name_obj.manga_series
-        else:
-            upload_session_response_json = self._create_upload_session()
-            if upload_session_response_json is None:
-                time.sleep(self.ratelimit_time)
-                return
+        upload_session_response_json = self._create_upload_session()
+        if upload_session_response_json is None:
+            time.sleep(self.ratelimit_time)
+            return
 
-            self.upload_session_id = upload_session_response_json["data"]["id"]
+        self.upload_session_id = upload_session_response_json["data"]["id"]
 
         upload_session_id_message = (
             f"Created upload session: {self.upload_session_id}, {self.zip_name}."
