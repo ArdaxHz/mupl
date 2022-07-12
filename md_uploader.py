@@ -17,7 +17,7 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.9.16"
+__version__ = "0.9.17"
 
 languages = [
     {"english": "English", "md": "en", "iso": "eng"},
@@ -1367,7 +1367,7 @@ def check_for_update():
 
     # Check the local version is the same as on GitHub
     remote_version_info_response = requests.get(
-        "https://raw.githubusercontent.com/Rudoal/mangadex_bulk_uploader/main/md_uploader.py"
+        "https://raw.githubusercontent.com/ArdaxHz/mangadex_bulk_uploader/main/md_uploader.py"
     )
     if remote_version_info_response.ok:
         remote_version_info = remote_version_info_response.content.decode()
