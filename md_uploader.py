@@ -17,55 +17,62 @@ from typing import Dict, List, Literal, Optional, Union
 import natsort
 import requests
 
-__version__ = "0.9.17"
+__version__ = "0.9.18"
 
 languages = [
-    {"english": "English", "md": "en", "iso": "eng"},
-    {"english": "Japanese", "md": "ja", "iso": "jpn"},
-    {"english": "Japanese (Romaji)", "md": "ja-ro", "iso": "jpn"},
-    {"english": "Polish", "md": "pl", "iso": "pol"},
-    {"english": "Serbo-Croatian", "md": "sh", "iso": "hrv"},
-    {"english": "Dutch", "md": "nl", "iso": "dut"},
-    {"english": "Italian", "md": "it", "iso": "ita"},
-    {"english": "Russian", "md": "ru", "iso": "rus"},
-    {"english": "German", "md": "de", "iso": "ger"},
-    {"english": "Hungarian", "md": "hu", "iso": "hun"},
-    {"english": "French", "md": "fr", "iso": "fre"},
-    {"english": "Finnish", "md": "fi", "iso": "fin"},
-    {"english": "Vietnamese", "md": "vi", "iso": "vie"},
-    {"english": "Greek", "md": "el", "iso": "gre"},
-    {"english": "Bulgarian", "md": "bg", "iso": "bul"},
-    {"english": "Spanish (Es)", "md": "es", "iso": "spa"},
-    {"english": "Portuguese (Br)", "md": "pt-br", "iso": "por"},
-    {"english": "Portuguese (Pt)", "md": "pt", "iso": "por"},
-    {"english": "Swedish", "md": "sv", "iso": "swe"},
-    {"english": "Arabic", "md": "ar", "iso": "ara"},
-    {"english": "Danish", "md": "da", "iso": "dan"},
-    {"english": "Chinese (Simp)", "md": "zh", "iso": "chi"},
-    {"english": "Chinese (Romaji)", "md": "zh-ro", "iso": "chi"},
-    {"english": "Bengali", "md": "bn", "iso": "ben"},
-    {"english": "Romanian", "md": "ro", "iso": "rum"},
-    {"english": "Czech", "md": "cs", "iso": "cze"},
-    {"english": "Mongolian", "md": "mn", "iso": "mon"},
-    {"english": "Turkish", "md": "tr", "iso": "tur"},
-    {"english": "Indonesian", "md": "id", "iso": "ind"},
-    {"english": "Korean", "md": "ko", "iso": "kor"},
-    {"english": "Korean (Romaji)", "md": "ko-ro", "iso": "kor"},
-    {"english": "Spanish (LATAM)", "md": "es-la", "iso": "spa"},
-    {"english": "Persian", "md": "fa", "iso": "per"},
-    {"english": "Malay", "md": "ms", "iso": "may"},
-    {"english": "Thai", "md": "th", "iso": "tha"},
-    {"english": "Catalan", "md": "ca", "iso": "cat"},
-    {"english": "Filipino", "md": "tl", "iso": "fil"},
-    {"english": "Chinese (Trad)", "md": "zh-hk", "iso": "chi"},
-    {"english": "Ukrainian", "md": "uk", "iso": "ukr"},
-    {"english": "Burmese", "md": "my", "iso": "bur"},
-    {"english": "Lithuanian", "md": "lt", "iso": "lit"},
-    {"english": "Hebrew", "md": "he", "iso": "heb"},
-    {"english": "Hindi", "md": "hi", "iso": "hin"},
-    {"english": "Norwegian", "md": "no", "iso": "nor"},
-    {"english": "Latin", "md": "la", "iso": "lat"},
-    {"english": "Other", "md": "null", "iso": "null"},
+    {"name": "English", "two_letter": "en", "three_letter": "eng"},
+    {"name": "Japanese", "two_letter": "ja", "three_letter": "jpn"},
+    {"name": "Japanese (Romaji)", "two_letter": "ja-ro", "three_letter": "jpn"},
+    {"name": "Polish", "two_letter": "pl", "three_letter": "pol"},
+    {"name": "Serbo-Croatian", "two_letter": "sh", "three_letter": "hrv"},
+    {"name": "Dutch", "two_letter": "nl", "three_letter": "dut"},
+    {"name": "Italian", "two_letter": "it", "three_letter": "ita"},
+    {"name": "Russian", "two_letter": "ru", "three_letter": "rus"},
+    {"name": "German", "two_letter": "de", "three_letter": "ger"},
+    {"name": "Hungarian", "two_letter": "hu", "three_letter": "hun"},
+    {"name": "French", "two_letter": "fr", "three_letter": "fre"},
+    {"name": "Finnish", "two_letter": "fi", "three_letter": "fin"},
+    {"name": "Vietnamese", "two_letter": "vi", "three_letter": "vie"},
+    {"name": "Greek", "two_letter": "el", "three_letter": "gre"},
+    {"name": "Bulgarian", "two_letter": "bg", "three_letter": "bul"},
+    {"name": "Spanish (Es)", "two_letter": "es", "three_letter": "spa"},
+    {"name": "Portuguese (Br)", "two_letter": "pt-br", "three_letter": "por"},
+    {"name": "Portuguese (Pt)", "two_letter": "pt", "three_letter": "por"},
+    {"name": "Swedish", "two_letter": "sv", "three_letter": "swe"},
+    {"name": "Arabic", "two_letter": "ar", "three_letter": "ara"},
+    {"name": "Danish", "two_letter": "da", "three_letter": "dan"},
+    {"name": "Chinese (Simp)", "two_letter": "zh", "three_letter": "chi"},
+    {"name": "Chinese (Romaji)", "two_letter": "zh-ro", "three_letter": "chi"},
+    {"name": "Bengali", "two_letter": "bn", "three_letter": "ben"},
+    {"name": "Romanian", "two_letter": "ro", "three_letter": "rum"},
+    {"name": "Czech", "two_letter": "cs", "three_letter": "cze"},
+    {"name": "Mongolian", "two_letter": "mn", "three_letter": "mon"},
+    {"name": "Turkish", "two_letter": "tr", "three_letter": "tur"},
+    {"name": "Indonesian", "two_letter": "id", "three_letter": "ind"},
+    {"name": "Korean", "two_letter": "ko", "three_letter": "kor"},
+    {"name": "Korean (Romaji)", "two_letter": "ko-ro", "three_letter": "kor"},
+    {"name": "Spanish (LATAM)", "two_letter": "es-la", "three_letter": "spa"},
+    {"name": "Persian", "two_letter": "fa", "three_letter": "per"},
+    {"name": "Malay", "two_letter": "ms", "three_letter": "may"},
+    {"name": "Thai", "two_letter": "th", "three_letter": "tha"},
+    {"name": "Catalan", "two_letter": "ca", "three_letter": "cat"},
+    {"name": "Filipino", "two_letter": "tl", "three_letter": "fil"},
+    {"name": "Chinese (Trad)", "two_letter": "zh-hk", "three_letter": "chi"},
+    {"name": "Ukrainian", "two_letter": "uk", "three_letter": "ukr"},
+    {"name": "Burmese", "two_letter": "my", "three_letter": "bur"},
+    {"name": "Lithuanian", "two_letter": "lt", "three_letter": "lit"},
+    {"name": "Hebrew", "two_letter": "he", "three_letter": "heb"},
+    {"name": "Hindi", "two_letter": "hi", "three_letter": "hin"},
+    {"name": "Norwegian", "two_letter": "no", "three_letter": "nor"},
+    {"name": "Latin", "two_letter": "la", "three_letter": "lat"},
+    {"name": "Kazakh", "two_letter": "kk", "three_letter": "kaz"},
+    {"name": "Tamil", "two_letter": "ta", "three_letter": "tam"},
+    {"name": "Croatian", "two_letter": "hr", "three_letter": "hrv"},
+    {"name": "Esperanto", "two_letter": "eo", "three_letter": "epo"},
+    {"name": "Estonian", "two_letter": "et", "three_letter": "est"},
+    {"name": "Nepali", "two_letter": "ne", "three_letter": "nep"},
+    {"name": "Serbian", "two_letter": "sr", "three_letter": "srp"},
+    {"name": "Other", "two_letter": "null", "three_letter": "null"},
 ]
 http_error_codes = {
     "400": "Bad Request.",
@@ -329,6 +336,7 @@ class AuthMD:
         self.refresh_token = self.file_token.get("refresh", None)
         self.decoded_session_token = None
         self.decoded_refresh_token = None
+        self.checked_login = 0
 
     def _open_auth_file(self) -> "dict":
         """Open auth file and read saved tokens."""
@@ -460,16 +468,16 @@ class AuthMD:
             return False
         return True
 
-    def login(self, check_login=True):
+    def login(self, force_login=False):
         """Login to MD account using details or saved token."""
-        if not check_login and self.successful_login:
+        if not force_login and self.successful_login:
             logging.info("Already logged in, not checking for login.")
             return
 
         if self.first_login:
             logging.info("Trying to login through the .mdauth file.")
 
-        if self.session_token is not None:
+        if self.session_token is not None and not force_login:
             if self.first_login:
                 logging.info("Reading the session expiry from the token.")
 
@@ -482,8 +490,15 @@ class AuthMD:
                 logging.warning("Session expired, refreshing using token.")
                 logged_in = self._refresh_token()
             else:
-                self._update_headers(self.session_token)
-                logged_in = True
+                rand_num = random.randint(9, 100)
+                if rand_num % 7 == 0 or self.checked_login % 7 == 0:
+                    logged_in = self._check_login()
+                    self.checked_login = 0
+                    time.sleep(1)
+                else:
+                    self._update_headers(self.session_token)
+                    logged_in = True
+                    self.checked_login += 1
         else:
             logged_in = self._refresh_token()
 
@@ -573,7 +588,9 @@ class FileProcesser:
             return language
         # Language in iso-639-3 format already
         elif len(language) == 3:
-            available_langs = [l["md"] for l in languages if l["iso"] == language]
+            available_langs = [
+                l["two_letter"] for l in languages if l["three_letter"] == language
+            ]
 
             if available_langs:
                 return available_langs[0]
@@ -581,7 +598,7 @@ class FileProcesser:
         else:
             # Language is a word instead of code, look for language and use that code
             languages_match = [
-                l for l in languages if language.lower() in l["english"].lower()
+                l for l in languages if language.lower() in l["name"].lower()
             ]
 
             if len(languages_match) > 1:
@@ -590,7 +607,7 @@ class FileProcesser:
                 )
 
                 for count, item in enumerate(languages_match, start=1):
-                    print(f"{count}: {item['english']}")
+                    print(f'{count}: {item["name"]}')
 
                 try:
                     lang = int(
@@ -613,8 +630,8 @@ class FileProcesser:
                     return "null"
 
                 lang_to_use = languages_match[(lang - 1)]
-                return lang_to_use["md"]
-            return languages_match[0]["md"]
+                return lang_to_use["two_letter"]
+            return languages_match[0]["two_letter"]
 
     def _get_chapter_number(self) -> "Optional[str]":
         """Get the chapter number from the file,
@@ -1010,7 +1027,7 @@ class ChapterUploaderProcess:
                 return
             elif existing_session.status_code == 401:
                 logging.warning("Not logged in, logging in and retrying.")
-                self.md_auth_object.login()
+                self.md_auth_object.login(True)
                 continue
             else:
                 print_error(existing_session, log_error=True)
@@ -1048,7 +1065,7 @@ class ChapterUploaderProcess:
                 continue
 
             if upload_session_response.status_code == 401:
-                self.md_auth_object.login()
+                self.md_auth_object.login(True)
                 continue
             elif upload_session_response.status_code not in range(200, 300):
                 error = print_error(upload_session_response)
@@ -1134,7 +1151,7 @@ class ChapterUploaderProcess:
                 self._move_files()
                 break
             elif chapter_commit_response.status_code == 401:
-                self.md_auth_object.login()
+                self.md_auth_object.login(True)
                 continue
             else:
                 error = print_error(chapter_commit_response)
