@@ -2,6 +2,7 @@
 NUMBER_OF_IMAGES_UPLOAD=10
 UPLOAD_RETRY=3
 RATELIMIT_TIME=2
+MAX_LOG_DAYS = 30
 GROUP_FALLBACK_ID=
 
 [MangaDex Credentials]
@@ -13,4 +14,5 @@ NAME_ID_MAP_FILE=name_id_map.json
 UPLOADS_FOLDER=to_upload
 UPLOADED_FILES=uploaded
 MANGADEX_API_URL=https://api.mangadex.org
+MANGADEX_AUTH_URL=https://auth.mangadex.org/realms/mangadex/protocol/openid-connect
 MDAUTH_PATH=.mdauth
