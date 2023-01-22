@@ -1,14 +1,13 @@
 import logging
 import os
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Dict
 
-from . import UPLOAD_RETRY, RATELIMIT_TIME, mangadex_api_url, config
-from .file_validator import FileProcesser
-from .http import RequestError, HTTPClient
-from .image_validator import ImageProcessor
+from uploader.file_validator import FileProcesser
+from uploader.http import RequestError, HTTPClient
+from uploader.image_validator import ImageProcessor
+from uploader.utils.config import config, mangadex_api_url, RATELIMIT_TIME, UPLOAD_RETRY
 
 logger = logging.getLogger("md_uploader")
 
@@ -19,8 +18,13 @@ def flatten(t: List[list]) -> list:
 
 
 class UploaderHelper:
-    def __init__(self, http_client: "HTTPClient", file_name_obj: "FileProcesser", names_to_ids: "dict",
-                 failed_uploads: "list"):
+    def __init__(
+        self,
+        http_client: "HTTPClient",
+        file_name_obj: "FileProcesser",
+        names_to_ids: "dict",
+        failed_uploads: "list",
+    ):
         self.http_client = http_client
         self.file_name_obj = file_name_obj
         self.to_upload = self.file_name_obj.to_upload
@@ -44,7 +48,9 @@ class UploaderHelper:
         self.upload_session_id: "Optional[str]" = None
         self.failed_image_upload = False
 
-        self.image_uploader_process = ImageProcessor(self.file_name_obj, self.folder_upload)
+        self.image_uploader_process = ImageProcessor(
+            self.file_name_obj, self.folder_upload
+        )
         self.myzip = self.image_uploader_process.myzip
 
     def _images_upload(self, image_batch: "Dict[str, bytes]"):
@@ -61,10 +67,7 @@ class UploaderHelper:
         # Some images returned errors
         uploaded_image_data = image_upload_response.data
         successful_upload_data = uploaded_image_data["data"]
-        if (
-                uploaded_image_data["errors"]
-                or uploaded_image_data["result"] == "error"
-        ):
+        if uploaded_image_data["errors"] or uploaded_image_data["result"] == "error":
             logger.warning(f"Some images errored out.")
             return
         return successful_upload_data
@@ -78,14 +81,18 @@ class UploaderHelper:
 
     def _commit_upload_session(self, payload: dict):
         return self.http_client.post(
-            f"{self.md_upload_api_url}/{self.upload_session_id}/commit",
-            json=payload
+            f"{self.md_upload_api_url}/{self.upload_session_id}/commit", json=payload
         )
 
 
 class ChapterUploader(UploaderHelper):
-    def __init__(self, http_client: "HTTPClient", file_name_obj: "FileProcesser", names_to_ids: "dict",
-                 failed_uploads: "list"):
+    def __init__(
+        self,
+        http_client: "HTTPClient",
+        file_name_obj: "FileProcesser",
+        names_to_ids: "dict",
+        failed_uploads: "list",
+    ):
         super().__init__(http_client, file_name_obj, names_to_ids, failed_uploads)
 
     def _upload_images(self, image_batch: "Dict[str, bytes]") -> "bool":
@@ -138,10 +145,10 @@ class ChapterUploader(UploaderHelper):
                     k: v
                     for (k, v) in image_batch.items()
                     if k
-                       not in [
-                           i["attributes"]["originalFileName"]
-                           for i in successful_upload_data
-                       ]
+                    not in [
+                        i["attributes"]["originalFileName"]
+                        for i in successful_upload_data
+                    ]
                 }
                 logger.warning(
                     f"Some images didn't upload, retrying. Failed images: {image_batch}"
@@ -161,7 +168,9 @@ class ChapterUploader(UploaderHelper):
             return
 
         try:
-            self.http_client.delete(f"{self.md_upload_api_url}/{session_id}", successful_codes=[404])
+            self.http_client.delete(
+                f"{self.md_upload_api_url}/{session_id}", successful_codes=[404]
+            )
         except (RequestError,) as e:
             logger.error(f"Couldn't delete {session_id}: {e}")
         else:
@@ -170,7 +179,9 @@ class ChapterUploader(UploaderHelper):
     def _delete_exising_upload_session(self):
         """Remove any exising upload sessions to not error out as mangadex only allows one upload session at a time."""
         try:
-            existing_session = self.http_client.get(f"{mangadex_api_url}/upload", successful_codes=[404])
+            existing_session = self.http_client.get(
+                f"{mangadex_api_url}/upload", successful_codes=[404]
+            )
         except (RequestError,) as e:
             logger.error(e)
         else:
@@ -230,7 +241,8 @@ class ChapterUploader(UploaderHelper):
 
         if self.file_name_obj.publish_date is not None:
             payload["chapterDraft"][
-                "publishAt"] = f"{self.file_name_obj.publish_date}T{datetime.now().strftime('%H:%M:%S')}"
+                "publishAt"
+            ] = f"{self.file_name_obj.publish_date.strftime('%Y-%m-%dT%H:%M:%S')}"
 
         try:
             chapter_commit_response = self._commit_upload_session(payload)

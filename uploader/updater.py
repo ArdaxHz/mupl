@@ -1,60 +1,78 @@
 import logging
-import re
+from io import BytesIO
+from threading import Timer
+from zipfile import ZipFile
 
 import requests
+from packaging import version
 
-from . import __version__, root_path
+from uploader import __version__
+from uploader.utils.config import root_path
 
 logger = logging.getLogger("md_uploader")
+
+
+def raise_error(ex):
+    raise ex
 
 
 def check_for_update():
     """Check For any program updates."""
     logger.debug("Looking for program update.")
 
-    # Check the local version is the same as on GitHub
-    remote_version_info_response = requests.get(
-        "https://raw.githubusercontent.com/ArdaxHz/mangadex_bulk_uploader/main/md_uploader.py"
+    update = False
+    local_version = version.parse(__version__)
+    remote_release = requests.get(
+        "https://api.github.com/repos/ArdaxHz/mangadex_bulk_uploader/releases/latest"
     )
-    if remote_version_info_response.ok:
-        remote_version_info = remote_version_info_response.content.decode()
-
-        ver_regex = re.compile(r"^__version__\s=\s\"(.+)\"$", re.MULTILINE)
-        match = ver_regex.search(remote_version_info)
-        remote_number = match.group(1)
-
-        local_version = float(
-            f"{__version__.split('.')[0]}.{''.join(__version__.split('.')[1:])}"
-        )
-        remote_version = float(
-            f"{remote_number.split('.')[0]}.{''.join(remote_number.split('.')[1:])}"
-        )
-        logger.warning(
-            f"GitHub version: {remote_number}, local version: {__version__}."
-        )
+    if remote_release.ok:
+        remote_release_json = remote_release.json()
+        remote_version = version.parse(remote_release_json["tag_name"])
 
         if remote_version > local_version:
-            download_update = input(
-                f"""Looks like update {remote_number} is available, you're on {__version__}, do you want to download?
-                "y" or "n" """
-            ).strip()
-
-            if download_update.lower() == "y":
-                with open(
-                        root_path.joinpath(f"{__file__}").with_suffix(".py"), "wb"
-                ) as file:
-                    file.write(remote_version_info_response.content)
-
+            print(f"Update found: (old){local_version} (new){remote_version}.")
+            logger.info(f"Update found: (old){local_version} (new){remote_version}.")
+            if remote_version.major != local_version.major:
                 print(
-                    "Downloaded the update, next program run will use the new update."
+                    f"""The new version may have breaking changes, please check the github releases page for a list of changes
+                    https://github.com/ArdaxHz/mangadex_bulk_uploader/releases/latest"""
                 )
-                logger.info(
-                    f"Successfully downloaded {remote_version}, will be used next program run."
-                )
+
+            timeout = 5
+            t = Timer(timeout, raise_error, [ValueError("Not updating.")])
+            t.start()
+            answer = input("Do you want to update? 'y' or 'n'")
+            t.cancel()
+
+            if answer.lower() in ["true", "1", "t", "y", "yes"]:
+                update = True
             else:
-                print("Skipping update, this might result in api errors.")
-                logger.warning("Update download skipped.")
-    else:
-        logger.error(
-            f"Error searching for update: {remote_version_info_response.status_code}."
-        )
+                update = False
+
+            if not update:
+                print(f"Not updating.")
+                logger.info(f"Skipping update {remote_version}")
+                return
+
+            zip_resp = requests.get(remote_release_json["zipball_url"])
+            if zip_resp.ok:
+                myzip = ZipFile(BytesIO(zip_resp.content))
+                zip_root = [z for z in myzip.infolist() if z.is_dir()][0].filename
+                zip_files = [z for z in myzip.infolist() if not z.is_dir()]
+
+                for fileinfo in zip_files:
+                    filename = root_path.joinpath(
+                        fileinfo.filename.replace(zip_root, "")
+                    )
+                    filename.parent.mkdir(parents=True, exist_ok=True)
+                    file_data = myzip.read(fileinfo)
+
+                    with open(filename, "wb") as fopen:
+                        fopen.write(file_data)
+
+                print(f"Updated, restart the ")
+                logger.info(f"Updated to version {remote_version}")
+                return
+
+    logger.info(f"Updating error.")
+    print(f"Couldn't update.")

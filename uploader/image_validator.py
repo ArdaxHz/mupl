@@ -6,8 +6,8 @@ from typing import List, Dict, Union, Literal
 
 import natsort
 
-from . import config
-from .file_validator import FileProcesser
+from uploader.file_validator import FileProcesser
+from uploader.utils.config import NUMBER_OF_IMAGES_UPLOAD
 
 logger = logging.getLogger("md_uploader")
 
@@ -27,9 +27,7 @@ class ImageProcessor:
         # Renamed file to original file name
         self.images_to_upload_names: "Dict[str, str]" = {}
 
-        self.images_upload_session = int(
-            config["User Set"]["number_of_images_upload"]
-        )
+        self.images_upload_session = NUMBER_OF_IMAGES_UPLOAD
 
         self.info_list = self._get_valid_images()
 
@@ -62,13 +60,13 @@ class ImageProcessor:
             return True
         # jpg image
         elif image_data[0:3] == b"\xff\xd8\xff" or image_data[6:10] in (
-                b"JFIF",
-                b"Exif",
+            b"JFIF",
+            b"Exif",
         ):
             return True
         # gif image
         elif image_data.startswith(
-                (b"\x47\x49\x46\x38\x37\x61", b"\x47\x49\x46\x38\x39\x61")
+            (b"\x47\x49\x46\x38\x37\x61", b"\x47\x49\x46\x38\x39\x61")
         ):
             return True
         return False
@@ -86,7 +84,7 @@ class ImageProcessor:
         info_list_images_only = natsort.natsorted(info_list, key=self._key)
 
         self.valid_images_to_upload = [
-            info_list_images_only[l: l + self.images_upload_session]
+            info_list_images_only[l : l + self.images_upload_session]
             for l in range(0, len(info_list_images_only), self.images_upload_session)
         ]
         logger.info(f"Images to upload: {self.valid_images_to_upload}")

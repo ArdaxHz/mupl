@@ -1,11 +1,11 @@
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List
 
-from . import config
-from .utils import languages
+from uploader.utils.config import config
+from uploader.utils.languages import languages
 
 logger = logging.getLogger("md_uploader")
 
@@ -16,7 +16,7 @@ FILE_NAME_REGEX = re.compile(
     r"(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)"  # Chapter number and prefix
     r"(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?"  # Volume number
     r"(?:\s?\((?P<chapter_title>.+)\))?"  # Chapter title
-    r"(?:\s?\{(?P<publish_date>\d{4}-[0-1]\d-(?:[0-2]\d|3[0-1]))\})?"  # Publish date
+    r"(?:\s?\{(?P<publish_date>(?P<publish_year>\d{4})-(?P<publish_month>\d{2})-(?P<publish_day>\d{2})(?:[T\s](?P<publish_hour>\d{2})[\:\-](?P<publish_minute>\d{2})(?:[\:\-](?P<publish_microsecond>\d{2}))?(?:(?P<publish_offset>[+-])(?P<publish_timezone>\d{2}[\:\-]?\d{2}))?)?)\})?"  # Publish date
     r"(?:\s?\[(?:(?P<group>.+))?\])?"  # Groups
     r"(?:\s?\{v?(?P<version>\d)?\})?"  # Chapter version
     r"(?:\.(?P<extension>zip|cbz))?$",  # File extension
@@ -179,24 +179,74 @@ class FileProcesser:
     def _get_publish_date(self) -> "Optional[str]":
         """Get the chapter publish date."""
         publish_date = self._zip_name_match.group("publish_date")
-        if publish_date is not None:
-            publish_date = publish_date.strip()
-            if datetime.fromisoformat(
-                    f"{publish_date}T00:00:00"
-            ) > datetime.now() + timedelta(weeks=2):
-                publish_date_over_2_weeks_error = f"Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
-                logger.warning(publish_date_over_2_weeks_error)
-                print(publish_date_over_2_weeks_error)
+        if publish_date is None:
+            return
 
-            if datetime.fromisoformat(f"{publish_date}T00:00:00") < datetime.now():
-                publish_date_before_current_error = f"Chosen publish date is before the current date, not setting a publish date."
-                logger.warning(publish_date_before_current_error)
-                print(publish_date_before_current_error)
-                publish_date = None
+        publish_year = self._zip_name_match.group("publish_year")
+        publish_month = self._zip_name_match.group("publish_month")
+        publish_day = self._zip_name_match.group("publish_day")
+        publish_hour = self._zip_name_match.group("publish_hour")
+        publish_minute = self._zip_name_match.group("publish_minute")
+        publish_microsecond = self._zip_name_match.group("publish_microsecond")
+        publish_offset = self._zip_name_match.group("publish_offset")
+        publish_timezone = self._zip_name_match.group("publish_timezone")
+
+        if publish_timezone is not None:
+            publish_timezone = re.sub(r"[-:]", "", publish_timezone)
+
+        try:
+            publish_year = int(publish_year)
+        except (ValueError, TypeError):
+            publish_year = None
+        try:
+            publish_month = int(publish_month)
+        except (ValueError, TypeError):
+            publish_month = None
+        try:
+            publish_day = int(publish_day)
+        except (ValueError, TypeError):
+            publish_day = None
+        try:
+            publish_hour = int(publish_hour)
+        except (ValueError, TypeError):
+            publish_hour = 0
+        try:
+            publish_minute = int(publish_minute)
+        except (ValueError, TypeError):
+            publish_minute = 0
+        try:
+            publish_microsecond = int(publish_microsecond)
+        except (ValueError, TypeError):
+            publish_microsecond = 0
+
+        publish_date = datetime(
+            year=publish_year,
+            month=publish_month,
+            day=publish_day,
+            hour=publish_hour,
+            minute=publish_minute,
+            microsecond=publish_microsecond,
+        ).isoformat()
+
+        if publish_timezone is not None:
+            publish_date += f"{publish_offset}{publish_timezone}"
+
+        publish_date = datetime.fromisoformat(publish_date).astimezone(tz=timezone.utc)
+
+        if publish_date > datetime.now(tz=timezone.utc) + timedelta(weeks=2):
+            publish_date_over_2_weeks_error = f"Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
+            logger.warning(publish_date_over_2_weeks_error)
+            print(publish_date_over_2_weeks_error)
+
+        if publish_date < datetime.now(tz=timezone.utc):
+            publish_date_before_current_error = f"Chosen publish date is before the current date, not setting a publish date."
+            logger.warning(publish_date_before_current_error)
+            print(publish_date_before_current_error)
+            publish_date = None
         return publish_date
 
     def _get_groups(self) -> "List[str]":
-        """Get the group ids from the file, use the group fallback if the file has no gorups."""
+        """Get the group ids from the file, use the group fallback if the file has no groups."""
         groups = []
         groups_match = self._zip_name_match.group("group")
         if groups_match is not None:

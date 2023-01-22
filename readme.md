@@ -10,7 +10,7 @@
 - Omit the chapter prefix if the chapter is a oneshot, e.g. `cXXX` > `XXX`.
 - `(vYY)` can be omitted if the chapter has no volume.
 - `(chapter_title)` can be omitted if the chapter has no title. Use `{question_mark}` in place where there would be a `?`.
-- `{publish_date}` can be omitted and **MUST** be in the format `YYYY-MM-DD` if included.
+- `{publish_date}` can be omitted and **MUST** be in the format `YYYY-MM-DDTHH-MM-SS[+0000]` if included.
 - `[group]` can be a list of groups. Separate each separate group with a `+`. Groups can be a key for the `name_id_map.json` file or the group ids.
 
 Images can be named whatever you like as they will be sorted naturally, but images **MUST** be either `png`, `jpg` or `gif`, anything else will not be accepted.

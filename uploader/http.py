@@ -1,5 +1,3 @@
-import base64
-import configparser
 import json
 import logging
 import time
@@ -9,7 +7,8 @@ from typing import Optional
 
 import requests
 
-from . import UPLOAD_RETRY, __version__, root_path, mangadex_api_url
+from uploader import __version__
+from uploader.utils.config import mangadex_api_url, UPLOAD_RETRY, root_path, config
 
 http_error_codes = {
     "400": "Bad Request.",
@@ -52,12 +51,16 @@ class HTTPResponse:
 
     @property
     def ok(self):
-        return True if self.response.ok or self.response.status_code in self.successful_codes else False
+        return (
+            True
+            if self.response.ok or self.response.status_code in self.successful_codes
+            else False
+        )
 
     def json(self) -> Optional[dict]:
         """Convert the api response into a parsable json."""
         critical_decode_error_message = (
-            "Couldn't convert mangadex api response into a json."
+            f"{self.status_code}: Couldn't convert mangadex api response into a json."
         )
 
         logger.debug(f"Request id: {self.response.headers.get('x-request-id', None)}")
@@ -70,6 +73,7 @@ class HTTPResponse:
             return converted_response
         except json.JSONDecodeError:
             logger.critical(critical_decode_error_message)
+            logger.error(self.response.content)
             print(critical_decode_error_message)
             return
         except AttributeError:
@@ -81,13 +85,14 @@ class HTTPResponse:
                 return converted_response
             except json.JSONDecodeError:
                 logger.critical(critical_decode_error_message)
+                logger.error(self.response.content)
                 print(critical_decode_error_message)
                 return
 
     def print_error(
-            self,
-            show_error: bool = False,
-            log_error: bool = True,
+        self,
+        show_error: bool = False,
+        log_error: bool = True,
     ) -> str:
         """Print the errors the site returns."""
         error_message = f"Error: {self.status_code}"
@@ -121,7 +126,7 @@ class HTTPResponse:
 
 
 class HTTPModel:
-    def __init__(self, config: "configparser.RawConfigParser") -> None:
+    def __init__(self) -> None:
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": f"md_uploader/{__version__}"})
 
@@ -142,25 +147,24 @@ class HTTPModel:
         self._successful_login = False
         self._session_token = self._file_token.get("session", None)
         self._refresh_token = self._file_token.get("refresh", None)
-        self._decoded_session_token = None
-        self._decoded_refresh_token = None
 
-    def _calculate_sleep_time(self, status_code: int, wait: bool, headers={}):
+    def _calculate_sleep_time(self, status_code: int, wait: bool, headers):
         self.number_of_requests += 1
         self.total_requests += 1
         loop = False
 
         limit = int(headers.get("x-ratelimit-limit", self.max_requests))
-        logger.debug("limit is: %s", limit)
         remaining = int(
             headers.get(
                 "x-ratelimit-remaining", self.max_requests - self.number_of_requests
             )
         )
-        logger.debug("remaining is: %s", remaining)
         retry_after = headers.get("x-ratelimit-retry-after", None)
 
-        logger.debug("retry is: %s", retry_after)
+        logger.debug(f"limit: {limit}")
+        logger.debug(f"remaining: {remaining}")
+        logger.debug(f"retry_after: {retry_after}")
+        logger.debug(f"number_of_requests: {self.number_of_requests}")
 
         delta = self.max_requests
         sleep = delta / limit
@@ -187,39 +191,46 @@ class HTTPModel:
 
         logger.debug("delta is: %s", delta)
 
-        if remaining == 0 or retry_after is not None:
-            if wait and status_code != 429:
+        if remaining <= 0 or retry_after is not None or status_code == 429:
+            if not wait and status_code != 429 and remaining > 0:
                 return loop
 
             self.number_of_requests = 0
             logger.debug(f"Sleeping {sleep} seconds")
             time.sleep(sleep)
+
+            if remaining == 0 and status_code != 429:
+                loop = False
         return loop
 
     def _format_request_log(
-            self,
-            method: str,
-            route: str,
-            params: dict = None,
-            json: dict = None,
-            data=None,
-            files=None,
-            successful_codes: list = [],
+        self,
+        method: str,
+        route: str,
+        params: dict = None,
+        json: dict = None,
+        data=None,
+        files=None,
+        successful_codes: list = None,
     ):
         return f'"{method}": {route} {successful_codes=} {params=} {json=} {data=}'
 
     def _request(
-            self,
-            method: str,
-            route: str,
-            params: dict = None,
-            json: dict = None,
-            data=None,
-            files=None,
-            successful_codes: list = [],
-            **kwargs,
+        self,
+        method: str,
+        route: str,
+        params: dict = None,
+        json: dict = None,
+        data=None,
+        files=None,
+        successful_codes: list = None,
+        **kwargs,
     ):
+        if successful_codes is None:
+            successful_codes = []
+
         retry = self.upload_retry_total
+        total_retry = self.upload_retry_total
         tries = kwargs.get("tries", self.upload_retry_total)
         sleep = kwargs.get("sleep", True)
 
@@ -240,15 +251,19 @@ class HTTPModel:
                 response = self.session.request(
                     method, route, json=json, params=params, data=data, files=files
                 )
+                logger.debug(response.url)
 
                 loop = self._calculate_sleep_time(
-                    status_code=response.status_code, headers=response.headers, wait=sleep
+                    status_code=response.status_code,
+                    headers=response.headers,
+                    wait=sleep,
                 )
                 if loop:
                     continue
             except requests.RequestException as e:
                 logger.error(e)
                 retry -= 1
+                total_retry -= 1
                 continue
 
             response_obj = HTTPResponse(response, successful_codes)
@@ -257,7 +272,7 @@ class HTTPModel:
                 continue
 
             if (successful_codes and response.status_code in successful_codes) or (
-                    response.status_code in range(200, 300)
+                response.status_code in range(200, 300)
             ):
                 return response_obj
 
@@ -266,9 +281,12 @@ class HTTPModel:
                 logger.warning(error_message)
                 print(error_message)
                 try:
-                    self._login(False)
+                    self._login()
                 except Exception as e:
                     logger.error(e)
+
+                    if total_retry >= 5:
+                        break
                     retry = self.upload_retry_total
                     continue
             elif response.status_code == 429:
@@ -276,6 +294,9 @@ class HTTPModel:
                 logger.warning(error_message)
                 print(error_message)
                 time.sleep(60)
+
+                if total_retry >= 5:
+                    break
                 retry = self.upload_retry_total
                 continue
             else:
@@ -287,34 +308,17 @@ class HTTPModel:
                     log_error=kwargs.get("show_error", True),
                 )
                 retry -= 1
+                total_retry -= 1
                 continue
 
         raise RequestError(formatted_request_string)
 
-    def _login(self, check_login: bool):
-        if not check_login and self._successful_login:
-            logger.info("Already logged in, not checking for login.")
-            return
-
+    def _login(self):
         if self._first_login:
             logger.info("Trying to login through the .mdauth file.")
 
         if self._session_token is not None:
-            if self._first_login:
-                logger.info("Reading the session expiry from the token.")
-
-            if self._decoded_session_token is None:
-                logger.debug("Decoding the token into a json object.")
-                self._decoded_session_token = self._decode_token(self._session_token)
-
-            expired_session_token = self._check_token_expiry(
-                self._decoded_session_token
-            )
-            if expired_session_token:
-                logged_in = self._check_login()
-            else:
-                self._update_headers(self._session_token)
-                logged_in = True
+            logged_in = self._check_login()
         else:
             logged_in = self._refresh_token_md()
 
@@ -369,11 +373,12 @@ class HTTPModel:
             return self._login_using_details()
 
         try:
-            refresh_response = self.post(
+            refresh_response = self._request(
+                "POST",
                 f"{self._md_auth_api_url}/refresh",
                 json={"token": self._refresh_token},
                 successful_codes=[401, 403],
-                sleep=False
+                sleep=False,
             )
         except RequestError as e:
             logger.error(e)
@@ -395,15 +400,18 @@ class HTTPModel:
     def _check_login(self) -> bool:
         """Try login using saved session token."""
         try:
-            auth_check_response = self.get(
+            auth_check_response = self._request(
+                "GET",
                 f"{self._md_auth_api_url}/check",
+                successful_codes=[401, 403, 404],
+                tries=1,
             )
         except RequestError as e:
             logger.error(e)
         else:
             if (
-                    auth_check_response.status_code == 200
-                    and auth_check_response.data is not None
+                auth_check_response.status_code == 200
+                and auth_check_response.data is not None
             ):
                 if auth_check_response.data["isAuthenticated"]:
                     logger.info("Already logged in.")
@@ -424,9 +432,12 @@ class HTTPModel:
             raise Exception(critical_message)
 
         try:
-            login_response = self.post(
+            login_response = self._request(
+                "POST",
                 f"{self._md_auth_api_url}/login",
                 json={"username": username, "password": password},
+                sleep=False,
+                successful_codes=[401, 403, 404],
             )
         except RequestError as e:
             logger.error(e)
@@ -440,41 +451,21 @@ class HTTPModel:
         logger.error(f"Couldn't login to mangadex using the details provided.")
         return False
 
-    def _decode_token(self, token: str) -> dict:
-        """Read the payload stored in the json web token."""
-        payload = token.split(".")[1]
-        padding = len(payload) % 4
-        payload = base64.b64decode(payload + "=" * padding)
-        try:
-            parsed_payload: dict = json.loads(payload)
-        except (json.JSONDecodeError,):
-            parsed_payload = {}
-        return parsed_payload
-
-    def _check_token_expiry(self, token: dict) -> bool:
-        """Check if the token is expired or will expire in the next two minutes."""
-        expiry = datetime.fromtimestamp(token.get("exp", 946684799))
-        datetime_now = datetime.now()
-
-        if expiry > datetime_now:
-            return False
-        return True
-
 
 class HTTPClient(HTTPModel):
-    def __init__(self, config: configparser.RawConfigParser):
-        super().__init__(config)
+    def __init__(self):
+        super().__init__()
 
     def request(
-            self,
-            method: str,
-            route: str,
-            params: dict = None,
-            json: dict = None,
-            data=None,
-            files=None,
-            successful_codes: list = [],
-            **kwargs,
+        self,
+        method: str,
+        route: str,
+        params: dict = None,
+        json: dict = None,
+        data=None,
+        files=None,
+        successful_codes: list = None,
+        **kwargs,
     ):
         return self._request(
             method=method,
@@ -488,13 +479,13 @@ class HTTPClient(HTTPModel):
         )
 
     def post(
-            self,
-            route: str,
-            json: dict = None,
-            data=None,
-            files=None,
-            successful_codes: list = [],
-            **kwargs,
+        self,
+        route: str,
+        json: dict = None,
+        data=None,
+        files=None,
+        successful_codes: list = None,
+        **kwargs,
     ):
         return self._request(
             method="POST",
@@ -507,11 +498,11 @@ class HTTPClient(HTTPModel):
         )
 
     def get(
-            self,
-            route: str,
-            params: dict = None,
-            successful_codes: list = [],
-            **kwargs,
+        self,
+        route: str,
+        params: dict = None,
+        successful_codes: list = None,
+        **kwargs,
     ):
         return self._request(
             method="GET",
@@ -522,13 +513,13 @@ class HTTPClient(HTTPModel):
         )
 
     def put(
-            self,
-            route: str,
-            json: dict = None,
-            data=None,
-            files=None,
-            successful_codes: list = [],
-            **kwargs,
+        self,
+        route: str,
+        json: dict = None,
+        data=None,
+        files=None,
+        successful_codes: list = None,
+        **kwargs,
     ):
         return self._request(
             method="PUT",
@@ -541,13 +532,13 @@ class HTTPClient(HTTPModel):
         )
 
     def update(
-            self,
-            route: str,
-            json: dict = None,
-            data=None,
-            files=None,
-            successful_codes: list = [],
-            **kwargs,
+        self,
+        route: str,
+        json: dict = None,
+        data=None,
+        files=None,
+        successful_codes: list = None,
+        **kwargs,
     ):
         return self.put(
             route=route,
@@ -559,13 +550,13 @@ class HTTPClient(HTTPModel):
         )
 
     def delete(
-            self,
-            route: str,
-            params: dict = None,
-            json: dict = None,
-            data=None,
-            successful_codes: list = [],
-            **kwargs,
+        self,
+        route: str,
+        params: dict = None,
+        json: dict = None,
+        data=None,
+        successful_codes: list = None,
+        **kwargs,
     ):
         return self._request(
             method="DELETE",
@@ -577,6 +568,6 @@ class HTTPClient(HTTPModel):
             **kwargs,
         )
 
-    def login(self, check_login=True):
+    def login(self):
         """Login to MD account using details or saved token."""
-        self._login(check_login)
+        self._login()

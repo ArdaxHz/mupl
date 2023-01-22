@@ -7,10 +7,11 @@ from typing import Optional, List
 
 import natsort
 
-from uploader import config, RATELIMIT_TIME, root_path
 from uploader.file_validator import FileProcesser
 from uploader.http import HTTPClient
+from uploader.updater import check_for_update
 from uploader.uploader import ChapterUploader
+from uploader.utils.config import config, RATELIMIT_TIME, root_path
 
 logger = logging.getLogger("md_uploader")
 
@@ -19,7 +20,7 @@ def open_manga_series_map(files_path: "Path") -> "dict":
     """Get the manga-name-to-id map."""
     try:
         with open(
-                files_path.joinpath(config["Paths"]["name_id_map_file"]), "r"
+            files_path.joinpath(config["Paths"]["name_id_map_file"]), "r"
         ) as json_file:
             names_to_ids = json.load(json_file)
     except FileNotFoundError:
@@ -86,12 +87,14 @@ def main():
     if zips_to_upload is None:
         return
 
-    http_client = HTTPClient(config)
+    http_client = HTTPClient()
     failed_uploads: "List[Path]" = []
 
     for index, file_name_obj in enumerate(zips_to_upload, start=1):
         try:
-            uploader_process = ChapterUploader(http_client, file_name_obj, names_to_ids, failed_uploads)
+            uploader_process = ChapterUploader(
+                http_client, file_name_obj, names_to_ids, failed_uploads
+            )
             uploader_process.start_chapter_upload()
             if not uploader_process.folder_upload:
                 uploader_process.myzip.close()
@@ -139,7 +142,11 @@ if __name__ == "__main__":
 
     vargs = vars(parser.parse_args())
 
-    # if vargs.get("update", True):
-    #     check_for_update()
+    if vargs.get("update", True):
+        try:
+            check_for_update()
+        except (KeyError, PermissionError, TypeError, OSError, ValueError) as e:
+            logger.error(f"Update check error: {e}")
+            print(f"Not updating.")
 
     main()

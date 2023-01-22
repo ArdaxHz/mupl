@@ -1,8 +1,8 @@
 import logging
-from datetime import date
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
-root_path = Path(".")
+from uploader.utils.config import MAX_LOG_DAYS, root_path
 
 
 def format_log_dir_path():
@@ -15,20 +15,20 @@ log_folder_path = format_log_dir_path()
 
 
 def setup_logs(
-        logger_name: str = "md_uploader",
-        path: Path = log_folder_path,
-        logger_filename: str = "md_uploader",
+    logger_name: str,
+    path: Path = log_folder_path,
+    logger_filename: str = None,
 ):
-    if logger_name == "md_uploader":
-        add_to = ""
-    else:
-        add_to = f"{logger_name}_"
-    filename = f"{logger_filename}_{add_to}{str(date.today())}.log"
+    path.mkdir(exist_ok=True, parents=True)
+    if logger_filename is None:
+        logger_filename = logger_name
+
+    filename = f"{logger_filename}_{str(current_date)}.log"
 
     logs_path = path.joinpath(filename)
     fileh = logging.FileHandler(logs_path, "a")
     formatter = logging.Formatter(
-        "%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s"
+        "%(asctime)s %(levelname)-8s [%(filename)s:%(funcName)s:%(lineno)d] %(message)s"
     )
     fileh.setFormatter(formatter)
 
@@ -40,4 +40,25 @@ def setup_logs(
     log.setLevel(logging.DEBUG)
 
 
-setup_logs()
+current_date = date.today()
+last_date_keep_logs = current_date - timedelta(days=MAX_LOG_DAYS)
+
+
+setup_logs(
+    logger_name="md_uploader",
+    path=log_folder_path,
+    logger_filename="md_uploader",
+)
+
+_logger = logging.getLogger("md_uploader")
+
+
+def clear_old_logs(folder_path: Path):
+    for log_file in folder_path.rglob("*.log"):
+        file_date = datetime.fromtimestamp(log_file.stat().st_mtime).date()
+        if file_date < last_date_keep_logs:
+            _logger.debug(f"{log_file.name} is over {MAX_LOG_DAYS} days old, deleting.")
+            log_file.unlink()
+
+
+clear_old_logs(log_folder_path)
