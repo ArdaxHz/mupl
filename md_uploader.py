@@ -137,14 +137,14 @@ if __name__ == "__main__":
         default=True,
         const=False,
         nargs="?",
-        help="Check for progam update.",
+        help="Check for program update.",
     )
 
     vargs = vars(parser.parse_args())
 
     if vargs.get("update", True):
         try:
-            check_for_update()
+            updated = check_for_update()
         except (KeyError, PermissionError, TypeError, OSError, ValueError) as e:
             logger.error(f"Update check error: {e}")
             print(f"Not updating.")

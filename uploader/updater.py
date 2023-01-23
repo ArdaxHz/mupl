@@ -1,4 +1,5 @@
 import logging
+import sys
 from io import BytesIO
 from threading import Timer
 from zipfile import ZipFile
@@ -30,8 +31,8 @@ def check_for_update():
         remote_version = version.parse(remote_release_json["tag_name"])
 
         if remote_version > local_version:
-            print(f"Update found: (old){local_version} (new){remote_version}.")
-            logger.info(f"Update found: (old){local_version} (new){remote_version}.")
+            print(f"Update found: {local_version} => {remote_version}.")
+            logger.info(f"Update found: {local_version} => {remote_version}.")
             if remote_version.major != local_version.major:
                 print(
                     f"""The new version may have breaking changes, please check the github releases page for a list of changes
@@ -41,7 +42,7 @@ def check_for_update():
             timeout = 5
             t = Timer(timeout, raise_error, [ValueError("Not updating.")])
             t.start()
-            answer = input("Do you want to update? 'y' or 'n'")
+            answer = input("Do you want to update? [y/N] ")
             t.cancel()
 
             if answer.lower() in ["true", "1", "t", "y", "yes"]:
@@ -52,7 +53,7 @@ def check_for_update():
             if not update:
                 print(f"Not updating.")
                 logger.info(f"Skipping update {remote_version}")
-                return
+                return False
 
             zip_resp = requests.get(remote_release_json["zipball_url"])
             if zip_resp.ok:
@@ -70,9 +71,11 @@ def check_for_update():
                     with open(filename, "wb") as fopen:
                         fopen.write(file_data)
 
-                print(f"Updated, restart the ")
+                print(f"Updated, restart the uploader to run the new version.")
                 logger.info(f"Updated to version {remote_version}")
-                return
+                sys.exit()
+        else:
+            return False
 
     logger.info(f"Updating error.")
     print(f"Couldn't update.")
