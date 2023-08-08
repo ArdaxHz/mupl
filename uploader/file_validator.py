@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Optional, List
 
 from uploader.utils.config import config
-from uploader.utils.languages import languages
 
 logger = logging.getLogger("md_uploader")
 
@@ -79,64 +78,7 @@ class FileProcesser:
         if language is None:
             return "en"
 
-        language = language.strip()
-
-        if language.lower() in ("eng", "en"):
-            return "en"
-        elif len(language) < 2:
-            logger.warning(f"Language selected, {language} isn't in ISO format.")
-            print("Not a valid language option.")
-            return "null"
-        # Chapter language already in correct format for MD
-        elif re.match(r"^[a-z]{2}(?:-[a-z]{2})?$", language):
-            logger.info(f"Language {language} already in ISO-639-2 form.")
-            return language
-        # Language in iso-639-3 format already
-        elif len(language) == 3:
-            available_langs = [
-                l["two_letter"] for l in languages if l["three_letter"] == language
-            ]
-
-            if available_langs:
-                return available_langs[0]
-            return "null"
-        else:
-            # Language is a word instead of code, look for language and use that code
-            languages_match = [
-                l for l in languages if language.lower() in l["name"].lower()
-            ]
-
-            if len(languages_match) > 1:
-                print(
-                    "Found multiple matching languages, please choose the language you want to download from the following options."
-                )
-
-                for count, item in enumerate(languages_match, start=1):
-                    print(f'{count}: {item["name"]}')
-
-                try:
-                    lang = int(
-                        input(
-                            f"Choose a number matching the position of the language: "
-                        ).strip()
-                    )
-                except ValueError:
-                    logger.warning(
-                        "Language option selected is not a number, using null as language."
-                    )
-                    print("That's not a number.")
-                    return "null"
-
-                if lang not in range(1, (len(languages_match) + 1)):
-                    logger.warning(
-                        "Language option selected is not in the accepted range."
-                    )
-                    print("Not a valid language option.")
-                    return "null"
-
-                lang_to_use = languages_match[(lang - 1)]
-                return lang_to_use["two_letter"]
-            return languages_match[0]["two_letter"]
+        return str(language).strip().lower()
 
     def _get_chapter_number(self) -> "Optional[str]":
         """Get the chapter number from the file,
@@ -302,9 +244,31 @@ class FileProcesser:
         self.groups = self._get_groups()
         self.chapter_title = self._get_chapter_title()
         self.publish_date = self._get_publish_date()
-
         return True
 
     @property
     def zip_name_match(self):
         return self._zip_name_match
+
+    def __hash__(self):
+        return hash(self.zip_name)
+
+    def __eq__(self, other):
+        return self.__hash__() == other.__hash__()
+
+    def __str__(self):
+        return self.zip_name
+
+    def __repr__(self):
+        return (
+            f"<FileProcessor "
+            f"{self.zip_name}: "
+            f"{self.manga_series=}, "
+            f"{self.chapter_number=}, "
+            f"{self.volume_number=}, "
+            f"{self.chapter_title=}, "
+            f"{self.language=}, "
+            f"{self.groups=}, "
+            f"{self.publish_date=}"
+            f">"
+        )

@@ -6,7 +6,7 @@
 ----
 
 - `manga_title` can either be a key to be used in the `name_id_map.json` or the manga id.
-- `[lang]` is omitted for English. Use the languages table at the bottom of this page to find out which language code to use for MangaDex. 
+- `[lang]` is omitted for English. MangaDex uses the ISO-639-2 code, the language will not be validated client-side, but is left for the MD API to validate. 
 - Omit the chapter prefix if the chapter is a oneshot, e.g. `cXXX` > `XXX`.
 - `(vYY)` can be omitted if the chapter has no volume.
 - `(chapter_title)` can be omitted if the chapter has no title. Use `{question_mark}` in place where there would be a `?`.
@@ -37,7 +37,7 @@ Take `takamine - c025 (v04) [XuN].cbz` as the chapter I want to upload. In my `n
         "XuN": "b6d57ade-cab7-4be7-b2b8-be68484b3ad3"
 }
 ```
-The progam would then look through this file for the `takamine` key and for the `XuN` key for their assigned ids.
+The program would then look through this file for the `takamine` key and for the `XuN` key for their assigned ids.
 
 If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-san) [XuN+00e03853-1b96-4f41-9542-c71b8692033b]`, the progam would take the manga id directly from the file, the language as Spanish with the code `es`, chapter number Oneshot and no volume number, chapter title as `Momi-san` with groups `XuN` (id taken form `name_id_map.json`) and `00e03853-1b96-4f41-9542-c71b8692033b`.
 

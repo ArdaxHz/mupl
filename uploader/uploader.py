@@ -17,7 +17,7 @@ def flatten(t: List[list]) -> list:
     return [item for sublist in t for item in sublist]
 
 
-class UploaderHelper:
+class ChapterUploader:
     def __init__(
         self,
         http_client: "HTTPClient",
@@ -84,17 +84,6 @@ class UploaderHelper:
             f"{self.md_upload_api_url}/{self.upload_session_id}/commit", json=payload
         )
 
-
-class ChapterUploader(UploaderHelper):
-    def __init__(
-        self,
-        http_client: "HTTPClient",
-        file_name_obj: "FileProcesser",
-        names_to_ids: "dict",
-        failed_uploads: "list",
-    ):
-        super().__init__(http_client, file_name_obj, names_to_ids, failed_uploads)
-
     def _upload_images(self, image_batch: "Dict[str, bytes]") -> "bool":
         """Try to upload every 10 (default) images to the upload session."""
         # No images to upload
@@ -113,6 +102,12 @@ class ChapterUploader(UploaderHelper):
 
         for retry in range(self.number_upload_retry):
             successful_upload_data = self._images_upload(image_batch)
+
+            if successful_upload_data is None:
+                print(
+                    f"Image upload error for {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}, try {self.number_upload_retry}."
+                )
+                continue
 
             # Add successful image uploads to the image ids array
             for uploaded_image in successful_upload_data:
@@ -156,6 +151,7 @@ class ChapterUploader(UploaderHelper):
                 self.failed_image_upload = True
                 continue
 
+        self.failed_image_upload = True
         return self.failed_image_upload
 
     def remove_upload_session(self, session_id: "Optional[str]" = None):

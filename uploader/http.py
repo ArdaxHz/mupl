@@ -251,7 +251,9 @@ class HTTPModel:
                 response = self.session.request(
                     method, route, json=json, params=params, data=data, files=files
                 )
-                logger.debug(response.url)
+                logger.debug(
+                    f"Initial Request: Code {response.status_code}, URL: {response.url}"
+                )
 
                 loop = self._calculate_sleep_time(
                     status_code=response.status_code,
