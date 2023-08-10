@@ -105,7 +105,7 @@ class ChapterUploader:
 
             if successful_upload_data is None:
                 print(
-                    f"Image upload error for {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}, try {retry}."
+                    f"Image upload error for {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}, try {retry + 1}."
                 )
                 if retry == self.number_upload_retry - 1:
                     self.failed_image_upload = True
