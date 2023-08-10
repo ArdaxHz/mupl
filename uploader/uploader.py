@@ -151,7 +151,6 @@ class ChapterUploader:
                 self.failed_image_upload = True
                 continue
 
-        self.failed_image_upload = True
         return self.failed_image_upload
 
     def remove_upload_session(self, session_id: "Optional[str]" = None):
