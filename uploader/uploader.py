@@ -90,7 +90,7 @@ class ChapterUploader:
         if not image_batch:
             return True
 
-        successful_upload_message = "Success: Uploaded page {}, size: {} bytes."
+        successful_upload_message = "Success: Uploaded page {}, size: {} MB."
 
         image_batch_list = list(image_batch.keys())
         print(
@@ -105,10 +105,10 @@ class ChapterUploader:
 
             if successful_upload_data is None:
                 print(
-                    f"Image upload error for {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}, try {retry + 1}."
+                    f"Image upload error for {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}, try {retry + 1}/{self.number_upload_retry}."
                 )
                 if retry == self.number_upload_retry - 1:
-                    self.failed_image_upload = True
+                    return True
                 continue
 
             # Add successful image uploads to the image ids array
@@ -127,15 +127,18 @@ class ChapterUploader:
                     uploaded_filename
                 ]
 
-                print(successful_upload_message.format(original_filename, file_size))
+                print(
+                    successful_upload_message.format(
+                        original_filename, round(file_size * 0.00000095367432, 2)
+                    )
+                )
 
             # Length of images array returned from the api is the same as the array sent to the api
             if len(successful_upload_data) == len(image_batch):
                 logger.info(
                     f"Uploaded images {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}."
                 )
-                self.failed_image_upload = False
-                break
+                return False
             else:
                 # Update the images to upload dictionary with the images that failed
                 image_batch = {
@@ -153,7 +156,7 @@ class ChapterUploader:
                 self.failed_image_upload = True
                 continue
 
-        return self.failed_image_upload
+        return True
 
     def remove_upload_session(self, session_id: "Optional[str]" = None):
         """Delete the upload session."""
@@ -344,7 +347,9 @@ class ChapterUploader:
             images_to_upload = self.image_uploader_process.get_images_to_upload(
                 images_array
             )
-            self._upload_images(images_to_upload)
+            failed = self._upload_images(images_to_upload)
+            if failed:
+                self.failed_image_upload = True
 
             # Don't upload rest of the chapter's images if the images before failed
             if self.failed_image_upload:

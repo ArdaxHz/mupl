@@ -1,6 +1,9 @@
 import argparse
+import atexit
 import json
 import logging
+import signal
+import sys
 import time
 from pathlib import Path
 from typing import Optional, List
@@ -126,6 +129,8 @@ def main():
         for fail in failed_uploads:
             prefix = "Folder" if fail.is_dir() else "Archive"
             print(f"{prefix}: {fail.name}")
+
+    sys.exit(0)
 
 
 if __name__ == "__main__":
