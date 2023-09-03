@@ -126,10 +126,16 @@ class ChapterUploader:
                 original_filename = self.image_uploader_process.images_to_upload_names[
                     uploaded_filename
                 ]
+                converted_format = self.image_uploader_process.converted_images.get(
+                    original_filename
+                )
+                formatted_name_message = original_filename
+                if converted_format is not None:
+                    formatted_name_message += f" (converted to {converted_format})"
 
                 print(
                     successful_upload_message.format(
-                        original_filename, round(file_size * 0.00000095367432, 2)
+                        formatted_name_message, round(file_size * 0.00000095367432, 2)
                     )
                 )
 

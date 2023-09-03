@@ -39,6 +39,7 @@ class ImageProcessor:
         self.valid_images_to_upload: "List[List[str]]" = []
         # Renamed file to original file name
         self.images_to_upload_names: "Dict[str, str]" = {}
+        self.converted_images: "Dict[str, str]" = {}
 
         self.images_upload_session = NUMBER_OF_IMAGES_UPLOAD
 
@@ -99,7 +100,8 @@ class ImageProcessor:
         if not new_format:
             return image_bytes
 
-        logger.info(f"Converting {image} into {new_format}")
+        self.converted_images.update({image: new_format})
+        logger.info(f"Converted {image} into {new_format}")
         with Image.open(io.BytesIO(image_bytes)) as image:
             output = io.BytesIO()
             image.save(output, new_format)
