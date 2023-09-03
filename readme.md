@@ -13,7 +13,9 @@
 - `{publish_date}` can be omitted and **MUST** be in the format `YYYY-MM-DDTHH-MM-SS[+0000]` if included.
 - `[group]` can be a list of groups. Separate each separate group with a `+`. Groups can be a key for the `name_id_map.json` file or the group ids.
 
-Images can be named whatever you like as they will be sorted naturally, but images **MUST** be either `png`, `jpg` or `gif`, anything else will not be accepted.
+Images can be named whatever you like as they will be sorted naturally, but they **MUST** be in one of the following formats: `png`, `jpg`, `gif` or `webp`. Anything else will not be accepted. 
+
+*Note: webp is not supported by MangaDex; as such, it will be automatically converted to one of the following formats during the uploading process: `png`, `jpg`, or `gif`.*
 
 ----
 

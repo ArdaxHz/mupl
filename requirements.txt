@@ -1,3 +1,4 @@
 requests
 natsort
 packaging
+Pillow
