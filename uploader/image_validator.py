@@ -1,4 +1,5 @@
 import enum
+import io
 import logging
 import string
 import zipfile
@@ -6,10 +7,11 @@ from pathlib import Path
 from typing import List, Dict, Union, Literal, Optional
 
 import natsort
+from PIL import Image
 
 from uploader.file_validator import FileProcesser
 from uploader.utils.config import NUMBER_OF_IMAGES_UPLOAD
-from uploader.utils.converter import convert_webp_for_upload
+from uploader.utils.converter import get_new_format_for_webp
 
 logger = logging.getLogger("md_uploader")
 
@@ -89,10 +91,19 @@ class ImageProcessor:
 
     def _get_bytes_for_upload(self, image: "str") -> bytes:
         image_bytes = self._read_image_data(image)
-        if self._get_image_format(image_bytes) != Format.WEBP:
+        current_format = self._get_image_format(image_bytes)
+        new_format = None
+        if current_format == Format.WEBP:
+            new_format = get_new_format_for_webp(image_bytes)
+
+        if not new_format:
             return image_bytes
-        else:
-            return convert_webp_for_upload(image_bytes)
+
+        logger.info(f"Converting {image} into {new_format}")
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            output = io.BytesIO()
+            image.save(output, new_format)
+            return output.getvalue()
 
     def _get_valid_images(self):
         """Validate the files in the archive.
