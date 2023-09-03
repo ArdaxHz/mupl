@@ -9,3 +9,4 @@ name_id_map.json
 *.ini
 .mdauth
 .idea
+venv/

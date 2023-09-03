@@ -1,15 +1,26 @@
+import enum
 import logging
 import string
 import zipfile
 from pathlib import Path
-from typing import List, Dict, Union, Literal
+from typing import List, Dict, Union, Literal, Optional
 
 import natsort
 
 from uploader.file_validator import FileProcesser
 from uploader.utils.config import NUMBER_OF_IMAGES_UPLOAD
+from uploader.utils.converter import convert_webp_for_upload
 
 logger = logging.getLogger("md_uploader")
+
+
+class Format(enum.Enum):
+    PNG = 0
+    JPG = 1
+    GIF = 2
+
+    # Converted to one of the md supported format
+    WEBP = 4
 
 
 class ImageProcessor:
@@ -51,25 +62,37 @@ class ImageProcessor:
         """Open zip file in read only mode."""
         return zipfile.ZipFile(self.to_upload)
 
-    def _get_image_mime_type(self, image: "str") -> "bool":
+    @staticmethod
+    def _get_image_format(image_bytes: "bytes") -> "Optional[Format]":
         """Returns the image type from the first few bytes."""
-        image_data = self._read_image_data(image)
+        if image_bytes.startswith(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"):
+            return Format.PNG
 
-        # png image
-        if image_data.startswith(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"):
-            return True
-        # jpg image
-        elif image_data[0:3] == b"\xff\xd8\xff" or image_data[6:10] in (
+        if image_bytes[0:3] == b"\xff\xd8\xff" or image_bytes[6:10] in (
             b"JFIF",
             b"Exif",
         ):
-            return True
-        # gif image
-        elif image_data.startswith(
+            return Format.JPG
+
+        if image_bytes.startswith(
             (b"\x47\x49\x46\x38\x37\x61", b"\x47\x49\x46\x38\x39\x61")
         ):
-            return True
-        return False
+            return Format.GIF
+
+        if image_bytes.startswith(b"RIFF") and image_bytes[8:12] == b"WEBP":
+            return Format.WEBP
+
+        return None
+
+    def _is_image_valid(self, image: "str") -> "bool":
+        return self._get_image_format(self._read_image_data(image)) is not None
+
+    def _get_bytes_for_upload(self, image: "str") -> bytes:
+        image_bytes = self._read_image_data(image)
+        if self._get_image_format(image_bytes) != Format.WEBP:
+            return image_bytes
+        else:
+            return convert_webp_for_upload(image_bytes)
 
     def _get_valid_images(self):
         """Validate the files in the archive.
@@ -80,7 +103,7 @@ class ImageProcessor:
         else:
             to_iter = [x.filename for x in self.myzip.infolist()]
 
-        info_list = [image for image in to_iter if self._get_image_mime_type(image)]
+        info_list = [image for image in to_iter if self._is_image_valid(image)]
         info_list_images_only = natsort.natsorted(info_list, key=self._key)
 
         self.valid_images_to_upload = [
@@ -101,5 +124,5 @@ class ImageProcessor:
             renamed_file = str(self.info_list.index(image))
             # Keeps track of which image index belongs to which image name
             self.images_to_upload_names.update({renamed_file: image_filename})
-            files.update({renamed_file: self._read_image_data(image)})
+            files.update({renamed_file: self._get_bytes_for_upload(image)})
         return files
