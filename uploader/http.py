@@ -121,6 +121,8 @@ class HTTPResponse:
                     logger.warning(error_message)
                 if show_error:
                     print(error_message)
+        else:
+            logger.error(self.response.content)
 
         return error_message
 
@@ -145,8 +147,8 @@ class HTTPModel:
 
         self._first_login = True
         self._successful_login = False
-        self._session_token = self._file_token.get("session", None)
-        self._refresh_token = self._file_token.get("refresh", None)
+        self._session_token = self._file_token.get("session")
+        self._refresh_token = self._file_token.get("refresh")
 
     def _calculate_sleep_time(self, status_code: int, wait: bool, headers):
         self.number_of_requests += 1
@@ -230,7 +232,7 @@ class HTTPModel:
             successful_codes = []
 
         retry = self.upload_retry_total
-        total_retry = self.upload_retry_total
+        total_retry = self.upload_retry_total * 2
         tries = kwargs.get("tries", self.upload_retry_total)
         sleep = kwargs.get("sleep", True)
 
@@ -260,44 +262,48 @@ class HTTPModel:
                     headers=response.headers,
                     wait=sleep,
                 )
+
+                retry -= 1
+                total_retry -= 1
                 if loop:
                     continue
             except requests.RequestException as e:
                 logger.error(e)
-                retry -= 1
-                total_retry -= 1
                 continue
 
             response_obj = HTTPResponse(response, successful_codes)
-            if response_obj.data is None and tries > 1:
-                retry -= 1
+            if (successful_codes and response.status_code not in successful_codes) or (
+                response.status_code not in range(200, 300)
+            ):
+                response_obj.print_error()
+
+            if response_obj.data is None and tries > 1 and total_retry > 0:
                 continue
 
-            if (successful_codes and response.status_code in successful_codes) or (
-                response.status_code in range(200, 300)
-            ):
+            if (
+                (successful_codes and response.status_code in successful_codes)
+                or (response.status_code in range(200, 300))
+            ) and response_obj.data is not None:
                 return response_obj
 
             if response.status_code == 401:
-                error_message = f"401: Not logged in."
-                logger.warning(error_message)
-                print(error_message)
+                response_obj.print_error()
+                print("401: Not logged in.")
                 try:
                     self._login()
                 except Exception as e:
                     logger.error(e)
 
-                    if total_retry >= 5:
+                    if total_retry <= 0:
                         break
                     retry = self.upload_retry_total
                     continue
             elif response.status_code == 429:
-                error_message = f"429: {http_error_codes.get('429')}"
-                logger.warning(error_message)
-                print(error_message)
-                time.sleep(60)
+                response_obj.print_error()
+                print(f"429: {http_error_codes.get('429')}")
+                time.sleep(90)
 
-                if total_retry >= 5:
+                if total_retry <= 0:
                     break
                 retry = self.upload_retry_total
                 continue
@@ -309,8 +315,6 @@ class HTTPModel:
                     show_error=kwargs.get("show_error", True),
                     log_error=kwargs.get("show_error", True),
                 )
-                retry -= 1
-                total_retry -= 1
                 continue
 
         raise RequestError(formatted_request_string)
@@ -320,6 +324,7 @@ class HTTPModel:
             logger.info("Trying to login through the .mdauth file.")
 
         if self._session_token is not None:
+            self._update_headers(self._session_token)
             logged_in = self._check_login()
         else:
             logged_in = self._refresh_token_md()
@@ -330,6 +335,7 @@ class HTTPModel:
                 logger.info(f"Logged into mangadex.")
                 print("Logged in.")
                 self._first_login = False
+            return True
         else:
             logger.critical("Couldn't login.")
             raise Exception("Couldn't login.")
@@ -416,7 +422,9 @@ class HTTPModel:
                 and auth_check_response.data is not None
             ):
                 if auth_check_response.data["isAuthenticated"]:
-                    logger.info("Already logged in.")
+                    logger.debug(
+                        f"Already logged in: {auth_check_response.data['isAuthenticated']=}"
+                    )
                     return True
 
         if self._refresh_token is None:
