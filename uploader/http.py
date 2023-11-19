@@ -9,6 +9,7 @@ import requests
 
 from uploader import __version__
 from uploader.utils.config import mangadex_api_url, UPLOAD_RETRY, root_path, config
+from uploader.utils.oauth2 import OAuth2
 
 http_error_codes = {
     "400": "Bad Request.",
@@ -139,16 +140,26 @@ class HTTPModel:
 
         self._config = config
         self._token_file = root_path.joinpath(config["Paths"]["mdauth_path"])
-        self._md_auth_api_url = f"{mangadex_api_url}/auth"
-        self._md_auth_auth_url = f"{self._md_auth_api_url}/auth"
-        self._md_auth_token_url = f"{self._md_auth_api_url}/token"
-        self._md_auth_introspect_url = f"{self._md_auth_api_url}/introspect"
         self._file_token = self._open_auth_file()
+        self._md_auth_api_url = f"{mangadex_api_url}/auth"
+
+        self.oauth = OAuth2(
+            self._config["MangaDex Credentials"],
+            self,
+            self._file_token.get("access"),
+            self._file_token.get("refresh"),
+        )
 
         self._first_login = True
         self._successful_login = False
-        self._session_token = self._file_token.get("session")
-        self._refresh_token = self._file_token.get("refresh")
+
+    @property
+    def access_token(self):
+        return self.oauth.access_token
+
+    @property
+    def refresh_token(self):
+        return self.oauth.refresh_token
 
     def _calculate_sleep_time(self, status_code: int, wait: bool, headers):
         self.number_of_requests += 1
@@ -323,14 +334,18 @@ class HTTPModel:
         if self._first_login:
             logger.info("Trying to login through the .mdauth file.")
 
-        if self._session_token is not None:
-            self._update_headers(self._session_token)
+        if self.access_token is not None:
+            self._update_headers(self.access_token)
             logged_in = self._check_login()
         else:
             logged_in = self._refresh_token_md()
 
         if logged_in:
             self._successful_login = True
+
+            self._update_headers(self.access_token)
+            self._save_session(self.access_token, self.refresh_token)
+
             if self._first_login:
                 logger.info(f"Logged into mangadex.")
                 print("Logged in.")
@@ -352,58 +367,27 @@ class HTTPModel:
             )
             return {}
 
-    def _save_session(self, token: dict):
+    def _save_session(self, access_token: str, refresh_token: str):
         """Save the session and refresh tokens."""
         with open(self._token_file, "w") as login_file:
-            login_file.write(json.dumps(token, indent=4))
+            login_file.write(
+                json.dumps({"access": access_token, "refresh": refresh_token}, indent=4)
+            )
         logger.debug("Saved mdauth file.")
 
-    def _update_headers(self, session_token: str):
+    def _update_headers(self, access_token: str):
         """Update the session headers to include the auth token."""
-        self.session.headers.update({"Authorization": f"Bearer {session_token}"})
-
-    def _update_token_details(self, token: dict):
-        """Update the instance session and refresh tokens, update the header and save the file."""
-        self._session_token = token["session"]
-        self._refresh_token = token["refresh"]
-
-        self._update_headers(token["session"])
-        self._save_session(token)
+        self.session.headers.update({"Authorization": f"Bearer {access_token}"})
 
     def _refresh_token_md(self) -> bool:
         """Use the refresh token to get a new session token."""
-        refreshed = False
-
-        if self._refresh_token is None:
+        if self.refresh_token is None:
             logger.error(
                 f"Refresh token doesn't exist, logging in through account details."
             )
             return self._login_using_details()
 
-        try:
-            refresh_response = self._request(
-                "POST",
-                f"{self._md_auth_api_url}/refresh",
-                json={"token": self._refresh_token},
-                successful_codes=[401, 403],
-                sleep=False,
-            )
-        except RequestError as e:
-            logger.error(e)
-            return False
-
-        if refresh_response.status_code == 200 and refresh_response.data is not None:
-            refresh_data = refresh_response.data["token"]
-            self._update_token_details(refresh_data)
-            return True
-        elif refresh_response.status_code in (401, 403):
-            logger.warning(
-                f"Couldn't login using refresh token, logging in using your account."
-            )
-            return self._login_using_details()
-
-        logger.error(f"Couldn't refresh token.")
-        return refreshed
+        return self.oauth.regenerate_access_token()
 
     def _check_login(self) -> bool:
         """Try login using saved session token."""
@@ -427,39 +411,23 @@ class HTTPModel:
                     )
                     return True
 
-        if self._refresh_token is None:
+        if self.refresh_token is None:
             return self._login_using_details()
         return self._refresh_token_md()
 
     def _login_using_details(self) -> bool:
         """Login using account details."""
-        username = self._config["MangaDex Credentials"]["mangadex_username"]
-        password = self._config["MangaDex Credentials"]["mangadex_password"]
+        username = self.oauth.username
+        password = self.oauth.password
+        client_id = self.oauth.client_id
+        client_secret = self.oauth.client_secret
 
-        if username == "" or password == "":
+        if username == "" or password == "" or client_id == "" or client_secret == "":
             critical_message = "Login details missing."
             logger.critical(critical_message)
             raise Exception(critical_message)
 
-        try:
-            login_response = self._request(
-                "POST",
-                f"{self._md_auth_api_url}/login",
-                json={"username": username, "password": password},
-                sleep=False,
-                successful_codes=[401, 403, 404],
-            )
-        except RequestError as e:
-            logger.error(e)
-            return False
-
-        if login_response.status_code == 200 and login_response.data is not None:
-            login_token = login_response.data["token"]
-            self._update_token_details(login_token)
-            return True
-
-        logger.error(f"Couldn't login to mangadex using the details provided.")
-        return False
+        return self.oauth.login()
 
 
 class HTTPClient(HTTPModel):
