@@ -5,16 +5,13 @@ from pathlib import Path
 from typing import List, Optional, Dict
 
 from uploader.file_validator import FileProcesser
-from uploader.http import RequestError, HTTPClient
+from uploader.http import RequestError
+from uploader.http.client import HTTPClient
 from uploader.image_validator import ImageProcessor
 from uploader.utils.config import config, mangadex_api_url, RATELIMIT_TIME, UPLOAD_RETRY
+from uploader.utils.misc import flatten
 
 logger = logging.getLogger("md_uploader")
-
-
-def flatten(t: List[list]) -> list:
-    """Flatten nested lists into one list."""
-    return [item for sublist in t for item in sublist]
 
 
 class ChapterUploader:

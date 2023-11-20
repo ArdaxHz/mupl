@@ -1,131 +1,18 @@
 import json
 import logging
 import time
-from copy import copy
 from datetime import datetime
-from typing import Optional
 
 import requests
 
 from uploader import __version__
-from uploader.utils.config import mangadex_api_url, UPLOAD_RETRY, root_path, config
-from uploader.utils.oauth2 import OAuth2
+from uploader.http import RequestError, http_error_codes
+from uploader.http.response import HTTPResponse
+from uploader.http.oauth import OAuth2
+from uploader.utils.config import UPLOAD_RETRY, config, mangadex_api_url, root_path
 
-http_error_codes = {
-    "400": "Bad Request.",
-    "401": "Unauthorised.",
-    "403": "Forbidden.",
-    "404": "Not Found.",
-    "429": "Too Many Requests.",
-    "500": "Internal Server Error.",
-    "502": "Bad Gateway.",
-    "503": "Service Unavailable.",
-    "504": "Gateway Timeout.",
-}
 
 logger = logging.getLogger("md_uploader")
-
-
-class RequestError(Exception):
-    def __init__(self, message: str) -> None:
-        super().__init__(message)
-
-
-class HTTPResponse:
-    def __init__(self, response: requests.Response, successful_codes=None) -> None:
-        if successful_codes is None:
-            successful_codes = []
-        else:
-            successful_codes = copy(successful_codes)
-
-        self.successful_codes = successful_codes.extend(range(200, 300))
-        self.response = response
-        self.data = self.json()
-
-    @property
-    def status_code(self):
-        return self.response.status_code
-
-    @property
-    def status(self):
-        return self.response.status_code
-
-    @property
-    def ok(self):
-        return (
-            True
-            if self.response.ok or self.response.status_code in self.successful_codes
-            else False
-        )
-
-    def json(self) -> Optional[dict]:
-        """Convert the api response into a parsable json."""
-        critical_decode_error_message = (
-            f"{self.status_code}: Couldn't convert mangadex api response into a json."
-        )
-
-        logger.debug(f"Request id: {self.response.headers.get('x-request-id', None)}")
-
-        if self.response.status_code == 204:
-            return
-
-        try:
-            converted_response = self.response.json()
-            return converted_response
-        except json.JSONDecodeError:
-            logger.critical(critical_decode_error_message)
-            logger.error(self.response.content)
-            print(critical_decode_error_message)
-            return
-        except AttributeError:
-            logger.critical(
-                f"Api response doesn't have load as json method, trying to load as json manually."
-            )
-            try:
-                converted_response = json.loads(self.response.content)
-                return converted_response
-            except json.JSONDecodeError:
-                logger.critical(critical_decode_error_message)
-                logger.error(self.response.content)
-                print(critical_decode_error_message)
-                return
-
-    def print_error(
-        self,
-        show_error: bool = False,
-        log_error: bool = True,
-    ) -> str:
-        """Print the errors the site returns."""
-        error_message = f"Error: {self.status_code}"
-        error_json = self.json()
-
-        if error_json is not None:
-            # Api response doesn't follow the normal api error format
-            try:
-                errors = [
-                    f'{e["status"]}: {e["detail"] if e["detail"] is not None else ""}'
-                    for e in error_json["errors"]
-                ]
-                errors = ", ".join(errors)
-
-                if not errors:
-                    errors = http_error_codes.get(str(self.status_code), "")
-
-                error_message = f"Error: {errors}"
-                if log_error:
-                    logger.warning(error_message)
-                if show_error:
-                    print(error_message)
-            except KeyError:
-                error_message = f"KeyError {self.status_code}: {error_json}."
-                if log_error:
-                    logger.warning(error_message)
-                if show_error:
-                    print(error_message)
-        else:
-            logger.error(self.response.content)
-
-        return error_message
 
 
 class HTTPModel:
@@ -154,14 +41,16 @@ class HTTPModel:
         self._successful_login = False
 
     @property
-    def access_token(self):
+    def access_token(self) -> "str":
         return self.oauth.access_token
 
     @property
-    def refresh_token(self):
+    def refresh_token(self) -> "str":
         return self.oauth.refresh_token
 
-    def _calculate_sleep_time(self, status_code: int, wait: bool, headers):
+    def _calculate_sleep_time(
+        self, status_code: "int", wait: "bool", headers: "dict"
+    ) -> "bool":
         self.number_of_requests += 1
         self.total_requests += 1
         loop = False
@@ -218,27 +107,27 @@ class HTTPModel:
 
     def _format_request_log(
         self,
-        method: str,
-        route: str,
-        params: dict = None,
-        json: dict = None,
+        method: "str",
+        route: "str",
+        params: "dict" = None,
+        json: "dict" = None,
         data=None,
         files=None,
-        successful_codes: list = None,
-    ):
+        successful_codes: "list" = None,
+    ) -> "str":
         return f'"{method}": {route} {successful_codes=} {params=} {json=} {data=}'
 
     def _request(
         self,
-        method: str,
-        route: str,
-        params: dict = None,
-        json: dict = None,
+        method: "str",
+        route: "str",
+        params: "dict" = None,
+        json: "dict" = None,
         data=None,
         files=None,
-        successful_codes: list = None,
+        successful_codes: "list" = None,
         **kwargs,
-    ):
+    ) -> "HTTPResponse":
         if successful_codes is None:
             successful_codes = []
 
@@ -330,7 +219,7 @@ class HTTPModel:
 
         raise RequestError(formatted_request_string)
 
-    def _login(self):
+    def _login(self) -> "bool":
         if self._first_login:
             logger.info("Trying to login through the .mdauth file.")
 
@@ -344,7 +233,7 @@ class HTTPModel:
             self._successful_login = True
 
             self._update_headers(self.access_token)
-            self._save_session(self.access_token, self.refresh_token)
+            self._save_tokens(self.access_token, self.refresh_token)
 
             if self._first_login:
                 logger.info(f"Logged into mangadex.")
@@ -355,7 +244,7 @@ class HTTPModel:
             logger.critical("Couldn't login.")
             raise Exception("Couldn't login.")
 
-    def _open_auth_file(self) -> dict:
+    def _open_auth_file(self) -> "dict":
         """Open auth file and read saved tokens."""
         try:
             with open(self._token_file, "r") as login_file:
@@ -367,20 +256,20 @@ class HTTPModel:
             )
             return {}
 
-    def _save_session(self, access_token: str, refresh_token: str):
-        """Save the session and refresh tokens."""
+    def _save_tokens(self, access_token: "str", refresh_token: "str") -> None:
+        """Save the access and refresh tokens."""
         with open(self._token_file, "w") as login_file:
             login_file.write(
                 json.dumps({"access": access_token, "refresh": refresh_token}, indent=4)
             )
         logger.debug("Saved mdauth file.")
 
-    def _update_headers(self, access_token: str):
-        """Update the session headers to include the auth token."""
+    def _update_headers(self, access_token: "str") -> None:
+        """Update the access headers to include the auth token."""
         self.session.headers.update({"Authorization": f"Bearer {access_token}"})
 
-    def _refresh_token_md(self) -> bool:
-        """Use the refresh token to get a new session token."""
+    def _refresh_token_md(self) -> "bool":
+        """Use the refresh token to get a new access token."""
         if self.refresh_token is None:
             logger.error(
                 f"Refresh token doesn't exist, logging in through account details."
@@ -389,8 +278,8 @@ class HTTPModel:
 
         return self.oauth.regenerate_access_token()
 
-    def _check_login(self) -> bool:
-        """Try login using saved session token."""
+    def _check_login(self) -> "bool":
+        """Try login using saved access token."""
         try:
             auth_check_response = self._request(
                 "GET",
@@ -415,137 +304,6 @@ class HTTPModel:
             return self._login_using_details()
         return self._refresh_token_md()
 
-    def _login_using_details(self) -> bool:
+    def _login_using_details(self) -> "bool":
         """Login using account details."""
-        username = self.oauth.username
-        password = self.oauth.password
-        client_id = self.oauth.client_id
-        client_secret = self.oauth.client_secret
-
-        if username == "" or password == "" or client_id == "" or client_secret == "":
-            critical_message = "Login details missing."
-            logger.critical(critical_message)
-            raise Exception(critical_message)
-
         return self.oauth.login()
-
-
-class HTTPClient(HTTPModel):
-    def __init__(self):
-        super().__init__()
-
-    def request(
-        self,
-        method: str,
-        route: str,
-        params: dict = None,
-        json: dict = None,
-        data=None,
-        files=None,
-        successful_codes: list = None,
-        **kwargs,
-    ):
-        return self._request(
-            method=method,
-            route=route,
-            params=params,
-            json=json,
-            data=data,
-            files=files,
-            successful_codes=successful_codes,
-            **kwargs,
-        )
-
-    def post(
-        self,
-        route: str,
-        json: dict = None,
-        data=None,
-        files=None,
-        successful_codes: list = None,
-        **kwargs,
-    ):
-        return self._request(
-            method="POST",
-            route=route,
-            json=json,
-            data=data,
-            files=files,
-            successful_codes=successful_codes,
-            **kwargs,
-        )
-
-    def get(
-        self,
-        route: str,
-        params: dict = None,
-        successful_codes: list = None,
-        **kwargs,
-    ):
-        return self._request(
-            method="GET",
-            route=route,
-            params=params,
-            successful_codes=successful_codes,
-            **kwargs,
-        )
-
-    def put(
-        self,
-        route: str,
-        json: dict = None,
-        data=None,
-        files=None,
-        successful_codes: list = None,
-        **kwargs,
-    ):
-        return self._request(
-            method="PUT",
-            route=route,
-            json=json,
-            data=data,
-            files=files,
-            successful_codes=successful_codes,
-            **kwargs,
-        )
-
-    def update(
-        self,
-        route: str,
-        json: dict = None,
-        data=None,
-        files=None,
-        successful_codes: list = None,
-        **kwargs,
-    ):
-        return self.put(
-            route=route,
-            json=json,
-            data=data,
-            files=files,
-            successful_codes=successful_codes,
-            **kwargs,
-        )
-
-    def delete(
-        self,
-        route: str,
-        params: dict = None,
-        json: dict = None,
-        data=None,
-        successful_codes: list = None,
-        **kwargs,
-    ):
-        return self._request(
-            method="DELETE",
-            route=route,
-            params=params,
-            json=json,
-            data=data,
-            successful_codes=successful_codes,
-            **kwargs,
-        )
-
-    def login(self):
-        """Login to MD account using details or saved token."""
-        self._login()

@@ -15,9 +15,9 @@ log_folder_path = format_log_dir_path()
 
 
 def setup_logs(
-    logger_name: str,
+    logger_name: "str",
     path: Path = log_folder_path,
-    logger_filename: str = None,
+    logger_filename: "str" = None,
 ):
     path.mkdir(exist_ok=True, parents=True)
     if logger_filename is None:
@@ -53,7 +53,7 @@ setup_logs(
 _logger = logging.getLogger("md_uploader")
 
 
-def clear_old_logs(folder_path: Path):
+def clear_old_logs(folder_path: "Path"):
     for log_file in folder_path.rglob("*.log"):
         file_date = datetime.fromtimestamp(log_file.stat().st_mtime).date()
         if file_date < last_date_keep_logs:

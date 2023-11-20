@@ -5,14 +5,12 @@ import time
 from configparser import SectionProxy
 from typing import Optional, TYPE_CHECKING
 
-from requests import Session
-
 from uploader.utils.config import mangadex_auth_url
 
 logger = logging.getLogger("md_uploader")
 
 if TYPE_CHECKING:
-    from uploader.http import HTTPClient
+    from uploader.http.client import HTTPClient
 
 
 class OAuth2:
@@ -23,50 +21,66 @@ class OAuth2:
         access_token: "Optional[str]" = None,
         refresh_token: "Optional[str]" = None,
     ):
-        self.__username: "str" = credential_config.get("mangadex_username", "")
-        self.__password: "str" = credential_config.get("mangadex_password", "")
-        self.__client_id: "str" = credential_config.get("client_id", "")
-        self.__client_secret: "str" = credential_config.get("client_secret", "")
         self.__client: "HTTPClient" = client
+        self.token_url = f"{mangadex_auth_url}/token"
+
+        self.__username: "str" = credential_config.get("mangadex_username")
+        self.__password: "str" = credential_config.get("mangadex_password")
+        self.__client_id: "str" = credential_config.get("client_id")
+        self.__client_secret: "str" = credential_config.get("client_secret")
+
         self.__access_token: "Optional[str]" = access_token
         self.__refresh_token: "Optional[str]" = refresh_token
 
-    def login(self):
+    def __update_token(self, data: "dict"):
+        """Update local vars with new tokens."""
+        self.__access_token = data["access_token"]
+        self.__refresh_token = data["refresh_token"]
+
+    def login(self) -> "bool":
+        """Generate access token from login and client details."""
+        username = self.username
+        password = self.password
+        client_id = self.client_id
+        client_secret = self.client_secret
+
+        if not username or not password or not client_id or not client_secret:
+            critical_message = "Login details missing."
+            logger.critical(critical_message)
+            raise Exception(critical_message)
+
         token_response = self.__client.post(
-            f"{mangadex_auth_url}/token",
+            self.token_url,
             data={
                 "grant_type": "password",
-                "username": self._username,
-                "password": self._password,
-                "client_id": self.__client_id,
-                "client_secret": self.__client_secret,
+                "username": self.username,
+                "password": self.password,
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
             },
         )
 
         if token_response.status_code == 200 and token_response.data is not None:
-            token_response_json = token_response.data
-            self.__access_token = token_response_json["access_token"]
-            self.__refresh_token = token_response_json["refresh_token"]
+            self.__update_token(token_response.data)
             return True
 
         logger.error(f"Couldn't login to mangadex using the details provided.")
         return False
 
-    def regenerate_access_token(self):
+    def regenerate_access_token(self) -> "bool":
+        """Regenerate access token using refresh token."""
         token_response = self.__client.post(
-            f"{mangadex_auth_url}/token",
+            self.token_url,
             data={
                 "grant_type": "refresh_token",
-                "client_id": self.__client_id,
-                "client_secret": self.__client_secret,
+                "client_id": self.client_id,
+                "client_secret": self.client_secret,
                 "refresh_token": self.refresh_token,
             },
         )
 
         if token_response.status_code == 200 and token_response.data is not None:
-            token_response_json = token_response.data
-            self.__access_token = token_response_json["access_token"]
-            self.__refresh_token = token_response_json["refresh_token"]
+            self.__update_token(token_response.data)
             return True
         elif token_response.status_code in (401, 403):
             logger.warning(
@@ -94,19 +108,19 @@ class OAuth2:
         return self.__token_expired(self.refresh_token)
 
     @property
-    def username(self):
+    def username(self) -> "str":
         return self.__username
 
     @property
-    def password(self):
+    def password(self) -> "str":
         return self.__password
 
     @property
-    def client_id(self):
+    def client_id(self) -> "str":
         return self.__client_id
 
     @property
-    def client_secret(self):
+    def client_secret(self) -> "str":
         return self.__client_secret
 
     @staticmethod

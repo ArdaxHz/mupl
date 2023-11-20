@@ -7,11 +7,10 @@ from pathlib import Path
 from typing import List, Dict, Union, Literal, Optional
 
 import natsort
-from PIL import Image
+from PIL import Image, ImageSequence
 
 from uploader.file_validator import FileProcesser
 from uploader.utils.config import NUMBER_OF_IMAGES_UPLOAD
-from uploader.utils.converter import get_new_format_for_webp
 
 logger = logging.getLogger("md_uploader")
 
@@ -23,6 +22,55 @@ class Format(enum.Enum):
 
     # Converted to one of the md supported format
     WEBP = 4
+
+
+class ImageProcessorBase:
+    @staticmethod
+    def key(x: "str") -> "Union[Literal[0], str]":
+        """Give a higher priority in sorting for images with their first character a punctuation."""
+        if Path(x).name[0].lower() in string.punctuation:
+            return 0
+        else:
+            return x
+
+    @staticmethod
+    def get_image_format(image_bytes: "bytes") -> "Optional[Format]":
+        """Returns the image type from the first few bytes."""
+        if image_bytes.startswith(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"):
+            return Format.PNG
+
+        if image_bytes[0:3] == b"\xff\xd8\xff" or image_bytes[6:10] in (
+            b"JFIF",
+            b"Exif",
+        ):
+            return Format.JPG
+
+        if image_bytes.startswith(
+            (b"\x47\x49\x46\x38\x37\x61", b"\x47\x49\x46\x38\x39\x61")
+        ):
+            return Format.GIF
+
+        if image_bytes.startswith(b"RIFF") and image_bytes[8:12] == b"WEBP":
+            return Format.WEBP
+
+        return None
+
+    @staticmethod
+    def get_new_format_for_webp(image_bytes: "bytes") -> "str":
+        with Image.open(io.BytesIO(image_bytes)) as image:
+            # If it has more then 1 frame it's animated so convert to GIF
+            try:
+                _ = ImageSequence.Iterator(image)[1]
+                return "GIF"
+            except IndexError:
+                pass
+
+            # Lossless WebP and lossy (with alpha) WebP
+            if image.mode == "RGBA":
+                return "PNG"
+
+            # Otherwise, convert to JPEG
+            return "JPEG"
 
 
 class ImageProcessor:
@@ -45,12 +93,11 @@ class ImageProcessor:
 
         self.info_list = self._get_valid_images()
 
-    def _key(self, x: "str") -> "Union[Literal[0], str]":
-        """Give a higher priority in sorting for images with their first character a punctuation."""
-        if Path(x).name[0].lower() in string.punctuation:
-            return 0
-        else:
-            return x
+    def _is_image_valid(self, image: "str") -> "bool":
+        return (
+            ImageProcessorBase.get_image_format(self._read_image_data(image))
+            is not None
+        )
 
     def _read_image_data(self, image: "str") -> "bytes":
         """Read the image data from the zip or from the folder."""
@@ -65,37 +112,12 @@ class ImageProcessor:
         """Open zip file in read only mode."""
         return zipfile.ZipFile(self.to_upload)
 
-    @staticmethod
-    def _get_image_format(image_bytes: "bytes") -> "Optional[Format]":
-        """Returns the image type from the first few bytes."""
-        if image_bytes.startswith(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"):
-            return Format.PNG
-
-        if image_bytes[0:3] == b"\xff\xd8\xff" or image_bytes[6:10] in (
-            b"JFIF",
-            b"Exif",
-        ):
-            return Format.JPG
-
-        if image_bytes.startswith(
-            (b"\x47\x49\x46\x38\x37\x61", b"\x47\x49\x46\x38\x39\x61")
-        ):
-            return Format.GIF
-
-        if image_bytes.startswith(b"RIFF") and image_bytes[8:12] == b"WEBP":
-            return Format.WEBP
-
-        return None
-
-    def _is_image_valid(self, image: "str") -> "bool":
-        return self._get_image_format(self._read_image_data(image)) is not None
-
-    def _get_bytes_for_upload(self, image: "str") -> bytes:
+    def _get_bytes_for_upload(self, image: "str") -> "bytes":
         image_bytes = self._read_image_data(image)
-        current_format = self._get_image_format(image_bytes)
+        current_format = ImageProcessorBase.get_image_format(image_bytes)
         new_format = None
         if current_format == Format.WEBP:
-            new_format = get_new_format_for_webp(image_bytes)
+            new_format = ImageProcessorBase.get_new_format_for_webp(image_bytes)
 
         if not new_format:
             return image_bytes
@@ -117,7 +139,7 @@ class ImageProcessor:
             to_iter = [x.filename for x in self.myzip.infolist()]
 
         info_list = [image for image in to_iter if self._is_image_valid(image)]
-        info_list_images_only = natsort.natsorted(info_list, key=self._key)
+        info_list_images_only = natsort.natsorted(info_list, key=ImageProcessorBase.key)
 
         self.valid_images_to_upload = [
             info_list_images_only[l : l + self.images_upload_session]

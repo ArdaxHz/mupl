@@ -1,8 +1,5 @@
 import argparse
-import atexit
-import json
 import logging
-import signal
 import sys
 import time
 from pathlib import Path
@@ -11,34 +8,13 @@ from typing import Optional, List
 import natsort
 
 from uploader.file_validator import FileProcesser
-from uploader.http import HTTPClient
+from uploader.http.client import HTTPClient
 from uploader.updater import check_for_update
 from uploader.uploader import ChapterUploader
 from uploader.utils.config import config, RATELIMIT_TIME, root_path
+from uploader.utils.misc import open_manga_series_map
 
 logger = logging.getLogger("md_uploader")
-
-
-def open_manga_series_map(files_path: "Path") -> "dict":
-    """Get the manga-name-to-id map."""
-    try:
-        with open(
-            files_path.joinpath(config["Paths"]["name_id_map_file"]),
-            "r",
-            encoding="utf-8",
-        ) as json_file:
-            names_to_ids = json.load(json_file)
-    except FileNotFoundError:
-        not_found_error = f"The manga name-to-id json file couldn't be found. Continuing with an empty name-id map."
-        logger.error(not_found_error)
-        print(not_found_error)
-        return {"manga": {}, "group": {}}
-    except json.JSONDecodeError:
-        corrupted_error = f"The manga name-to-id json file is corrupted. Continuing with an empty name-id map."
-        logger.error(corrupted_error)
-        print(corrupted_error)
-        return {"manga": {}, "group": {}}
-    return names_to_ids
 
 
 def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
