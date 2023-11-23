@@ -145,12 +145,12 @@ class ImageProcessor:
             info_list_images_only[l : l + self.images_upload_session]
             for l in range(0, len(info_list_images_only), self.images_upload_session)
         ]
-        logger.info(f"Images to upload: {self.valid_images_to_upload}")
+        logger.debug(f"Images to upload: {self.valid_images_to_upload}")
         return info_list_images_only
 
     def get_images_to_upload(self, images_to_read: "List[str]") -> "Dict[str, bytes]":
         """Read the image data from the zip as list."""
-        logger.info(f"Reading data for images: {images_to_read}")
+        logger.debug(f"Reading data for images: {images_to_read}")
         # Dictionary to store the image index to the image bytes
         files: "Dict[str, bytes]" = {}
         for array_index, image in enumerate(images_to_read, start=1):

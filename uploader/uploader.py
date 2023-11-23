@@ -111,7 +111,7 @@ class ChapterUploader:
             # Add successful image uploads to the image ids array
             for uploaded_image in successful_upload_data:
                 if successful_upload_data.index(uploaded_image) == 0:
-                    logger.info(f"Success: Uploaded images {successful_upload_data}")
+                    logger.debug(f"Success: Uploaded images {successful_upload_data}")
 
                 uploaded_image_attributes = uploaded_image["attributes"]
                 uploaded_filename = uploaded_image_attributes["originalFileName"]
@@ -177,7 +177,7 @@ class ChapterUploader:
         except (RequestError,) as e:
             logger.error(f"Couldn't delete {session_id}: {e}")
         else:
-            logger.info(f"Sent {session_id} to be deleted.")
+            logger.debug(f"Sent {session_id} to be deleted.")
 
     def _delete_exising_upload_session(self):
         """Remove any exising upload sessions to not error out as mangadex only allows one upload session at a time."""
@@ -194,7 +194,7 @@ class ChapterUploader:
                 return
 
             elif existing_session.status_code == 404:
-                logger.info("No existing upload session found.")
+                logger.debug("No existing upload session found.")
                 return
 
         logger.error("Exising upload session not deleted.")
@@ -303,7 +303,7 @@ class ChapterUploader:
         new_uploaded_zip_path = self.to_upload.rename(
             os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}")
         )
-        logger.info(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
+        logger.debug(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
 
     def start_chapter_upload(self):
         """Process the zip for uploading."""
@@ -316,7 +316,7 @@ class ChapterUploader:
             f"groups: {self.file_name_obj.groups}, "
             f"publish on: {self.file_name_obj.publish_date}."
         )
-        logger.info(f"Chapter upload details: {upload_details}")
+        logger.info(f"Uploading chapter: {upload_details}")
         print(upload_details)
 
         if not self.image_uploader_process.valid_images_to_upload:

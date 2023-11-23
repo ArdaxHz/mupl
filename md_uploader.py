@@ -57,7 +57,7 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
         logger.error(no_zips_found_error_message)
         return
 
-    logger.info(f"Uploading files: {zips_to_upload}")
+    logger.debug(f"Uploading files: {zips_to_upload}")
     return zips_to_upload
 
 
@@ -122,8 +122,20 @@ if __name__ == "__main__":
         nargs="?",
         help="Check for program update.",
     )
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        action="count",
+        default=0,
+        help="Log verbosity.",
+    )
 
     vargs = vars(parser.parse_args())
+
+    if vargs["verbose"] == 0:
+        logger.setLevel(logging.INFO)
+    else:
+        logger.setLevel(logging.DEBUG)
 
     if vargs.get("update", True):
         try:

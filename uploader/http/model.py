@@ -146,7 +146,7 @@ class HTTPModel:
             successful_codes=successful_codes,
         )
 
-        logger.debug(formatted_request_string)
+        logger.info(formatted_request_string)
 
         while retry > 0:
             try:
@@ -221,7 +221,7 @@ class HTTPModel:
 
     def _login(self) -> "bool":
         if self._first_login:
-            logger.info("Trying to login through the .mdauth file.")
+            logger.debug("Trying to login through the mdauth file.")
 
         if self.access_token is not None:
             self._update_headers(self.access_token)
@@ -276,6 +276,7 @@ class HTTPModel:
             )
             return self._login_using_details()
 
+        logger.debug(f"Regenerating refresh token.")
         return self.oauth.regenerate_access_token()
 
     def _check_login(self) -> "bool":
@@ -306,4 +307,5 @@ class HTTPModel:
 
     def _login_using_details(self) -> "bool":
         """Login using account details."""
+        logger.debug(f"Logging in through account details.")
         return self.oauth.login()

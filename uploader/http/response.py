@@ -14,12 +14,13 @@ class HTTPResponse:
     def __init__(
         self, response: "requests.Response", successful_codes: "list" = None
     ) -> None:
-        if successful_codes is None:
-            successful_codes = []
-        else:
+        if isinstance(successful_codes, list):
             successful_codes = copy(successful_codes)
+        else:
+            successful_codes = []
 
-        self.successful_codes = successful_codes.extend(range(200, 300))
+        successful_codes.extend(range(200, 300))
+        self.successful_codes = successful_codes
         self.response = response
         self.data = self.json()
 
@@ -78,7 +79,7 @@ class HTTPResponse:
     ) -> "str":
         """Print the errors the site returns."""
         if self.ok:
-            return ""
+            return None
 
         error_message = f"Error: {self.status_code}"
         error_json = self.json()
