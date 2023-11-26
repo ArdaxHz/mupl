@@ -46,7 +46,7 @@ class HTTPResponse:
             f"{self.status_code}: Couldn't convert mangadex api response into a json."
         )
 
-        logger.debug(f"Request id: {self.response.headers.get('x-request-id', None)}")
+        logger.info(f"Request id: {self.response.headers.get('x-request-id', None)}")
 
         if self.response.status_code == 204:
             return

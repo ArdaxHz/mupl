@@ -196,16 +196,11 @@ class FileProcesser:
                     groups.append(group)
 
         if not groups:
-            logger.warning("Zip groups array is empty, using group fallback.")
-            print(f"No groups found, using group fallback.")
             groups = (
                 []
                 if config["User Set"]["group_fallback_id"] == ""
                 else [config["User Set"]["group_fallback_id"]]
             )
-            if not groups:
-                logger.warning("Group fallback not found, uploading without a group.")
-                print("Group fallback not found, uploading without a group.")
         return groups
 
     def process_zip_name(self) -> "bool":

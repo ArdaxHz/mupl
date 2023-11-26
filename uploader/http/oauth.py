@@ -58,6 +58,8 @@ class OAuth2:
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
             },
+            successful_codes=[401, 403, 404],
+            tries=1,
         )
 
         if token_response.status_code == 200 and token_response.data is not None:
@@ -77,6 +79,8 @@ class OAuth2:
                 "client_secret": self.client_secret,
                 "refresh_token": self.refresh_token,
             },
+            successful_codes=[401, 403, 404],
+            tries=1,
         )
 
         if token_response.status_code == 200 and token_response.data is not None:

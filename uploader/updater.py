@@ -1,6 +1,7 @@
 import logging
 import sys
 from io import BytesIO
+from pathlib import Path
 from threading import Timer
 from zipfile import ZipFile
 
@@ -8,7 +9,7 @@ import requests
 from packaging import version
 
 from uploader import __version__
-from uploader.utils.config import root_path
+from uploader.utils.config import root_path, config
 
 logger = logging.getLogger("md_uploader")
 
@@ -75,6 +76,7 @@ def check_for_update():
                     with open(filename, "wb") as fopen:
                         fopen.write(file_data)
 
+                Path(config["Paths"]["mdauth_path"]).unlink(missing_ok=True)
                 print(f"Updated, restart the uploader to run the new version.")
                 logger.info(
                     f"Updated to version {remote_version}: {remote_release_json['name']}."

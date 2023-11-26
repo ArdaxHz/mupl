@@ -24,6 +24,7 @@ class HTTPModel:
         self.max_requests = 5
         self.number_of_requests = 0
         self.total_requests = 0
+        self.total_not_login_row = 0
 
         self._config = config
         self._token_file = root_path.joinpath(config["Paths"]["mdauth_path"])
@@ -133,6 +134,7 @@ class HTTPModel:
 
         retry = self.upload_retry_total
         total_retry = self.upload_retry_total * 2
+        run_number = 0
         tries = kwargs.get("tries", self.upload_retry_total)
         sleep = kwargs.get("sleep", True)
 
@@ -150,12 +152,23 @@ class HTTPModel:
 
         while retry > 0:
             try:
+                run_number += 1
+
                 response = self.session.request(
                     method, route, json=json, params=params, data=data, files=files
                 )
                 logger.debug(
                     f"Initial Request: Code {response.status_code}, URL: {response.url}"
                 )
+                response_obj = HTTPResponse(response, successful_codes)
+
+                if response.status_code == 401:
+                    print("401: Not logged in.")
+                    self.total_not_login_row += 1
+                    if self.total_not_login_row >= self.upload_retry_total:
+                        return response_obj
+                else:
+                    self.total_not_login_row = 0
 
                 loop = self._calculate_sleep_time(
                     status_code=response.status_code,
@@ -171,7 +184,6 @@ class HTTPModel:
                 logger.error(e)
                 continue
 
-            response_obj = HTTPResponse(response, successful_codes)
             if (successful_codes and response.status_code not in successful_codes) or (
                 response.status_code not in range(200, 300)
             ):
@@ -183,12 +195,12 @@ class HTTPModel:
             if (
                 (successful_codes and response.status_code in successful_codes)
                 or (response.status_code in range(200, 300))
+                or run_number == tries
             ) and response_obj.data is not None:
                 return response_obj
 
             if response.status_code == 401:
                 response_obj.print_error()
-                print("401: Not logged in.")
                 try:
                     self._login()
                 except Exception as e:
