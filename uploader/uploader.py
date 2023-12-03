@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import time
@@ -8,8 +9,14 @@ from uploader.file_validator import FileProcesser
 from uploader.http import RequestError
 from uploader.http.client import HTTPClient
 from uploader.image_validator import ImageProcessor
-from uploader.utils.config import config, mangadex_api_url, RATELIMIT_TIME, UPLOAD_RETRY
-from uploader.utils.misc import flatten
+from uploader.utils.config import (
+    NUMBER_THREADS,
+    config,
+    mangadex_api_url,
+    RATELIMIT_TIME,
+    UPLOAD_RETRY,
+)
+from uploader.utils.misc import create_new_event_loop, flatten
 
 logger = logging.getLogger("md_uploader")
 
@@ -21,12 +28,16 @@ class ChapterUploader:
         file_name_obj: "FileProcesser",
         names_to_ids: "dict",
         failed_uploads: "list",
+        threaded: "bool",
     ):
         self.http_client = http_client
         self.file_name_obj = file_name_obj
         self.to_upload = self.file_name_obj.to_upload
         self.names_to_ids = names_to_ids
         self.failed_uploads = failed_uploads
+        self.threaded = threaded
+        if NUMBER_THREADS == 1:
+            self.threaded = False
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
         self.folder_upload = False
@@ -305,6 +316,50 @@ class ChapterUploader:
         )
         logger.debug(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
 
+    async def process_images_upload(self, images_array):
+        """Start uploading the images, threaded."""
+        images_to_upload = self.image_uploader_process.get_images_to_upload(
+            images_array
+        )
+        failed = self._upload_images(images_to_upload)
+        if failed:
+            self.failed_image_upload = True
+            asyncio.get_running_loop().close()
+
+    def run_threaded_uploader(self, spliced_images):
+        """Run the threads for upload."""
+        print("Running threaded uploader.")
+        tasks = []
+
+        loop = create_new_event_loop()
+        for images_to_upload in spliced_images:
+            task = self.process_images_upload(images_to_upload)
+            tasks.append(task)
+
+        gathered = asyncio.gather(*tasks)
+
+        try:
+            loop.run_until_complete(gathered)
+        except KeyboardInterrupt as e:
+            print("Caught keyboard interrupt. Canceling tasks...")
+            gathered.cancel()
+            self.failed_image_upload = True
+
+    def run_image_uploader(self, images):
+        """Run the image uploader ."""
+        print("Running non-threaded uploader.")
+        for images_array in images:
+            images_to_upload = self.image_uploader_process.get_images_to_upload(
+                images_array
+            )
+            failed = self._upload_images(images_to_upload)
+            if failed:
+                self.failed_image_upload = True
+
+            # Don't upload rest of the chapter's images if the images before failed
+            if self.failed_image_upload:
+                break
+
     def start_chapter_upload(self):
         """Process the zip for uploading."""
         upload_details = (
@@ -346,18 +401,26 @@ class ChapterUploader:
             f"{len(flatten(self.image_uploader_process.valid_images_to_upload))} images to upload."
         )
 
-        for images_array in self.image_uploader_process.valid_images_to_upload:
-            images_to_upload = self.image_uploader_process.get_images_to_upload(
-                images_array
+        spliced_images_list = [
+            self.image_uploader_process.valid_images_to_upload[
+                elem : elem + NUMBER_THREADS
+            ]
+            for elem in range(
+                0,
+                len(self.image_uploader_process.valid_images_to_upload),
+                NUMBER_THREADS,
             )
-            failed = self._upload_images(images_to_upload)
-            if failed:
-                self.failed_image_upload = True
+        ]
 
-            # Don't upload rest of the chapter's images if the images before failed
-            if self.failed_image_upload:
-                break
+        if self.threaded:
+            for spliced_images in spliced_images_list:
+                self.run_threaded_uploader(spliced_images)
+                if self.failed_image_upload:
+                    break
+        else:
+            self.run_image_uploader(self.image_uploader_process.valid_images_to_upload)
 
+        asyncio.get_event_loop().close()
         if not self.folder_upload:
             self.myzip.close()
 

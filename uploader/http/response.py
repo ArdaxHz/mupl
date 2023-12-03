@@ -88,7 +88,7 @@ class HTTPResponse:
             # Api response doesn't follow the normal api error format
             try:
                 errors = [
-                    f'{e["status"]}: {e["detail"] if e["detail"] is not None else ""}'
+                    f'{e["status"]}: {e["title"]}: {e["detail"] if e["detail"] is not None else ""}'
                     for e in error_json["errors"]
                 ]
                 errors = ", ".join(errors)

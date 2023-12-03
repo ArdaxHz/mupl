@@ -61,7 +61,7 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
     return zips_to_upload
 
 
-def main():
+def main(threaded: "bool" = True):
     """Run the uploader on each zip."""
     names_to_ids = open_manga_series_map(root_path)
     zips_to_upload = get_zips_to_upload(names_to_ids)
@@ -74,7 +74,7 @@ def main():
     for index, file_name_obj in enumerate(zips_to_upload, start=1):
         try:
             uploader_process = ChapterUploader(
-                http_client, file_name_obj, names_to_ids, failed_uploads
+                http_client, file_name_obj, names_to_ids, failed_uploads, threaded
             )
             uploader_process.start_chapter_upload()
             if not uploader_process.folder_upload:
@@ -129,6 +129,14 @@ if __name__ == "__main__":
         default=0,
         help="Log verbosity.",
     )
+    parser.add_argument(
+        "--threaded",
+        "-t",
+        default=True,
+        const=False,
+        nargs="?",
+        help="Upload the images concurrently.",
+    )
 
     vargs = vars(parser.parse_args())
 
@@ -144,4 +152,4 @@ if __name__ == "__main__":
             logger.error(f"Update check error: {e}")
             print(f"Not updating.")
 
-    main()
+    main(vargs["threaded"])

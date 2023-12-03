@@ -89,5 +89,16 @@ except (ValueError, KeyError):
     )
     MAX_LOG_DAYS = 30
 
+try:
+    NUMBER_THREADS = int(config["User Set"].get("number_threads", ""))
+    if NUMBER_THREADS > 5 or NUMBER_THREADS < 1:
+        NUMBER_THREADS = 3
+except (ValueError, KeyError):
+    logger.warning(
+        "Config number of threads is empty or contains a non-number character, using default of 3."
+    )
+    NUMBER_THREADS = 3
+
+
 mangadex_api_url = config["Paths"]["mangadex_api_url"]
 mangadex_auth_url = config["Paths"]["mangadex_auth_url"]
