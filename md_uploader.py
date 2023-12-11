@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 import logging
 import sys
 import time
@@ -91,6 +92,8 @@ def main(threaded: "bool" = True):
             logger.warning("Keyboard Interrupt detected, exiting.")
             print("Keyboard interrupt detected, exiting.")
             try:
+                asyncio.get_event_loop().stop()
+                asyncio.get_event_loop().close()
                 uploader_process.remove_upload_session()
                 if not uploader_process.folder_upload:
                     uploader_process.myzip.close()

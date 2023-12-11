@@ -36,7 +36,7 @@ class ChapterUploader:
         self.names_to_ids = names_to_ids
         self.failed_uploads = failed_uploads
         self.threaded = threaded
-        if NUMBER_THREADS == 1:
+        if NUMBER_THREADS <= 1:
             self.threaded = False
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
@@ -328,7 +328,6 @@ class ChapterUploader:
 
     def run_threaded_uploader(self, spliced_images):
         """Run the threads for upload."""
-        print("Running threaded uploader.")
         tasks = []
 
         loop = create_new_event_loop()
@@ -347,7 +346,6 @@ class ChapterUploader:
 
     def run_image_uploader(self, images):
         """Run the image uploader ."""
-        print("Running non-threaded uploader.")
         for images_array in images:
             images_to_upload = self.image_uploader_process.get_images_to_upload(
                 images_array
@@ -413,14 +411,15 @@ class ChapterUploader:
         ]
 
         if self.threaded:
+            print("Running threaded uploader.")
             for spliced_images in spliced_images_list:
                 self.run_threaded_uploader(spliced_images)
                 if self.failed_image_upload:
                     break
         else:
+            print("Running non-threaded uploader.")
             self.run_image_uploader(self.image_uploader_process.valid_images_to_upload)
 
-        asyncio.get_event_loop().close()
         if not self.folder_upload:
             self.myzip.close()
 

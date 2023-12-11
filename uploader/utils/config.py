@@ -91,7 +91,7 @@ except (ValueError, KeyError):
 
 try:
     NUMBER_THREADS = int(config["User Set"].get("number_threads", ""))
-    if NUMBER_THREADS > 5 or NUMBER_THREADS < 1:
+    if NUMBER_THREADS > 5:
         NUMBER_THREADS = 3
 except (ValueError, KeyError):
     logger.warning(
