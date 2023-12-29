@@ -47,7 +47,7 @@ Se eu tenho um arquivo nomeado `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000
 | Catalão         | ca            | cat            | Mongol          | mn            | mon            |
 | Chinês (Simp.)  | zh            | chi            | Norueguês       | no            | nor            |
 | Chinês (Trad.)  | zh-hk         | chi            | Persa           | fa            | per            |
-| Checo           | cs            | cze            | Polandês        | pl            | pol            |
+| Checo           | cs            | cze            | Polonês         | pl            | pol            |
 | Dinamarquês     | da            | dan            | Português (Br)  | pt-br         | por            |
 | Holandês        | nl            | dut            | Português (Pt)  | pt            | por            |
 | Inglês          | en            | eng            | Romeno          | ro            | rum            |
@@ -62,5 +62,5 @@ Se eu tenho um arquivo nomeado `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000
 | Indonésio       | id            | ind            | Vietnamita      | vi            | vie            |
 
 ## Contribuição
-- Tenha total certeza que não há nenhum pedido aberto igual antes do seu.
+- Tenha total certeza que não há nenhuma issue aberta antes igual a sua.
 - Pull requests podem ser abertas tranquilamente se você achar necessário, mas por favor formate todo o código em Python Black nas configs padrão antes de realizar.
