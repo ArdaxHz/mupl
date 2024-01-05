@@ -29,8 +29,12 @@ class OAuth2:
         self.__client_id: "str" = credential_config.get("client_id")
         self.__client_secret: "str" = credential_config.get("client_secret")
 
-        self.__access_token: "Optional[str]" = access_token
-        self.__refresh_token: "Optional[str]" = refresh_token
+        self.__access_token: "Optional[str]" = (
+            None if self.__token_expired(access_token) else access_token
+        )
+        self.__refresh_token: "Optional[str]" = (
+            None if self.__token_expired(refresh_token) else refresh_token
+        )
 
     def __update_token(self, data: "dict"):
         """Update local vars with new tokens."""

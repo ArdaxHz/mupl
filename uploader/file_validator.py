@@ -198,8 +198,8 @@ class FileProcesser:
         if not groups:
             groups = (
                 []
-                if config["User Set"]["group_fallback_id"] == ""
-                else [config["User Set"]["group_fallback_id"]]
+                if not config["options"]["group_fallback_id"]
+                else [config["options"]["group_fallback_id"]]
             )
         return groups
 

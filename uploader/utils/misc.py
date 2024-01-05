@@ -34,7 +34,7 @@ def open_manga_series_map(files_path: "Path") -> "dict":
     """Get the manga-name-to-id map."""
     try:
         with open(
-            files_path.joinpath(config["Paths"]["name_id_map_file"]),
+            files_path.joinpath(config["paths"]["name_id_map_file"]),
             "r",
             encoding="utf-8",
         ) as json_file:

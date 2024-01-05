@@ -1,4 +1,5 @@
 import configparser
+import json
 import logging
 from pathlib import Path
 
@@ -8,97 +9,62 @@ logger = logging.getLogger("md_uploader")
 root_path = Path(".")
 
 
-def load_config_info(config: "configparser.RawConfigParser"):
+def open_defaults_file(defaults_path: "Path") -> "dict":
+    try:
+        with open(
+            defaults_path,
+            "r",
+            encoding="utf-8",
+        ) as json_file:
+            return json.load(json_file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+
+def load_config_info(config: "dict", defaults: "dict"):
     """Check if the config file has the needed data, if not, use the default values."""
-    if config["Paths"].get("mangadex_api_url", "") == "":
-        logger.warning("Mangadex api path empty, using default.")
-        config["Paths"]["mangadex_api_url"] = "https://api.mangadex.org"
+    for section in defaults:
+        for option in defaults[section]:
+            if option not in config[section] or not config[section].get(option):
+                logger.debug(f"Using default value for config {section}: {option}")
+                config[section][option] = defaults[section][option]
 
-    if config["Paths"].get("mangadex_auth_url", "") == "":
-        logger.warning("Mangadex auth path empty, using default.")
-        config["Paths"][
-            "mangadex_auth_url"
-        ] = "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect"
+            if type(config[section][option]) != type(defaults[section][option]):
+                config[section][option] = defaults[section][option]
 
-    if config["Paths"].get("name_id_map_file", "") == "":
-        logger.info("Name id map_file path empty, using default.")
-        config["Paths"]["name_id_map_file"] = "name_id_map.json"
-
-    if config["Paths"].get("uploads_folder", "") == "":
-        logger.info("To upload files folder path empty, using default.")
-        config["Paths"]["uploads_folder"] = "to_upload"
-
-    if config["Paths"].get("uploaded_files", "") == "":
-        logger.info("Uploaded files folder path empty, using default.")
-        config["Paths"]["uploaded_files"] = "uploaded"
-
-    if config["Paths"].get("mdauth_path", "") == "":
-        logger.info("mdauth path empty, using default.")
-        config["Paths"]["mdauth_path"] = ".mdauth"
-
-    # Config files can only take strings, convert all the integers to string.
+            if (
+                config["options"]["number_threads"]
+                >= defaults["options"]["number_threads"]
+            ):
+                config["options"]["number_threads"] = defaults["options"][
+                    "number_threads"
+                ]
 
 
-def open_config_file(root_path: "Path") -> "configparser.RawConfigParser":
+def open_config_file(root_path: "Path") -> "dict":
     """Try to open the config file if it exists."""
-    config_file_path = root_path.joinpath("config").with_suffix(".ini")
-    # Open config file and read values
+    config_file_path = root_path.joinpath("config").with_suffix(".json")
+    defaults_path = root_path.joinpath("uploader", "utils", "defaults").with_suffix(
+        ".json"
+    )
+    defaults_file = open_defaults_file(defaults_path)
+
     if config_file_path.exists():
-        config = configparser.RawConfigParser()
-        config.read(config_file_path)
-        logger.info("Loaded config file.")
+        config = json.loads(config_file_path.read_bytes())
     else:
         logger.critical("Config file not found, exiting.")
         raise FileNotFoundError("Config file not found.")
 
-    load_config_info(config)
+    load_config_info(config, defaults_file)
     return config
 
 
 config = open_config_file(root_path)
 
-try:
-    NUMBER_OF_IMAGES_UPLOAD = int(config["User Set"].get("number_of_images_upload", ""))
-except ValueError:
-    logger.warning(
-        "Config file number of images to upload is empty or contains a non-number character, using default of 10."
-    )
-    NUMBER_OF_IMAGES_UPLOAD = 10
-
-try:
-    UPLOAD_RETRY = int(config["User Set"].get("upload_retry", ""))
-except ValueError:
-    logger.warning(
-        "Config file number of image retry is empty or contains a non-number character, using default of 3."
-    )
-    UPLOAD_RETRY = 3
-
-try:
-    RATELIMIT_TIME = int(config["User Set"].get("ratelimit_time", ""))
-except (ValueError, KeyError):
-    logger.warning(
-        "Config file time to sleep is empty or contains a non-number character, using default of 2."
-    )
-    RATELIMIT_TIME = 2
-
-try:
-    MAX_LOG_DAYS = int(config["User Set"].get("max_log_days", ""))
-except (ValueError, KeyError):
-    logger.warning(
-        "Config max days to keep logs is empty or contains a non-number character, using default of 30."
-    )
-    MAX_LOG_DAYS = 30
-
-try:
-    NUMBER_THREADS = int(config["User Set"].get("number_threads", ""))
-    if NUMBER_THREADS > 5:
-        NUMBER_THREADS = 3
-except (ValueError, KeyError):
-    logger.warning(
-        "Config number of threads is empty or contains a non-number character, using default of 3."
-    )
-    NUMBER_THREADS = 3
-
-
-mangadex_api_url = config["Paths"]["mangadex_api_url"]
-mangadex_auth_url = config["Paths"]["mangadex_auth_url"]
+NUMBER_OF_IMAGES_UPLOAD = config["options"]["number_of_images_upload"]
+UPLOAD_RETRY = config["options"]["upload_retry"]
+RATELIMIT_TIME = config["options"]["ratelimit_time"]
+MAX_LOG_DAYS = config["options"]["max_log_days"]
+NUMBER_THREADS = config["options"]["number_threads"]
+mangadex_api_url = config["paths"]["mangadex_api_url"]
+mangadex_auth_url = config["paths"]["mangadex_auth_url"]

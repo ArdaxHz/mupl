@@ -46,7 +46,7 @@ class ChapterUploader:
             self.folder_upload = True
             self.zip_extension = None
 
-        self.uploaded_files_path = Path(config["Paths"]["uploaded_files"])
+        self.uploaded_files_path = Path(config["paths"]["uploaded_files"])
         self.number_upload_retry = UPLOAD_RETRY
         self.ratelimit_time = RATELIMIT_TIME
         self.md_upload_api_url = f"{mangadex_api_url}/upload"

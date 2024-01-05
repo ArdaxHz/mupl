@@ -27,12 +27,12 @@ class HTTPModel:
         self.total_not_login_row = 0
 
         self._config = config
-        self._token_file = root_path.joinpath(config["Paths"]["mdauth_path"])
+        self._token_file = root_path.joinpath(config["paths"]["mdauth_path"])
         self._file_token = self._open_auth_file()
         self._md_auth_api_url = f"{mangadex_api_url}/auth"
 
         self.oauth = OAuth2(
-            self._config["MangaDex Credentials"],
+            self._config["credentials"],
             self,
             self._file_token.get("access"),
             self._file_token.get("refresh"),

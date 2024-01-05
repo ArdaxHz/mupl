@@ -76,7 +76,7 @@ def check_for_update():
                     with open(filename, "wb") as fopen:
                         fopen.write(file_data)
 
-                Path(config["Paths"]["mdauth_path"]).unlink(missing_ok=True)
+                Path(config["paths"]["mdauth_path"]).unlink(missing_ok=True)
                 print(f"Updated, restart the uploader to run the new version.")
                 logger.info(
                     f"Updated to version {remote_version}: {remote_release_json['name']}."

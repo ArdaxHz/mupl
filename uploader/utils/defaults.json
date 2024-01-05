@@ -1,0 +1,17 @@
+{
+    "paths": {
+        "mangadex_api_url": "https://api.mangadex.org",
+        "mangadex_auth_url": "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
+        "name_id_map_file": "name_id_map.json",
+        "uploads_folder": "to_upload",
+        "uploaded_files": "uploaded",
+        "mdauth_path": ".mdauth"
+    },
+    "options": {
+        "number_of_images_upload": 10,
+        "upload_retry": 3,
+        "ratelimit_time": 2,
+        "max_log_days": 30,
+        "number_threads": 3
+    }
+}

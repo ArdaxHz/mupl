@@ -20,7 +20,7 @@ logger = logging.getLogger("md_uploader")
 
 def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
     """Get a list of files that end with a zip/cbz extension for uploading."""
-    to_upload_folder_path = Path(config["Paths"]["uploads_folder"])
+    to_upload_folder_path = Path(config["paths"]["uploads_folder"])
     zips_to_upload: "List[FileProcesser]" = []
     zips_invalid_file_name = []
     zips_no_manga_id = []

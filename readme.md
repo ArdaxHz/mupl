@@ -19,10 +19,33 @@ Images can be named whatever you like as they will be sorted naturally, but they
 
 ----
 
-Copy the `config.ini.example` file and remove the `.example`. Put the respective details next to the equals sign.
-- `GROUP_FALLBACK_ID` will be used if the upload file has no groups, you can leave this blank if you do not wish to upload to any group.
-- `NUMBER_OF_IMAGES_UPLOAD` is the number of images to upload at once, a maximum of 10 images can be uploaded at once.
-- `UPLOAD_RETRY` is the number of times to retry uploading images or committing (releasing) the chapter.
+# config.json
+Copy the `config.json.example` file and remove the `.example`. Put the respective details next to the colon.
+
+*JSON values cannot be empty, use `null` where a value is meant to be empty, a string `"username"` for string values, or a digit `1` for number values.*
+
+
+## Options
+- `number_of_images_upload`: Number of images to upload at once, 10 maximum at once.
+- `upload_retry`: Attempts to retry image or chapter upload.
+- `ratelimit_time`: Time (in seconds) to sleep after API calls.
+- `max_log_days`: Number of days to keep logs.
+- `group_fallback_id`: Group ID to use if not found in file or ID map, leave blank to not upload to a group.
+- `number_threads`: Number of thread for concurrent image upload. ***This can rate limit you.*** Threads are limited to the range 1-3 (inclusive). 
+- `language`: Language for command line messages.
+
+## Credentials
+- `mangadex_username`: MangaDex username.
+- `mangadex_password`: MangaDex password.
+- `client_id`: Client ID for the MangaDex API Client.
+- `client_secret`: Client Secret for the MangaDex API Client.
+
+<details>
+  <summary>How to obtain a client ID and secret.</summary>
+
+  ![a screenshot of the mangadex-mass-uploader](https://github.com/Xnot/mangadex-mass-uploader/blob/main/assets/usage_1.png?raw=true)
+  ![a screenshot of the mangadex-mass-uploader](https://github.com/Xnot/mangadex-mass-uploader/blob/main/assets/usage_2.png?raw=true)
+</details>
 
 In the `name_id_map.json` file, replace `series1_name` with the `manga_title` used in your zip file and `series1_id` with the MangaDex id of the series. You can add more series by adding new lines under `series1_name` following the same format as the `series1_name` line. If adding more lines, each line except the last, must end with a `,`. You can do the same for the group names and ids.
 
@@ -42,34 +65,6 @@ Take `takamine - c025 (v04) [XuN].cbz` as the chapter I want to upload. In my `n
 The program would then look through this file for the `takamine` key and for the `XuN` key for their assigned ids.
 
 If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-san) [XuN+00e03853-1b96-4f41-9542-c71b8692033b]`, the progam would take the manga id directly from the file, the language as Spanish with the code `es`, chapter number Oneshot and no volume number, chapter title as `Momi-san` with groups `XuN` (id taken form `name_id_map.json`) and `00e03853-1b96-4f41-9542-c71b8692033b`.
-
-----
-
-## Languages
-
-| Language        | MD Code       | ISO-639 Code  | Language        | MD Code       | ISO-639 Code  |
-|:---------------:| ------------- | ------------- |:---------------:| ------------- | ------------- |
-| Arabic          | ar            | ara           | Italian         | it            | ita           |
-| Bengali         | bd            | ben           | Japanese        | ja            | jpn           |
-| Bulgarian       | bg            | bul           | Korean          | ko            | kor           |
-| Burmese         | my            | bur           | Lithuanian      | li            | lit           |
-| Bengali         | bn            | ben           | Malay           | ms            | may           |
-| Catalan         | ca            | cat           | Mongolian       | mn            | mon           |
-| Chinese (Simp)  | zh            | chi           | Norwegian       | no            | nor           |
-| Chinese (Trad)  | zh-hk         | chi           | Persian         | fa            | per           |
-| Czech           | cs            | cze           | Polish          | pl            | pol           |
-| Danish          | da            | dan           | Portuguese (Br) | pt-br         | por           |
-| Dutch           | nl            | dut           | Portuguese (Pt) | pt            | por           |
-| English         | en            | eng           | Romanian        | ro            | rum           |
-| Filipino        | tl            | fil           | Russian         | ru            | rus           |
-| Finnish         | fi            | fin           | Serbo-Croatian  | sh            | hrv           |
-| French          | fr            | fre           | Spanish (Es)    | es            | spa           |
-| German          | de            | ger           | Spanish (LATAM) | es-la         | spa           |
-| Greek           | el            | gre           | Swedish         | sv            | swe           |
-| Hebrew          | he            | heb           | Thai            | th            | tha           |
-| Hindi           | hi            | hin           | Turkish         | tr            | tur           |
-| Hungarian       | hu            | hun           | Ukrainian       | uk            | ukr           |
-| Indonesian      | id            | ind           | Vietnamese      | vi            | vie           |
 
 
 ## Contribution
