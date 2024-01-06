@@ -44,9 +44,7 @@ def load_config_info(config: "dict", defaults: "dict"):
 def open_config_file(root_path: "Path") -> "dict":
     """Try to open the config file if it exists."""
     config_file_path = root_path.joinpath("config").with_suffix(".json")
-    defaults_path = root_path.joinpath("uploader", "utils", "defaults").with_suffix(
-        ".json"
-    )
+    defaults_path = root_path.joinpath("mupl", "utils", "defaults").with_suffix(".json")
     defaults_file = open_defaults_file(defaults_path)
 
     if config_file_path.exists():
@@ -68,3 +66,4 @@ MAX_LOG_DAYS = config["options"]["max_log_days"]
 NUMBER_THREADS = config["options"]["number_threads"]
 mangadex_api_url = config["paths"]["mangadex_api_url"]
 mangadex_auth_url = config["paths"]["mangadex_auth_url"]
+VERBOSE = False

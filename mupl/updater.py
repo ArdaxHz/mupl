@@ -8,8 +8,8 @@ from zipfile import ZipFile
 import requests
 from packaging import version
 
-from uploader import __version__
-from uploader.utils.config import root_path, config
+from mupl import __version__
+from mupl.utils.config import root_path, config
 
 logger = logging.getLogger("md_uploader")
 

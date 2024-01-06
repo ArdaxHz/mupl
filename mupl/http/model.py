@@ -5,11 +5,11 @@ from datetime import datetime
 
 import requests
 
-from uploader import __version__
-from uploader.http import RequestError, http_error_codes
-from uploader.http.response import HTTPResponse
-from uploader.http.oauth import OAuth2
-from uploader.utils.config import UPLOAD_RETRY, config, mangadex_api_url, root_path
+from mupl import __version__
+from mupl.http import RequestError, http_error_codes
+from mupl.http.response import HTTPResponse
+from mupl.http.oauth import OAuth2
+from mupl.utils.config import UPLOAD_RETRY, config, mangadex_api_url, root_path
 
 
 logger = logging.getLogger("md_uploader")

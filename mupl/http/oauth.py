@@ -5,12 +5,12 @@ import time
 from configparser import SectionProxy
 from typing import Optional, TYPE_CHECKING
 
-from uploader.utils.config import mangadex_auth_url
+from mupl.utils.config import mangadex_auth_url
 
 logger = logging.getLogger("md_uploader")
 
 if TYPE_CHECKING:
-    from uploader.http.client import HTTPClient
+    from mupl.http.client import HTTPClient
 
 
 class OAuth2:

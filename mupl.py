@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 import logging
 import sys
 import time
@@ -8,12 +9,11 @@ from typing import Optional, List
 
 import natsort
 
-from uploader.file_validator import FileProcesser
-from uploader.http.client import HTTPClient
-from uploader.updater import check_for_update
-from uploader.uploader import ChapterUploader
-from uploader.utils.config import config, RATELIMIT_TIME, root_path
-from uploader.utils.misc import open_manga_series_map
+from mupl.file_validator import FileProcesser
+from mupl.http.client import HTTPClient
+from mupl.updater import check_for_update
+from mupl.uploader.uploader import ChapterUploader
+from mupl.utils.config import config, RATELIMIT_TIME, root_path, VERBOSE
 
 logger = logging.getLogger("md_uploader")
 
@@ -62,8 +62,24 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
     return zips_to_upload
 
 
+def open_manga_series_map(files_path: "Path") -> "dict":
+    """Get the manga-name-to-id map."""
+    try:
+        with open(
+            files_path.joinpath(config["paths"]["name_id_map_file"]),
+            "r",
+            encoding="utf-8",
+        ) as json_file:
+            names_to_ids = json.load(json_file)
+    except (FileNotFoundError, json.decoder.JSONDecodeError):
+        logger.exception("Please check your name-to-id file.")
+        print("Please check your name-to-id file.")
+        return {"manga": {}, "group": {}}
+    return names_to_ids
+
+
 def main(threaded: "bool" = True):
-    """Run the uploader on each zip."""
+    """Run the mupl on each zip."""
     names_to_ids = open_manga_series_map(root_path)
     zips_to_upload = get_zips_to_upload(names_to_ids)
     if zips_to_upload is None:
@@ -77,7 +93,7 @@ def main(threaded: "bool" = True):
             uploader_process = ChapterUploader(
                 http_client, file_name_obj, names_to_ids, failed_uploads, threaded
             )
-            uploader_process.start_chapter_upload()
+            uploader_process.upload()
             if not uploader_process.folder_upload:
                 uploader_process.myzip.close()
 
@@ -146,6 +162,7 @@ if __name__ == "__main__":
     if vargs["verbose"] == 0:
         logger.setLevel(logging.INFO)
     else:
+        VERBOSE = True
         logger.setLevel(logging.DEBUG)
 
     if vargs.get("update", True):

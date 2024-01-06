@@ -2,7 +2,7 @@ import logging
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from uploader.utils.config import MAX_LOG_DAYS, root_path
+from mupl.utils.config import MAX_LOG_DAYS, root_path
 
 
 def format_log_dir_path():
