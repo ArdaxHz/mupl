@@ -15,7 +15,7 @@ from mupl.updater import check_for_update
 from mupl.uploader.uploader import ChapterUploader
 from mupl.utils.config import config, RATELIMIT_TIME, root_path, VERBOSE
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":

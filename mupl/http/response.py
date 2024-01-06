@@ -7,7 +7,7 @@ import requests
 
 from mupl.http import http_error_codes
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 class HTTPResponse:

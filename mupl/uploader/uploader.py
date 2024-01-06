@@ -17,7 +17,7 @@ from mupl.utils.config import (
     RATELIMIT_TIME,
 )
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 class ChapterUploader(ChapterUploaderHandler):

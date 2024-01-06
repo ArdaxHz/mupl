@@ -45,12 +45,12 @@ last_date_keep_logs = current_date - timedelta(days=MAX_LOG_DAYS)
 
 
 setup_logs(
-    logger_name="md_uploader",
+    logger_name="mupl",
     path=log_folder_path,
-    logger_filename="md_uploader",
+    logger_filename="mupl",
 )
 
-_logger = logging.getLogger("md_uploader")
+_logger = logging.getLogger("mupl")
 
 
 def clear_old_logs(folder_path: "Path"):

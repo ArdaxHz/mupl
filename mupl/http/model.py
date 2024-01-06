@@ -12,13 +12,13 @@ from mupl.http.oauth import OAuth2
 from mupl.utils.config import UPLOAD_RETRY, config, mangadex_api_url, root_path
 
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 class HTTPModel:
     def __init__(self) -> None:
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": f"md_uploader/{__version__}"})
+        self.session.headers.update({"User-Agent": f"mupl/{__version__}"})
 
         self.upload_retry_total = UPLOAD_RETRY
         self.max_requests = 5

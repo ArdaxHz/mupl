@@ -3,7 +3,7 @@ import json
 import logging
 from pathlib import Path
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 root_path = Path(".")

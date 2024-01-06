@@ -11,7 +11,7 @@ from packaging import version
 from mupl import __version__
 from mupl.utils.config import root_path, config
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 def raise_error(ex):
@@ -25,7 +25,7 @@ def check_for_update():
     update = False
     local_version = version.parse(__version__)
     remote_release = requests.get(
-        "https://api.github.com/repos/ArdaxHz/mangadex_bulk_uploader/releases/latest"
+        "https://api.github.com/repos/ArdaxHz/mupl/releases/latest"
     )
     if remote_release.ok:
         remote_release_json = remote_release.json()
@@ -41,7 +41,7 @@ def check_for_update():
             if remote_version.major != local_version.major:
                 print(
                     f"""The new version may have breaking changes, please check the github releases page for a list of changes
-                    https://github.com/ArdaxHz/mangadex_bulk_uploader/releases/latest"""
+                    https://github.com/ArdaxHz/mupl/releases/latest"""
                 )
 
             timeout = 10

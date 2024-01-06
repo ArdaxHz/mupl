@@ -7,7 +7,7 @@ from typing import Optional, TYPE_CHECKING
 
 from mupl.utils.config import mangadex_auth_url
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 if TYPE_CHECKING:
     from mupl.http.client import HTTPClient

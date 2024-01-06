@@ -12,7 +12,7 @@ from mupl.utils.config import (
     UPLOAD_RETRY,
 )
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 class ChapterUploaderHandler:
