@@ -47,15 +47,20 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
 
     if zips_no_manga_id:
         zips_no_manga_id_skip_message = (
-            f"Skipping {len(zips_no_manga_id)} files as they have a missing manga id"
+            "Skipping {} files as they have a missing manga id".format(
+                len(zips_no_manga_id)
+            )
         )
         logger.warning(f"{zips_no_manga_id_skip_message}: {zips_no_manga_id}")
-        print(f"{zips_no_manga_id_skip_message}, check the logs for the file names.")
+        print(
+            "{}, check the logs for the file names.".format(
+                zips_no_manga_id_skip_message
+            )
+        )
 
     if not zips_to_upload:
-        no_zips_found_error_message = "No valid files found to upload, exiting."
-        print(no_zips_found_error_message)
-        logger.error(no_zips_found_error_message)
+        print("No valid files found to upload, exiting.")
+        logger.error(f"Exited due to {len(zips_to_upload)} zips not being valid.")
         return
 
     logger.debug(f"Uploading files: {zips_to_upload}")
@@ -71,7 +76,7 @@ def open_manga_series_map(files_path: "Path") -> "dict":
             encoding="utf-8",
         ) as json_file:
             names_to_ids = json.load(json_file)
-    except (FileNotFoundError, json.decoder.JSONDecodeError):
+    except (FileNotFoundError, json.decoder.JSONDecodeError) as e:
         logger.exception("Please check your name-to-id file.")
         print("Please check your name-to-id file.")
         return {"manga": {}, "group": {}}
@@ -90,6 +95,8 @@ def main(threaded: "bool" = True):
 
     for index, file_name_obj in enumerate(zips_to_upload, start=1):
         try:
+            print(f"\n\nUploading {str(file_name_obj)}\n{'-'*40}")
+
             uploader_process = ChapterUploader(
                 http_client, file_name_obj, names_to_ids, failed_uploads, threaded
             )
@@ -102,10 +109,13 @@ def main(threaded: "bool" = True):
             # Delete to save memory on large amounts of uploads
             del uploader_process
 
+            print(f"{'-'*10}\nFinished Uploading {str(file_name_obj)}\n{'-'*10}")
             logger.debug("Sleeping between zip upload.")
             time.sleep(RATELIMIT_TIME * 2)
         except KeyboardInterrupt:
-            logger.warning("Keyboard Interrupt detected, exiting.")
+            logger.warning(
+                f"Keyboard Interrupt detected during upload of {str(file_name_obj)}"
+            )
             print("Keyboard interrupt detected, exiting.")
             try:
                 asyncio.get_event_loop().stop()
@@ -122,10 +132,10 @@ def main(threaded: "bool" = True):
 
     if failed_uploads:
         logger.info(f"Failed uploads: {failed_uploads}")
-        print(f"Failed uploads:")
+        print("Failed uploads:")
         for fail in failed_uploads:
             prefix = "Folder" if fail.is_dir() else "Archive"
-            print(f"{prefix}: {fail.name}")
+            print("{}: {}".format(prefix, fail.name))
 
     sys.exit(0)
 
@@ -169,7 +179,7 @@ if __name__ == "__main__":
         try:
             updated = check_for_update()
         except (KeyError, PermissionError, TypeError, OSError, ValueError) as e:
-            logger.error(f"Update check error: {e}")
-            print(f"Not updating.")
+            logger.exception("Update check the error stack")
+            print("Not updating.")
 
     main(vargs["threaded"])

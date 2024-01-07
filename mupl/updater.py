@@ -33,14 +33,16 @@ def check_for_update():
 
         if remote_version > local_version:
             print(
-                f"Update found: {local_version} => {remote_version}: {remote_release_json['name']}."
+                "Update found: {} => {}: {}.".format(
+                    local_version, remote_version, remote_release_json["name"]
+                )
             )
             logger.info(
                 f"Update found: {local_version} => {remote_version}: {remote_release_json['name']}."
             )
             if remote_version.major != local_version.major:
                 print(
-                    f"""The new version may have breaking changes, please check the github releases page for a list of changes
+                    """The new version may have breaking changes, please check the github releases page for a list of changes
                     https://github.com/ArdaxHz/mupl/releases/latest"""
                 )
 
@@ -56,7 +58,7 @@ def check_for_update():
                 update = False
 
             if not update:
-                print(f"Not updating.")
+                print("Not updating.")
                 logger.info(f"Skipping update {remote_version}")
                 return False
 
@@ -85,5 +87,5 @@ def check_for_update():
         else:
             return False
 
-    logger.info(f"Updating error.")
-    print(f"Couldn't update.")
+    logger.info("Updating error.")
+    print("Couldn't update.")

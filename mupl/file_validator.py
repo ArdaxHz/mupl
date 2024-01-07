@@ -53,7 +53,9 @@ class FileProcesser:
         zip_name_match = self._file_name_regex.match(self.zip_name)
         if not zip_name_match:
             logger.error(f"{self.zip_name} isn't in the correct naming format.")
-            print(f"{self.zip_name} not in the correct naming format, skipping.")
+            print(
+                "{} not in the correct naming format, skipping.".format(self.zip_name)
+            )
             return
         return zip_name_match
 
@@ -179,14 +181,14 @@ class FileProcesser:
         publish_date = datetime.fromisoformat(publish_date).astimezone(tz=timezone.utc)
 
         if publish_date > datetime.now(tz=timezone.utc) + timedelta(weeks=2):
-            publish_date_over_2_weeks_error = f"Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
-            logger.warning(publish_date_over_2_weeks_error)
-            print(publish_date_over_2_weeks_error)
+            logger.warning(
+                "Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
+            )
 
         if publish_date < datetime.now(tz=timezone.utc):
-            publish_date_before_current_error = f"Chosen publish date is before the current date, not setting a publish date."
-            logger.warning(publish_date_before_current_error)
-            print(publish_date_before_current_error)
+            logger.warning(
+                "Chosen publish date is before the current date, not setting a publish date."
+            )
             publish_date = None
         return publish_date
 
@@ -233,7 +235,7 @@ class FileProcesser:
 
         if self.manga_series is None:
             logger.error(f"Couldn't find a manga id for {self.zip_name}, skipping.")
-            print(f"Skipped {self.zip_name}, no manga id found.")
+            print("Skipped {}, no manga id found.".format(self.zip_name))
             return False
 
         self.language = self._get_language()
@@ -259,7 +261,7 @@ class FileProcesser:
 
     def __repr__(self):
         return (
-            f"<FileProcessor "
+            f"<{self.__class__.__name__} "
             f"{self.zip_name}: "
             f"{self.manga_series=}, "
             f"{self.chapter_number=}, "

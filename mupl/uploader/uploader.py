@@ -131,24 +131,20 @@ class ChapterUploader(ChapterUploaderHandler):
 
     def upload(self):
         """Process the zip for uploading."""
-        upload_details = (
-            f"Manga id: {self.file_name_obj.manga_series}, "
-            f"chapter: {self.file_name_obj.chapter_number}, "
-            f"volume: {self.file_name_obj.volume_number}, "
-            f"title: {self.file_name_obj.chapter_title}, "
-            f"language: {self.file_name_obj.language}, "
-            f"groups: {self.file_name_obj.groups}, "
-            f"publish on: {self.file_name_obj.publish_date}."
+        logger.info(f"Uploading chapter: {repr(self.file_name_obj)}")
+        print(
+            "Manga id: {manga_series}, "
+            "chapter: {chapter_number}, "
+            "volume: {volume_number}, "
+            "title: {chapter_title}, "
+            "language: {language}, "
+            "groups: {groups}, "
+            "publish on: {publish_date}.".format(**self.file_name_obj.__dict__)
         )
-        logger.info(f"Uploading chapter: {upload_details}")
-        print(upload_details)
 
         if not self.image_uploader_process.valid_images_to_upload:
-            no_valid_images_found_error_message = (
-                f"{self.zip_name} has no valid images to upload, skipping."
-            )
-            print(no_valid_images_found_error_message)
-            logger.error(no_valid_images_found_error_message)
+            print("No valid images to upload, skipping.")
+            logger.error(f"No valid images found for {self.zip_name}")
             self.failed_uploads.append(self.to_upload)
             return
 
@@ -161,14 +157,21 @@ class ChapterUploader(ChapterUploaderHandler):
 
         self.upload_session_id = upload_session_response_json["data"]["id"]
 
-        upload_session_id_message = (
-            f"Created upload session: {self.upload_session_id}, {self.zip_name}."
+        logger.info(
+            "Created upload session: {self.upload_session_id}, {self.zip_name}."
         )
-        logger.info(upload_session_id_message)
-        print(upload_session_id_message)
+        print("Created upload session: {}".format(self.upload_session_id))
         if VERBOSE:
             print(
-                f"{len([item for sublist in self.image_uploader_process.valid_images_to_upload for item in sublist])} images to upload."
+                "{} images to upload.".format(
+                    len(
+                        [
+                            item
+                            for sublist in self.image_uploader_process.valid_images_to_upload
+                            for item in sublist
+                        ]
+                    )
+                )
             )
 
         self.tqdm = tqdm(total=len(self.image_uploader_process.info_list))
@@ -203,9 +206,10 @@ class ChapterUploader(ChapterUploaderHandler):
 
         # Skip chapter upload and delete upload session
         if self.failed_image_upload:
-            failed_image_upload_message = f"Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}."
-            print(failed_image_upload_message)
-            logger.error(failed_image_upload_message)
+            print("Deleting draft due to failed image upload.")
+            logger.error(
+                f"Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}."
+            )
             self.remove_upload_session()
             self.failed_uploads.append(self.to_upload)
             return

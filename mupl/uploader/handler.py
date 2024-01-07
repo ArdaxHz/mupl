@@ -84,20 +84,23 @@ class ChapterUploaderHandler:
         successful_upload_message = "Success: Uploaded page {}, size: {} MB."
 
         image_batch_list = list(image_batch.keys())
+        batch_start = int(image_batch_list[0]) + 1
+        batch_end = int(image_batch_list[-1]) + 1
         if VERBOSE:
-            print(
-                f"Uploading images {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}."
-            )
-        logger.debug(
-            f"Uploading images {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}."
-        )
+            print("Uploading images {} to {}.".format(batch_start, batch_end))
+        logger.debug(f"Uploading images {batch_start} to {batch_end}.")
 
         for retry in range(self.number_upload_retry):
             successful_upload_data = self._images_upload(image_batch)
 
             if successful_upload_data is None:
                 print(
-                    f"Image upload error for {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}, try {retry + 1}/{self.number_upload_retry}."
+                    "Image upload error for {} to {}, try {}/{},.".format(
+                        batch_start,
+                        batch_end,
+                        retry + 1,
+                        self.number_upload_retry,
+                    )
                 )
                 if retry == self.number_upload_retry - 1:
                     return True
@@ -221,7 +224,7 @@ class ChapterUploaderHandler:
 
         # Couldn't create an upload session, skip the chapter
         upload_session_response_json_message = (
-            f"Couldn't create an upload session for {self.zip_name}."
+            "Couldn't create an upload session for {}.".format(self.zip_name)
         )
         logger.error(upload_session_response_json_message)
         print(upload_session_response_json_message)
@@ -253,7 +256,9 @@ class ChapterUploaderHandler:
             if chapter_commit_response.ok:
                 successful_upload_id = chapter_commit_response.data["data"]["id"]
                 print(
-                    f"Successfully uploaded: {successful_upload_id}, {self.zip_name}."
+                    "Successfully uploaded: {}, {}.".format(
+                        successful_upload_id, self.zip_name
+                    )
                 )
                 logger.info(
                     f"Successful commit: {successful_upload_id}, {self.zip_name}."
@@ -261,11 +266,8 @@ class ChapterUploaderHandler:
                 self.move_files()
                 return True
 
-        commit_error_message = (
-            f"Failed to commit {self.zip_name}, removing upload draft."
-        )
-        logger.error(commit_error_message)
-        print(commit_error_message)
+        logger.error(f"Failed to commit {self.zip_name}, removing upload draft.")
+        print("Failed to upload {}".format(self.zip_name))
         self.remove_upload_session()
         self.failed_uploads.append(self.to_upload)
         return False
