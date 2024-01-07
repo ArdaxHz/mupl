@@ -1,4 +1,3 @@
-
 # mupl - MangaDex Bulk Uploader
 Bulk uploads folders and zips (.zip/.cbz) to MangaDex in a quick and easy fashion. 
 
@@ -23,8 +22,10 @@ Read this in other languages:
 
 
 ## Usage
-In a terminal (bash, powershell, cmd) type `python mupl.py` to run the uploader.
-Command `python` for windows and `python3` for mac and linux.
+Download the [latest version](https://github.com/ArdaxHz/mupl/releases/latest) (the source code zip) from the releases page, unzip the file into a folder and open a terminal in that location.
+
+In the terminal (bash, powershell, cmd) type `python mupl.py` to run the uploader.
+Ensure you have Python 3.9+ installed, use `python` for windows and `python3` for mac and linux.
 
 ### Command Line Arguments
 There are command line arguments that can be added after the main command to change the behaviour of the program, for example: `python mupl.py -u`.
