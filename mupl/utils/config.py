@@ -1,4 +1,3 @@
-import configparser
 import json
 import logging
 from pathlib import Path
@@ -32,6 +31,7 @@ def load_config_info(config: "dict", defaults: "dict"):
             if type(config[section][option]) != type(defaults[section][option]):
                 config[section][option] = defaults[section][option]
 
+            # Threads can't exceed default value
             if (
                 config["options"]["number_threads"]
                 >= defaults["options"]["number_threads"]

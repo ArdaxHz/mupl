@@ -52,7 +52,7 @@ class ChapterUploader(ChapterUploaderHandler):
             else:
                 raise
 
-    def _move_files(self):
+    def move_files(self):
         """Move the uploaded chapters to a different folder."""
         self.uploaded_files_path.mkdir(parents=True, exist_ok=True)
         # Folders don't have an extension

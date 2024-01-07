@@ -7,7 +7,6 @@ from mupl.http.client import HTTPClient
 from mupl.image_validator import ImageProcessor
 from mupl.utils.config import (
     VERBOSE,
-    config,
     mangadex_api_url,
     UPLOAD_RETRY,
 )
@@ -259,7 +258,7 @@ class ChapterUploaderHandler:
                 logger.info(
                     f"Successful commit: {successful_upload_id}, {self.zip_name}."
                 )
-                self._move_files()
+                self.move_files()
                 return True
 
         commit_error_message = (

@@ -8,6 +8,7 @@ from mupl.utils.config import config
 
 logger = logging.getLogger("mupl")
 
+
 FILE_NAME_REGEX = re.compile(
     r"^(?:\[(?P<artist>.+?)?\])?\s?"  # Artist
     r"(?P<title>.+?)"  # Manga title
