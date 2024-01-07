@@ -133,6 +133,8 @@ class OAuth2:
 
     @staticmethod
     def __token_expired(token: "str") -> "bool":
+        if not token:
+            return True
         payload_string = base64.b64decode(token.split(".")[1] + "===").decode("utf-8")
         expiry_time = json.loads(payload_string)["exp"]
         current_time = int(time.time())
