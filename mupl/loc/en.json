@@ -37,5 +37,8 @@
     "updater_text_2": "The new version may have breaking changes, please check the github releases page for a list of changes",
     "updater_text_3": "Not updating.",
     "updater_text_4": "Updated, restart the uploader to run the new version.",
-    "updater_text_5": "Couldn't update."
+    "updater_text_5": "Couldn't update.",
+
+    "model_text_1": "401: Not logged in.",
+    "model_text_2": "Logged in."
 }

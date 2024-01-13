@@ -37,5 +37,8 @@
     "updater_text_2": "A nova versão pode ter mudanças significativas, por favor, verifique a página de lançamentos no GitHub para ver a lista de mudanças",
     "updater_text_3": "Não atualizando.",
     "updater_text_4": "Atualizado, reinicie o uploader para executar a nova versão.",
-    "updater_text_5": "Não foi possível atualizar."
+    "updater_text_5": "Não foi possível atualizar.",
+
+    "model_text_1": "401: Não conectado.",
+    "model_text_2": "Conectado."
 }
