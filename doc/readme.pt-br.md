@@ -69,8 +69,11 @@ Existem argumentos da linha de comando que podem ser adicionados após o comando
 A data pode ser definida de algumas formas diferentes.
 
 **{1d}** == Daqui 1 dia
+
 **{5h}** == Daqui 5 horas
+
 **{40m}** == Daqui 40 minutos
+
 **{30s}** ==  Daqui 30 segundos
 
 Você pode juntar também.
