@@ -12,6 +12,7 @@
         "upload_retry": 3,
         "ratelimit_time": 2,
         "max_log_days": 30,
-        "number_threads": 3
+        "number_threads": 3,
+        "language_default": "en"
     }
 }

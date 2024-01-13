@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List
 
-from mupl.utils.config import config
+from mupl.utils.config import config, translate_message
 
 logger = logging.getLogger("mupl")
 
@@ -53,7 +53,9 @@ class FileProcesser:
         zip_name_match = self._file_name_regex.match(self.zip_name)
         if not zip_name_match:
             logger.error(f"{self.zip_name} isn't in the correct naming format.")
-            print(f"{self.zip_name} not in the correct naming format, skipping.")
+            print(
+                f"{translate_message['file_v_text_1']}".format(self.zip_name)
+            )
             return
         return zip_name_match
 
@@ -179,14 +181,14 @@ class FileProcesser:
         publish_date = datetime.fromisoformat(publish_date).astimezone(tz=timezone.utc)
 
         if publish_date > datetime.now(tz=timezone.utc) + timedelta(weeks=2):
-            publish_date_over_2_weeks_error = f"Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
-            logger.warning(publish_date_over_2_weeks_error)
-            print(publish_date_over_2_weeks_error)
+            logger.warning(
+                "Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
+            )
 
         if publish_date < datetime.now(tz=timezone.utc):
-            publish_date_before_current_error = f"Chosen publish date is before the current date, not setting a publish date."
-            logger.warning(publish_date_before_current_error)
-            print(publish_date_before_current_error)
+            logger.warning(
+                "Chosen publish date is before the current date, not setting a publish date."
+            )
             publish_date = None
         return publish_date
 
@@ -233,7 +235,7 @@ class FileProcesser:
 
         if self.manga_series is None:
             logger.error(f"Couldn't find a manga id for {self.zip_name}, skipping.")
-            print(f"Skipped {self.zip_name}, no manga id found.")
+            print(f"{translate_message['file_v_text_2']}".format(self.zip_name))
             return False
 
         self.language = self._get_language()
@@ -242,6 +244,157 @@ class FileProcesser:
         self.groups = self._get_groups()
         self.chapter_title = self._get_chapter_title()
         self.publish_date = self._get_publish_date()
+        return True
+
+    def process_zip_name_extanded(self) -> "bool":
+        """Extract the respective chapter data from the file name."""
+        
+        def match_file(to_upload):
+            parts = to_upload.parts
+
+            idiom = None
+            obra = None
+            grup = None
+            volume = None
+            chapter = None
+            title = None
+            data = None
+
+            idiom = parts[1] # Language
+            obra = parts[2] # Project name
+            grup = parts[3] # Group scan
+            
+            if parts[4].startswith("v"):
+                volume = parts[4][1:].strip() # Volume (without 'v')
+                
+                chapter = parts[5] # Chapter
+                
+                if len(parts) == 7:
+                    title = parts[6] # Title
+                    data_position = title.find("{")  # Encontrar a posição inicial da chave {
+    
+                    if data_position != -1:
+                        data_part = title[data_position:].strip()  # Texto da chave { até o final
+                        data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
+                        title = title[:data_position].strip()  # Texto antes da chave {
+
+                    data = data_part if data_position != -1 else None
+            
+            else:
+                chapter = parts[4] # Chapter
+                
+                if len(parts) == 6:
+                    title = parts[5] # Title
+                    data_position = title.find("{")  # Encontrar a posição inicial da chave {
+    
+                    if data_position != -1:
+                        data_part = title[data_position:].strip()  # Texto da chave { até o final
+                        data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
+                        title = title[:data_position].strip()  # Texto antes da chave {
+
+                    data = data_part if data_position != -1 else None
+                
+            return idiom, obra, grup, volume, chapter, title, data
+        
+        self._zip_name_match = match_file(self.to_upload)
+        if self._zip_name_match is None:
+            logger.error(f"No values processed from {self.to_upload}, skipping.")
+            return False
+
+        def get_manga(title):
+            manga_series = title
+            if manga_series is not None:
+                manga_series = manga_series.strip()
+                if not self._uuid_regex.match(manga_series):
+                    try:
+                        manga_series = self._names_to_ids["manga"].get(manga_series, None)
+                    except KeyError:
+                        manga_series = None
+
+            if manga_series is None:
+                logger.warning(f"No manga id found for {manga_series}.")
+            return manga_series
+
+        self.manga_series = get_manga(self._zip_name_match[1])
+
+        if self.manga_series is None:
+            logger.error(f"Couldn't find a manga id for {self.zip_name}, skipping.")
+            print(f"{translate_message['file_v_text_2']}".format(self.zip_name))
+            return False
+        
+        def group_get(group):
+            """Get the group ids from the file, use the group fallback if the file has no groups."""
+            groups = []
+            groups_match = group
+            if groups_match is not None:
+                # Split the zip name groups into an array and remove any leading/trailing whitespace
+                groups_array = groups_match.split("+")
+                groups_array = [g.strip() for g in groups_array]
+
+                # Check if the groups are using uuids, if not, use the id map for the id
+                for group in groups_array:
+                    if not self._uuid_regex.match(group):
+                        try:
+                            group_id = self._names_to_ids["group"].get(group, None)
+                        except KeyError:
+                            logger.warning(
+                                f"No group id found for {group}, not tagging the upload with this group."
+                            )
+                            group_id = None
+                        if group_id is not None:
+                            groups.append(group_id)
+                    else:
+                        groups.append(group)
+
+            if not groups:
+                groups = (
+                    []
+                    if not config["options"]["group_fallback_id"]
+                    else [config["options"]["group_fallback_id"]]
+                )
+            return groups
+
+
+        def publish_get(date):
+            if date is None:
+                return None
+            
+            try:
+                parts = date.split()
+                total_seconds = 0
+
+                for part in parts:
+                    if part.endswith('d'):
+                        total_seconds += int(part[:-1]) * 86400  # 1 dia = 24 horas * 60 minutos * 60 segundos
+                    elif part.endswith('h'):
+                        total_seconds += int(part[:-1]) * 3600  # 1 hora = 60 minutos * 60 segundos
+                    elif part.endswith('m'):
+                        total_seconds += int(part[:-1]) * 60  # 1 minuto = 60 segundos
+                    elif part.endswith('s'):
+                        total_seconds += int(part[:-1])
+                    else:
+                        raise ValueError("Formato de tempo não reconhecido.")
+
+                if total_seconds > 1209600:  # 2 semanas em segundos
+                    raise ValueError("O tempo máximo permitido é de 2 semanas.")
+
+                publish_date = datetime.now() + timedelta(seconds=total_seconds)
+                publish_date = publish_date.replace(microsecond=0)
+                publish_date = publish_date.isoformat()
+                publish_date = datetime.fromisoformat(publish_date).astimezone(tz=timezone.utc)
+
+                return publish_date
+            
+            except ValueError as e:
+                logger.error(f"{self.zip_name} isn't in the correct date format.")
+                return None
+
+        self.language = self._zip_name_match[0]
+        self.chapter_number = self._zip_name_match[4]
+        self.volume_number = self._zip_name_match[3]
+        self.groups = group_get(self._zip_name_match[2])
+        self.chapter_title = self._zip_name_match[5]
+        self.publish_date = publish_get(self._zip_name_match[6])
         return True
 
     @property
@@ -259,7 +412,7 @@ class FileProcesser:
 
     def __repr__(self):
         return (
-            f"<FileProcessor "
+            f"<{self.__class__.__name__} "
             f"{self.zip_name}: "
             f"{self.manga_series=}, "
             f"{self.chapter_number=}, "

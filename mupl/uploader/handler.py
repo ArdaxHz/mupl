@@ -9,6 +9,7 @@ from mupl.utils.config import (
     VERBOSE,
     mangadex_api_url,
     UPLOAD_RETRY,
+    translate_message,
 )
 
 logger = logging.getLogger("mupl")
@@ -84,20 +85,23 @@ class ChapterUploaderHandler:
         successful_upload_message = "Success: Uploaded page {}, size: {} MB."
 
         image_batch_list = list(image_batch.keys())
+        batch_start = int(image_batch_list[0]) + 1
+        batch_end = int(image_batch_list[-1]) + 1
         if VERBOSE:
-            print(
-                f"Uploading images {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}."
-            )
-        logger.debug(
-            f"Uploading images {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}."
-        )
+            print(f"{translate_message['handler_text_1']}".format(batch_start, batch_end))
+        logger.debug(f"Uploading images {batch_start} to {batch_end}.")
 
         for retry in range(self.number_upload_retry):
             successful_upload_data = self._images_upload(image_batch)
 
             if successful_upload_data is None:
                 print(
-                    f"Image upload error for {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}, try {retry + 1}/{self.number_upload_retry}."
+                    f"{translate_message['handler_text_2']}".format(
+                        batch_start,
+                        batch_end,
+                        retry + 1,
+                        self.number_upload_retry,
+                    )
                 )
                 if retry == self.number_upload_retry - 1:
                     return True
@@ -221,9 +225,12 @@ class ChapterUploaderHandler:
 
         # Couldn't create an upload session, skip the chapter
         upload_session_response_json_message = (
-            f"Couldn't create an upload session for {self.zip_name}."
+            "Couldn't create an upload session for {}.".format(self.zip_name)
         )
         logger.error(upload_session_response_json_message)
+        upload_session_response_json_message = (
+            f"{translate_message['handler_text_3']}".format(self.zip_name)
+        )
         print(upload_session_response_json_message)
         self.failed_uploads.append(self.to_upload)
         return
@@ -235,7 +242,7 @@ class ChapterUploaderHandler:
                 "volume": self.file_name_obj.volume_number,
                 "chapter": self.file_name_obj.chapter_number,
                 "title": self.file_name_obj.chapter_title,
-                "translatedLanguage": self.file_name_obj.language,
+                "translatedLanguage": self.file_name_obj.language.replace('[', '').replace(']', ''),
             },
             "pageOrder": self.images_to_upload_ids,
         }
@@ -253,7 +260,9 @@ class ChapterUploaderHandler:
             if chapter_commit_response.ok:
                 successful_upload_id = chapter_commit_response.data["data"]["id"]
                 print(
-                    f"Successfully uploaded: {successful_upload_id}, {self.zip_name}."
+                    f"{translate_message['handler_text_4']}".format(
+                        successful_upload_id, self.zip_name
+                    )
                 )
                 logger.info(
                     f"Successful commit: {successful_upload_id}, {self.zip_name}."
@@ -261,11 +270,8 @@ class ChapterUploaderHandler:
                 self.move_files()
                 return True
 
-        commit_error_message = (
-            f"Failed to commit {self.zip_name}, removing upload draft."
-        )
-        logger.error(commit_error_message)
-        print(commit_error_message)
+        logger.error(f"Failed to commit {self.zip_name}, removing upload draft.")
+        print(f"{translate_message['handler_text_4']}".format(self.zip_name))
         self.remove_upload_session()
         self.failed_uploads.append(self.to_upload)
         return False

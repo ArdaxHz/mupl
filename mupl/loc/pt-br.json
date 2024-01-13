@@ -1,0 +1,41 @@
+{
+    "mulp_text_1": "Nenhum arquivo válido encontrado para upload, encerrando.",
+    "mulp_text_2": "Por favor, verifique o seu arquivo de nome para ID.",
+    "mulp_text_3": "Enviando",
+    "mulp_text_4": "Upload Concluído",
+    "mulp_text_5": "Detectado interrupção do teclado, encerrando.",
+    "mulp_text_6": "Falhas nos uploads:",
+    "mulp_text_7": "Pasta",
+    "mulp_text_8": "Arquivo Compactado",
+    "mulp_text_9": "Sem atualizações.",
+
+    "uploader_text_1": "Interrupção do teclado detectada. Cancelando tarefas...",
+    "uploader_text_2": "Capítulo",
+    "uploader_text_3": "Volume",
+    "uploader_text_4": "Título",
+    "uploader_text_5": "Idioma",
+    "uploader_text_6": "Grupos",
+    "uploader_text_7": "Publicado em",
+    "uploader_text_8": "Nenhuma imagem válida para upload, pulando.",
+    "uploader_text_9": "Sessão de upload criada: {}",
+    "uploader_text_10": "{} imagens para upload.",
+    "uploader_text_11": "Executando uploader em threads.",
+    "uploader_text_12": "Executando uploader sem threads.",
+    "uploader_text_13": "Excluindo rascunho devido a falha no upload de imagem.",
+    "uploader_text_14": "Não adicionado",
+
+    "handler_text_1": "Enviando imagens de {} para {}.",
+    "handler_text_2": "Erro no upload da imagem para {} de {}, tentativa {}/{}.",
+    "handler_text_3": "Não foi possível criar uma sessão de upload para {}.",
+    "handler_text_4": "Enviado com sucesso: {}, {}.",
+    "handler_text_5": "Falha ao enviar {}",
+
+    "file_v_text_1": "{} não está no formato de nomeação correto, pulando.",
+    "file_v_text_2": "Pulado {}, nenhum ID de manga encontrado.",
+
+    "updater_text_1": "Atualização encontrada: {} => {}: {}.",
+    "updater_text_2": "A nova versão pode ter mudanças significativas, por favor, verifique a página de lançamentos no GitHub para ver a lista de mudanças",
+    "updater_text_3": "Não atualizando.",
+    "updater_text_4": "Atualizado, reinicie o uploader para executar a nova versão.",
+    "updater_text_5": "Não foi possível atualizar."
+}

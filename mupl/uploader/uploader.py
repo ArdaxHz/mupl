@@ -15,6 +15,7 @@ from mupl.utils.config import (
     VERBOSE,
     config,
     RATELIMIT_TIME,
+    translate_message
 )
 
 logger = logging.getLogger("mupl")
@@ -79,11 +80,80 @@ class ChapterUploader(ChapterUploaderHandler):
                 continue
             else:
                 break
+        
+        if len(self.to_upload.parts) > 3:
+            parts = self.to_upload.parts
 
-        new_uploaded_zip_path = self.to_upload.rename(
-            os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}")
-        )
-        logger.debug(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
+            idiom = None
+            obra = None
+            group = None
+            volume = None
+            chapter = None
+            title = None
+            data = None
+
+            idiom = parts[1] # Language
+            obra = parts[2] # Project name
+            group = parts[3] # Group scan
+            
+            if parts[4].startswith("v"):
+                volume = parts[4][1:].strip() # Volume (without 'v')
+                
+                chapter = parts[5] # Chapter
+                
+                if len(parts) == 7:
+                    title = parts[6] # Title
+                    data_position = title.find("{")  # Encontrar a posição inicial da chave {
+    
+                    if data_position != -1:
+                        data_part = title[data_position:].strip()  # Texto da chave { até o final
+                        data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
+                        title = title[:data_position].strip()  # Texto antes da chave {
+
+                    data = data_part if data_position != -1 else None
+            
+            else:
+                chapter = parts[4] # Chapter
+                
+                if len(parts) == 6:
+                    title = parts[5] # Title
+                    data_position = title.find("{")  # Encontrar a posição inicial da chave {
+    
+                    if data_position != -1:
+                        data_part = title[data_position:].strip()  # Texto da chave { até o final
+                        data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
+                        title = title[:data_position].strip()  # Texto antes da chave {
+
+                    data = data_part if data_position != -1 else None
+            
+            volume_text = f"(v{volume})" if volume else ""
+            title_text = f"({title})" if title else ""
+            group_text = f"[{group}]" if group else ""
+            text = f"{obra} {idiom} - c{chapter} {volume_text} {title_text} {group_text}"
+            
+            new_uploaded_zip_path = self.to_upload.rename(
+                os.path.join(self.uploaded_files_path, f"{text}")
+            )
+            logger.debug(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
+            
+            def delete_empty_folders(folder_path):
+                # Percorre recursivamente a árvore de diretórios
+                for root, dirs, files in os.walk(folder_path, topdown=False):
+                    for dir_name in dirs:
+                        dir_path = os.path.join(root, dir_name)
+                        
+                        # Verifica se a pasta está vazia
+                        if not os.listdir(dir_path):
+                            # Exclui a pasta vazia
+                            os.rmdir(dir_path)
+            
+            delete_empty_folders("to_upload")
+        
+        else:
+            new_uploaded_zip_path = self.to_upload.rename(
+                os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}")
+            )
+            logger.debug(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
 
     async def process_images_upload(self, images_array):
         """Start uploading the images, threaded."""
@@ -109,7 +179,7 @@ class ChapterUploader(ChapterUploaderHandler):
         try:
             loop.run_until_complete(gathered)
         except KeyboardInterrupt as e:
-            print("Caught keyboard interrupt. Canceling tasks...")
+            print(translate_message['uploader_text_1'])
             gathered.cancel()
             self.failed_image_upload = True
 
@@ -131,24 +201,34 @@ class ChapterUploader(ChapterUploaderHandler):
 
     def upload(self):
         """Process the zip for uploading."""
-        upload_details = (
-            f"Manga id: {self.file_name_obj.manga_series}, "
-            f"chapter: {self.file_name_obj.chapter_number}, "
-            f"volume: {self.file_name_obj.volume_number}, "
-            f"title: {self.file_name_obj.chapter_title}, "
-            f"language: {self.file_name_obj.language}, "
-            f"groups: {self.file_name_obj.groups}, "
-            f"publish on: {self.file_name_obj.publish_date}."
+        logger.info(f"Uploading chapter: {repr(self.file_name_obj)}")
+        print(
+            "Manga id: {manga_series}\n"
+            "{uploader_text_2}: {chapter_number}\n"
+            "{uploader_text_3}: {volume_number}\n"
+            "{uploader_text_4}: {chapter_title}\n"
+            "{uploader_text_5}: {language}\n"
+            "{uploader_text_6}: {groups}\n"
+            "{uploader_text_7}: {publish_date}".format(
+                manga_series=self.file_name_obj.manga_series,
+                chapter_number=self.file_name_obj.chapter_number,
+                volume_number=self.file_name_obj.volume_number if self.file_name_obj.volume_number is not None else translate_message['uploader_text_14'],
+                chapter_title=self.file_name_obj.chapter_title if self.file_name_obj.chapter_title is not None else translate_message['uploader_text_14'],
+                language=self.file_name_obj.language.upper(),
+                groups=self.file_name_obj.groups if self.file_name_obj.groups is not None else translate_message['uploader_text_14'],
+                publish_date=self.file_name_obj.publish_date if self.file_name_obj.publish_date is not None else translate_message['uploader_text_14'],
+                uploader_text_2=translate_message["uploader_text_2"],
+                uploader_text_3=translate_message["uploader_text_3"],
+                uploader_text_4=translate_message["uploader_text_4"],
+                uploader_text_5=translate_message["uploader_text_5"],
+                uploader_text_6=translate_message["uploader_text_6"],
+                uploader_text_7=translate_message["uploader_text_7"]
+            )
         )
-        logger.info(f"Uploading chapter: {upload_details}")
-        print(upload_details)
 
         if not self.image_uploader_process.valid_images_to_upload:
-            no_valid_images_found_error_message = (
-                f"{self.zip_name} has no valid images to upload, skipping."
-            )
-            print(no_valid_images_found_error_message)
-            logger.error(no_valid_images_found_error_message)
+            print(translate_message['uploader_text_8'])
+            logger.error(f"No valid images found for {self.zip_name}")
             self.failed_uploads.append(self.to_upload)
             return
 
@@ -161,21 +241,28 @@ class ChapterUploader(ChapterUploaderHandler):
 
         self.upload_session_id = upload_session_response_json["data"]["id"]
 
-        upload_session_id_message = (
-            f"Created upload session: {self.upload_session_id}, {self.zip_name}."
+        logger.info(
+            "Created upload session: {self.upload_session_id}, {self.zip_name}."
         )
-        logger.info(upload_session_id_message)
-        print(upload_session_id_message)
+        print(f"{translate_message['uploader_text_9']}".format(self.upload_session_id))
         if VERBOSE:
             print(
-                f"{len([item for sublist in self.image_uploader_process.valid_images_to_upload for item in sublist])} images to upload."
+                f"{translate_message['uploader_text_10']}".format(
+                    len(
+                        [
+                            item
+                            for sublist in self.image_uploader_process.valid_images_to_upload
+                            for item in sublist
+                        ]
+                    )
+                )
             )
 
         self.tqdm = tqdm(total=len(self.image_uploader_process.info_list))
 
         if self.threaded:
             if VERBOSE:
-                print("Running threaded uploader.")
+                print(translate_message['uploader_text_11'])
 
             spliced_images_list = [
                 self.image_uploader_process.valid_images_to_upload[
@@ -194,7 +281,7 @@ class ChapterUploader(ChapterUploaderHandler):
                     break
         else:
             if VERBOSE:
-                print("Running non-threaded uploader.")
+                print(translate_message['uploader_text_12'])
             self.run_image_uploader(self.image_uploader_process.valid_images_to_upload)
 
         self.tqdm.close()
@@ -203,9 +290,10 @@ class ChapterUploader(ChapterUploaderHandler):
 
         # Skip chapter upload and delete upload session
         if self.failed_image_upload:
-            failed_image_upload_message = f"Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}."
-            print(failed_image_upload_message)
-            logger.error(failed_image_upload_message)
+            print(translate_message['uploader_text_13'])
+            logger.error(
+                f"Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}."
+            )
             self.remove_upload_session()
             self.failed_uploads.append(self.to_upload)
             return

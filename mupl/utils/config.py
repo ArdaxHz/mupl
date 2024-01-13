@@ -57,6 +57,15 @@ def open_config_file(root_path: "Path") -> "dict":
     return config
 
 
+def load_language(lang):
+    defaults_path = root_path.joinpath("mupl", "loc", lang).with_suffix(".json")
+    with open(
+            defaults_path,
+            "r",
+            encoding="utf-8",
+        ) as json_file:
+            return json.load(json_file)
+
 config = open_config_file(root_path)
 
 NUMBER_OF_IMAGES_UPLOAD = config["options"]["number_of_images_upload"]
@@ -66,4 +75,5 @@ MAX_LOG_DAYS = config["options"]["max_log_days"]
 NUMBER_THREADS = config["options"]["number_threads"]
 mangadex_api_url = config["paths"]["mangadex_api_url"]
 mangadex_auth_url = config["paths"]["mangadex_auth_url"]
+translate_message = load_language(config['options']['language_default'])
 VERBOSE = False

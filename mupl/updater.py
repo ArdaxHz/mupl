@@ -9,7 +9,7 @@ import requests
 from packaging import version
 
 from mupl import __version__
-from mupl.utils.config import root_path, config
+from mupl.utils.config import root_path, config, translate_message
 
 logger = logging.getLogger("mupl")
 
@@ -33,14 +33,16 @@ def check_for_update():
 
         if remote_version > local_version:
             print(
-                f"Update found: {local_version} => {remote_version}: {remote_release_json['name']}."
+                f"{translate_message['updater_text_1']}".format(
+                    local_version, remote_version, remote_release_json["name"]
+                )
             )
             logger.info(
                 f"Update found: {local_version} => {remote_version}: {remote_release_json['name']}."
             )
             if remote_version.major != local_version.major:
                 print(
-                    f"""The new version may have breaking changes, please check the github releases page for a list of changes
+                    f"""{translate_message['updater_text_2']}
                     https://github.com/ArdaxHz/mupl/releases/latest"""
                 )
 
@@ -56,7 +58,7 @@ def check_for_update():
                 update = False
 
             if not update:
-                print(f"Not updating.")
+                print(translate_message['updater_text_3'])
                 logger.info(f"Skipping update {remote_version}")
                 return False
 
@@ -77,7 +79,7 @@ def check_for_update():
                         fopen.write(file_data)
 
                 Path(config["paths"]["mdauth_path"]).unlink(missing_ok=True)
-                print(f"Updated, restart the uploader to run the new version.")
+                print(translate_message['updater_text_4'])
                 logger.info(
                     f"Updated to version {remote_version}: {remote_release_json['name']}."
                 )
@@ -85,5 +87,5 @@ def check_for_update():
         else:
             return False
 
-    logger.info(f"Updating error.")
-    print(f"Couldn't update.")
+    logger.info("Updating error.")
+    print(translate_message['updater_text_5'])

@@ -5,9 +5,10 @@ uploaded/*
 __pycache__
 *.log
 logs/*
-name_id_map.json
 *.ini
 .mdauth
 .idea
 venv/
 config.json
+.github/*
+.vscode/*
