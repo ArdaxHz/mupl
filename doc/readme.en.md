@@ -22,7 +22,7 @@ Read this in other languages:
 
 
 ## Usage
-Download the [latest version](https://github.com/ArdaxHz/mupl/releases/latest) (the source code zip) from the releases page, unzip the file into a folder and open a terminal in that location.
+Download the [latest version](https://github.com/OneDefauter/mupl/releases/latest) (the source code zip) from the releases page, unzip the file into a folder and open a terminal in that location.
 
 In the terminal (bash, powershell, cmd) type `python mupl.py` to run the uploader.
 Ensure you have Python 3.9+ installed, use `python` for windows and `python3` for mac and linux.

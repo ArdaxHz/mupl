@@ -25,7 +25,7 @@ def check_for_update():
     update = False
     local_version = version.parse(__version__)
     remote_release = requests.get(
-        "https://api.github.com/repos/ArdaxHz/mupl/releases/latest"
+        "https://api.github.com/repos/OneDefauter/mupl/releases/latest"
     )
     if remote_release.ok:
         remote_release_json = remote_release.json()
@@ -43,7 +43,7 @@ def check_for_update():
             if remote_version.major != local_version.major:
                 print(
                     f"""{translate_message['updater_text_2']}
-                    https://github.com/ArdaxHz/mupl/releases/latest"""
+                    https://github.com/OneDefauter/mupl/releases/latest"""
                 )
 
             timeout = 10
