@@ -12,7 +12,4 @@
 
 # Install
 
-
-
-https://github.com/OneDefauter/mupl/assets/27703239/1084259d-3b0d-4e63-ac40-ebacde21aaaa
-
+![WindowsSandboxClient_lg1U04DisW](https://github.com/OneDefauter/mupl/assets/27703239/aa366765-b471-43fc-9228-b6c0745f943c)
