@@ -1,3 +1,6 @@
+import mupl.install as mulp_ins
+mulp_ins.setup()
+
 import argparse
 import asyncio
 import json
@@ -140,6 +143,7 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
 
     # Sort the array to mirror your system's file explorer
     zips_to_upload = natsort.os_sorted(zips_to_upload, key=lambda x: x.to_upload)
+    zips_to_upload = natsort.os_sorted(zips_to_upload, key=lambda x: (x.volume_number, x.chapter_number))
 
     if zips_invalid_file_name:
         logger.warning(
