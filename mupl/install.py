@@ -16,6 +16,9 @@ def setup():
         try:
             if module == 'pywin32':
                 __import__('win32api')
+                
+            elif module == 'Pillow':
+                __import__('PIL')
             
             else:
                 __import__(module)
