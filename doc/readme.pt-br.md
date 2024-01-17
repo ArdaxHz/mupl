@@ -62,7 +62,7 @@ Existem argumentos da linha de comando que podem ser adicionados após o comando
 - `Obra` Título do manga (mesmo que a chave em `name_id_map.json`) ou o ID do MangaDex.
 - `Grupo` Lista de nomes ou IDs de grupos. Se forem nomes de grupos, eles devem estar incluídos no `name_id_map.json` para os IDs. *Separe vários grupos usando `+`.* *Deixe como 0 (zero) para caso seja sem grupo.*
 - `Volume` Volume do capítulo. *Opcional.* *Exemplo: v5*
-- `Capítulo` Número do capítulo.
+- `Capítulo` Número do capítulo. *Para capítulos oneshot coloque como 0000 (quatro zeros)*
 - `Título {data}` Em *Título* coloque o título do capítulo, em *{data}* coloque um tempo máximo de duas semanas. *Mantenha as chaves {}*
 
 ##### Exemplo de {data}
