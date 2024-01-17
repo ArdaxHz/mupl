@@ -267,7 +267,10 @@ class FileProcesser:
             if parts[4].startswith("v"):
                 volume = parts[4][1:].strip() # Volume (without 'v')
                 
-                chapter = parts[5] # Chapter
+                chapter = str(parts[5]) # Chapter
+                if chapter == "0000":
+                    chapter = None
+                    self.oneshot = True
                 
                 if len(parts) == 7:
                     title = parts[6] # Title
@@ -282,6 +285,9 @@ class FileProcesser:
             
             else:
                 chapter = parts[4] # Chapter
+                if chapter == "0000":
+                    chapter = None
+                    self.oneshot = True
                 
                 if len(parts) == 6:
                     title = parts[5] # Title
@@ -360,30 +366,48 @@ class FileProcesser:
                 return None
             
             try:
-                parts = date.split()
-                total_seconds = 0
+                if '-' in date and ' ' in date:
+                    # Processar data no formato "DD-MM-YYYY HH-MM-SS"
+                    date_time_parts = date.split(' ')
+                    date_parts = date_time_parts[0].split('-')
+                    time_parts = date_time_parts[1].split('-')
 
-                for part in parts:
-                    if part.endswith('d'):
-                        total_seconds += int(part[:-1]) * 86400  # 1 dia = 24 horas * 60 minutos * 60 segundos
-                    elif part.endswith('h'):
-                        total_seconds += int(part[:-1]) * 3600  # 1 hora = 60 minutos * 60 segundos
-                    elif part.endswith('m'):
-                        total_seconds += int(part[:-1]) * 60  # 1 minuto = 60 segundos
-                    elif part.endswith('s'):
-                        total_seconds += int(part[:-1])
-                    else:
-                        raise ValueError("Formato de tempo não reconhecido.")
+                    year = int(date_parts[2])
+                    month = int(date_parts[1])
+                    day = int(date_parts[0])
 
-                if total_seconds > 1209600:  # 2 semanas em segundos
-                    raise ValueError("O tempo máximo permitido é de 2 semanas.")
+                    hour = int(time_parts[0])
+                    minute = int(time_parts[1])
+                    second = int(time_parts[2])
 
-                publish_date = datetime.now() + timedelta(seconds=total_seconds)
-                publish_date = publish_date.replace(microsecond=0)
-                publish_date = publish_date.isoformat()
-                publish_date = datetime.fromisoformat(publish_date).astimezone(tz=timezone.utc)
+                    publish_date = datetime(year, month, day, hour, minute, second, tzinfo=timezone.utc)
+                    return publish_date
+                
+                else:
+                    parts = date.split()
+                    total_seconds = 0
 
-                return publish_date
+                    for part in parts:
+                        if part.endswith('d'):
+                            total_seconds += int(part[:-1]) * 86400  # 1 dia = 24 horas * 60 minutos * 60 segundos
+                        elif part.endswith('h'):
+                            total_seconds += int(part[:-1]) * 3600  # 1 hora = 60 minutos * 60 segundos
+                        elif part.endswith('m'):
+                            total_seconds += int(part[:-1]) * 60  # 1 minuto = 60 segundos
+                        elif part.endswith('s'):
+                            total_seconds += int(part[:-1])
+                        else:
+                            raise ValueError("Formato de tempo não reconhecido.")
+
+                    if total_seconds > 1209600:  # 2 semanas em segundos
+                        raise ValueError("O tempo máximo permitido é de 2 semanas.")
+
+                    publish_date = datetime.now() + timedelta(seconds=total_seconds)
+                    publish_date = publish_date.replace(microsecond=0)
+                    publish_date = publish_date.isoformat()
+                    publish_date = datetime.fromisoformat(publish_date).astimezone(tz=timezone.utc)
+
+                    return publish_date
             
             except ValueError as e:
                 logger.error(f"{self.zip_name} isn't in the correct date format.")

@@ -67,7 +67,6 @@ Existem argumentos da linha de comando que podem ser adicionados após o comando
 
 ##### Exemplo de {data}
 A data pode ser definida de algumas formas diferentes.
-
 **{1d}** == Daqui 1 dia
 
 **{5h}** == Daqui 5 horas
@@ -75,6 +74,9 @@ A data pode ser definida de algumas formas diferentes.
 **{40m}** == Daqui 40 minutos
 
 **{30s}** ==  Daqui 30 segundos
+
+Ou da forma comum.
+**{2024-01-16 22-00-00}**
 
 Você pode juntar também.
 **{1d 5h 40m 30s}** == Daqui 1 dia, 5 horas, 40 minutos e 30 segundos
