@@ -271,7 +271,7 @@ class ChapterUploaderHandler:
                 return True
 
         logger.error(f"Failed to commit {self.zip_name}, removing upload draft.")
-        print(f"{translate_message['handler_text_4']}".format(self.zip_name))
+        print(f"{translate_message['handler_text_5']}".format(self.zip_name))
         self.remove_upload_session()
         self.failed_uploads.append(self.to_upload)
         return False
