@@ -16,7 +16,6 @@ def install_modul():
         'asyncio',
         'packaging',
         'flask',
-        'pywin32',
     ]
     
     for module in required_modules:
@@ -38,7 +37,6 @@ def install_modul():
 install_modul()
 
 import requests
-import win32com.client
 
 
 temp_folder = os.environ['TEMP']
@@ -164,56 +162,6 @@ if not os.path.exists(caminho_arquivo):
 if not os.path.exists(os.path.join(app_folder, "static", "background.mp4")):
     download_files({'background.mp4':f'{context_7}/background.mp4'}, os.path.join(app_folder, 'static'))
 
-
-def create_config_file(uploads_folder, uploaded_files):
-    config_structure = {
-        "options": {
-            "number_of_images_upload": 10,
-            "upload_retry": 3,
-            "ratelimit_time": 2,
-            "max_log_days": 30,
-            "group_fallback_id": None,
-            "number_threads": 3,
-            "language_default": "en"
-        },
-        "credentials": {
-            "mangadex_username": None,
-            "mangadex_password": None,
-            "client_id": None,
-            "client_secret": None
-        },
-        "paths": {
-            "name_id_map_file": "name_id_map.json",
-            "uploads_folder": "to_upload",
-            "uploaded_files": "uploaded",
-            "mangadex_api_url": "https://api.mangadex.org",
-            "mangadex_auth_url": "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
-            "mdauth_path": ".mdauth"
-        }
-    }
-
-    with open(config_path, 'w', encoding='utf-8') as file:
-        json.dump(config_structure, file, indent=4)
-
-def criar_atalho(origem, destino):
-    shell = win32com.client.Dispatch("WScript.Shell")
-    atalho = shell.CreateShortcut(os.path.join(destino, os.path.basename(origem) + ".lnk"))
-    atalho.TargetPath = origem
-    atalho.save()
-
-def check_config_paths():
-    uploads_folder = os.path.join(app_folder, 'to_upload')
-    uploaded_files = os.path.join(app_folder, 'uploaded')
-    
-    # Cria atalhos para as pastas to_upload e uploaded na mesma pasta
-    criar_atalho(app_folder, uploads_folder)
-    criar_atalho(app_folder, uploaded_files)
-    
-    if not os.path.exists(config_path):
-        create_config_file(uploads_folder, uploaded_files)
-
-# Chamar a função para verificar os caminhos no arquivo config.json
-check_config_paths()
 
 os.chdir(app_folder)
 
