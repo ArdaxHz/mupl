@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MangaDex</title>
+  <link rel="icon" href="https://i.ibb.co/JqFMZML/avatar.png" type="image/png">
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+
+    #videoContainer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: -1;
+    }
+
+    canvas {
+      object-fit: cover;
+      width: 100%;
+      height: 100%;
+      filter: blur(5px);
+      transform: scale(1.1);
+    }
+
+    #frame1 {
+      position: fixed;
+      top: 15%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      padding: 50px;
+      border-radius: 10px;
+      backdrop-filter: blur(10px);
+      color: white;
+      text-align: center;
+  }
+  
+    #frame2 {
+        position: fixed;
+        top: 50%; /* Ajuste a posição vertical para evitar sobreposição */
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.8);
+        padding: 50px;
+        border-radius: 10px;
+        backdrop-filter: blur(10px);
+        color: white;
+        text-align: center;
+    }
+
+      input {
+        padding: 10px;
+        font-size: 16px;
+        margin-bottom: 10px;
+      }
+
+      button {
+        padding: 15px;
+        font-size: 18px;
+        background-color: #5662f6;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        margin-left: 50px;
+        margin-right: 50px;
+        margin-top: 25px;
+        margin-bottom: 25px;
+      }
+      
+
+      button:hover {
+        background-color: #454fde;
+      }
+
+
+      #fileExplorer {
+        max-width: 400px;
+        margin: 20px auto;
+        padding: 10px;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+    }
+
+      ul {
+          list-style-type: none;
+          padding: 0;
+      }
+
+      li {
+          margin-bottom: 5px;
+          cursor: pointer;
+      }
+
+      li:hover {
+          text-decoration: underline;
+      }
+
+      #github-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #333;
+        color: #fff;
+        padding: 15px;
+        text-decoration: none;
+        border-radius: 8px;
+        font-family: Arial, sans-serif;
+        font-size: 18px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); /* Adiciona uma sombra sutil */
+        transition: background-color 0.3s; /* Adiciona uma transição suave para a cor de fundo */
+    }
+
+    #github-button:hover {
+        background-color: #555; /* Cor de fundo ao passar o mouse */
+    }
+  
+  </style>
+</head>
+
+<body>
+
+  <!-- Container para o vídeo de fundo -->
+  <div id="videoContainer">
+    <canvas id="videoCanvas" autoplay muted loop></canvas>
+  </div>
+
+<!-- Frame 1 -->
+<div id="frame1">
+  <button onclick="NewLogin_()" id="NewLoginMangadex"></button>
+  <button onclick="StartProcess_()" id="StartProcessMangadex"></button>
+</div>
+
+<!-- Frame 2 -->
+<div id="frame2">
+  <button onclick="OpenFile_1()" id="OpenFile1"></button>
+  <button onclick="OpenFolder_1()" id="OpenFolder1"></button>
+  <button onclick="OpenFolder_2()" id="OpenFolder2"></button>
+  <button onclick="CleanFolder_2()" id="CleanFolder2"></button>
+</div>
+
+<a id="github-button" href="https://github.com/OneDefauter/mupl/blob/main/readme.md" target="_blank">GitHub</a>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var video = document.createElement('video');
+      video.autoplay = true;
+      video.muted = true;
+      video.loop = true;
+  
+      var canvas = document.getElementById('videoCanvas');
+      var ctx = canvas.getContext('2d');
+  
+      // Adicione o código para definir a origem do vídeo
+      video.src = "{{ url_for('static', filename='background.mp4') }}";
+  
+      // Adicione um listener para quando o vídeo estiver carregado
+      video.addEventListener('loadeddata', function () {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+  
+        // Inicie a reprodução do vídeo
+        video.play();
+        drawFrame();
+      });
+  
+      // Adicione um listener para atualizar o canvas em cada frame do vídeo
+      function drawFrame() {
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        requestAnimationFrame(drawFrame);
+      }
+    });
+
+      function NewLogin_() {
+        window.location.href = '{{url_for('new_login')}}'
+      }
+
+      function StartProcess_() {
+        fetch('/start_process', {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {})
+        .catch(error => console.error('Error:', error));
+      }
+
+      function OpenFile_1() {
+        fetch('/open_file', {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {})
+        .catch(error => console.error('Error:', error));
+      }
+
+      function OpenFolder_1() {
+        fetch('/open_folder1', {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {})
+        .catch(error => console.error('Error:', error));
+      }
+
+      function OpenFolder_2() {
+        fetch('/open_folder2', {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {})
+        .catch(error => console.error('Error:', error));
+      }
+
+      function CleanFolder_2() {
+        fetch('/clear_folder1', {
+            method: 'POST',
+        })
+        .then(response => response.json())
+        .then(data => {})
+        .catch(error => console.error('Error:', error));
+      }
+    
+
+    const languageCode = localStorage.getItem('selectedLanguage') || 'en';
+
+    // Verifica se o arquivo do idioma específico existe
+    fetch(`static/${languageCode}.json`)
+        .then(response => {
+            if (!response.ok) {
+                // Se o arquivo não existir, carrega o arquivo 'en.json'
+                throw new Error('Language file not found');
+            }
+            return response.json();
+        })
+        .then(translations => {
+            // Aplica as traduções
+            document.getElementById('NewLoginMangadex').textContent = translations.new_login_mangadex;
+            document.getElementById('StartProcessMangadex').textContent = translations.start_process_mangadex;
+            document.getElementById('OpenFile1').textContent = translations.open_map_id;
+            document.getElementById('OpenFolder1').textContent = translations.open_folder_upload;
+            document.getElementById('OpenFolder2').textContent = translations.open_folder_uploaded;
+            document.getElementById('CleanFolder2').textContent = translations.clean_folder_uploaded;
+            // Adicione outras atribuições de tradução conforme necessário
+        })
+        .catch(error => {
+            // Se ocorrer um erro (por exemplo, arquivo não encontrado), carrega o arquivo 'en.json'
+            fetch('static/en.json')
+                .then(response => response.json())
+                .then(translations => {
+                    document.getElementById('NewLoginMangadex').textContent = translations.new_login_mangadex;
+                    document.getElementById('StartProcessMangadex').textContent = translations.start_process_mangadex;
+                    document.getElementById('OpenFile1').textContent = translations.open_map_id;
+                    document.getElementById('OpenFolder1').textContent = translations.open_folder_upload;
+                    document.getElementById('OpenFolder2').textContent = translations.open_folder_uploaded;
+                    document.getElementById('CleanFolder2').textContent = translations.clean_folder_uploaded;
+                    // Adicione outras atribuições de tradução conforme necessário
+                })
+                .catch(error => console.error('Error:', error));
+        });
+  </script>
+  
+</body>
+
+</html>

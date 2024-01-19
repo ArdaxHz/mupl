@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, Indexial-scale=1.0">
+    <title>MangaDex</title>
+    <link rel="icon" href="https://i.ibb.co/JqFMZML/avatar.png" type="image/png">
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #videoContainer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -1;
+        }
+
+        video {
+            object-fit: cover;
+            width: 100%;
+            height: 100%;
+            filter: blur(5px);
+            transform: scale(1.1);
+        }
+
+        .language-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px;
+            justify-content: center;
+        }
+
+        .language-button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        .language-button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Container para o vídeo de fundo -->
+    <div id="videoContainer">
+        <video autoplay muted loop>
+            <source src="{{ url_for('static', filename='background.mp4') }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <!-- Botões de idioma -->
+    <div class="language-buttons">
+        <button class="language-button" onclick="changeLanguage('ar')" data-language="ar">Arabic</button>
+        <button class="language-button" onclick="changeLanguage('ita')" data-language="ita">Italian</button>
+        <button class="language-button" onclick="changeLanguage('ben')" data-language="ben">Bengali</button>
+        <button class="language-button" onclick="changeLanguage('jpn')" data-language="jpn">Japanese</button>
+        <button class="language-button" onclick="changeLanguage('bul')" data-language="bul">Bulgarian</button>
+        <button class="language-button" onclick="changeLanguage('kor')" data-language="kor">Korean</button>
+        <button class="language-button" onclick="changeLanguage('bur')" data-language="bur">Burmese</button>
+        <button class="language-button" onclick="changeLanguage('lit')" data-language="lit">Lithuanian</button>
+        <button class="language-button" onclick="changeLanguage('ms')" data-language="ms">Malay</button>
+        <button class="language-button" onclick="changeLanguage('mon')" data-language="mon">Mongolian</button>
+        <button class="language-button" onclick="changeLanguage('zh')" data-language="zh">Chinese (Simp)</button>
+        <button class="language-button" onclick="changeLanguage('no')" data-language="no">Norwegian</button>
+        <button class="language-button" onclick="changeLanguage('fa')" data-language="fa">Persian</button>
+        <button class="language-button" onclick="changeLanguage('pl')" data-language="pl">Polish</button>
+        <button class="language-button" onclick="changeLanguage('pt-br')" data-language="pt-br">Portuguese (Br)</button>
+        <button class="language-button" onclick="changeLanguage('pt')" data-language="pt">Portuguese (Pt)</button>
+        <button class="language-button" onclick="changeLanguage('ro')" data-language="ro">Romanian</button>
+        <button class="language-button" onclick="changeLanguage('tl')" data-language="tl">Filipino</button>
+        <button class="language-button" onclick="changeLanguage('ru')" data-language="ru">Russian</button>
+        <button class="language-button" onclick="changeLanguage('fi')" data-language="fi">Finnish</button>
+        <button class="language-button" onclick="changeLanguage('sh')" data-language="sh">Serbo-Croatian</button>
+        <button class="language-button" onclick="changeLanguage('es')" data-language="es">Spanish (Es)</button>
+        <button class="language-button" onclick="changeLanguage('es-la')" data-language="es-la">Spanish (LATAM)</button>
+        <button class="language-button" onclick="changeLanguage('de')" data-language="de">German</button>
+        <button class="language-button" onclick="changeLanguage('gre')" data-language="gre">Greek</button>
+        <button class="language-button" onclick="changeLanguage('sv')" data-language="sv">Swedish</button>
+        <button class="language-button" onclick="changeLanguage('he')" data-language="he">Hebrew</button>
+        <button class="language-button" onclick="changeLanguage('th')" data-language="th">Thai</button>
+        <button class="language-button" onclick="changeLanguage('hi')" data-language="hi">Hindi</button>
+        <button class="language-button" onclick="changeLanguage('tr')" data-language="tr">Turkish</button>
+        <button class="language-button" onclick="changeLanguage('hu')" data-language="hu">Hungarian</button>
+        <button class="language-button" onclick="changeLanguage('uk')" data-language="uk">Ukrainian</button>
+        <button class="language-button" onclick="changeLanguage('id')" data-language="id">Indonesian</button>
+        <button class="language-button" onclick="changeLanguage('vi')" data-language="vi">Vietnamese</button>
+        <button class="language-button" onclick="changeLanguage('en')" data-language="eng">English</button>
+    </div>
+
+    <script>
+        function changeLanguage(languageCode) {
+            // Armazenar a linguagem selecionada no localStorage
+            localStorage.setItem('selectedLanguage', languageCode);
+
+            // Redirecionar para a próxima página (config.html)
+            window.location.href = '{{ url_for('login') }}';
+        }
+    </script>
+</body>
+
+</html>

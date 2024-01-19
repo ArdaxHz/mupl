@@ -266,11 +266,17 @@ class FileProcesser:
             
             if parts[4].startswith("v"):
                 volume = parts[4][1:].strip() # Volume (without 'v')
+                volume = volume.lstrip('0')
                 
                 chapter = str(parts[5]) # Chapter
+                
+                # Verificar se o valor é "0000"
                 if chapter == "0000":
                     chapter = None
                     self.oneshot = True
+                else:
+                    # Remover todos os zeros à esquerda
+                    chapter = chapter.lstrip('0')
                 
                 if len(parts) == 7:
                     title = parts[6] # Title
