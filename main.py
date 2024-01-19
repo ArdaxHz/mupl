@@ -16,6 +16,7 @@ def install_modul():
         'asyncio',
         'packaging',
         'flask',
+        'pywin32',
     ]
     
     for module in required_modules:
@@ -37,6 +38,7 @@ def install_modul():
 install_modul()
 
 import requests
+import win32com.client
 
 
 temp_folder = os.environ['TEMP']
@@ -193,12 +195,19 @@ def create_config_file(uploads_folder, uploaded_files):
     with open(config_path, 'w', encoding='utf-8') as file:
         json.dump(config_structure, file, indent=4)
 
+def criar_atalho(destino, origem):
+    shell = win32com.client.Dispatch("WScript.Shell")
+    atalho = shell.CreateShortcut(os.path.join(destino, os.path.basename(origem) + ".lnk"))
+    atalho.TargetPath = origem
+    atalho.save()
+
 def check_config_paths():
     uploads_folder = os.path.join(folder_executed, 'to_upload')
     uploaded_files = os.path.join(folder_executed, 'uploaded')
     
-    os.makedirs(uploads_folder, exist_ok=True)
-    os.makedirs(uploaded_files, exist_ok=True)
+    # Cria atalhos para as pastas to_upload e uploaded na mesma pasta
+    criar_atalho(uploads_folder, app_folder)
+    criar_atalho(uploaded_files, app_folder)
     
     if not os.path.exists(config_path):
         create_config_file(uploads_folder, uploaded_files)

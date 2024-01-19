@@ -162,19 +162,6 @@ def clear_folder1():
 def start_process():
     uploads_folder = os.path.join(folder_executed, 'to_upload')
     uploaded_files = os.path.join(folder_executed, 'uploaded')
-    destination_folder = os.path.join(app_folder, 'to_upload')
-
-    # Garanta que a pasta de destino exista
-    os.makedirs(destination_folder, exist_ok=True)
-
-    # Obtenha a lista de arquivos em uploads_folder
-    files_to_copy = os.listdir(uploads_folder)
-
-    # Copie cada arquivo para a pasta de destino
-    for file_name in files_to_copy:
-        source_file = os.path.join(uploads_folder, file_name)
-        destination_file = os.path.join(destination_folder, file_name)
-        shutil.copy2(source_file, destination_file)
     
     try:
         # Verifique a plataforma para usar o comando apropriado
