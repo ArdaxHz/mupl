@@ -46,6 +46,8 @@ config_path = os.path.join(app_folder, 'config.json')
 caminho_arquivo = os.path.join(app_folder, 'name_id_map.json')
 
 os.makedirs(app_folder, exist_ok=True)
+os.makedirs(os.path.join(app_folder, "to_upload"), exist_ok=True)
+os.makedirs(os.path.join(app_folder, "uploaded"), exist_ok=True)
 
 
 folders = ['logs', 'static', 'templates', 'mupl\\http', 'mupl\\loc', 'mupl\\uploader', 'mupl\\utils']
@@ -180,8 +182,8 @@ def create_config_file(uploads_folder, uploaded_files):
         },
         "paths": {
             "name_id_map_file": "name_id_map.json",
-            "uploads_folder": uploads_folder,
-            "uploaded_files": uploaded_files,
+            "uploads_folder": "to_upload",
+            "uploaded_files": "uploaded",
             "mangadex_api_url": "https://api.mangadex.org",
             "mangadex_auth_url": "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
             "mdauth_path": ".mdauth"
@@ -200,24 +202,6 @@ def check_config_paths():
     
     if not os.path.exists(config_path):
         create_config_file(uploads_folder, uploaded_files)
-
-    with open(config_path, 'r', encoding='utf-8') as file:
-        config = json.load(file)
-
-        # Verificar e corrigir caminhos se necessário
-        if config['paths']['uploads_folder'] != uploads_folder:
-            config['paths']['uploads_folder'] = uploads_folder
-
-        if config['paths']['uploaded_files'] != uploaded_files:
-            config['paths']['uploaded_files'] = uploaded_files
-
-        # Garantir que os caminhos estejam em formato absoluto
-        config['paths']['uploads_folder'] = os.path.abspath(config['paths']['uploads_folder'])
-        config['paths']['uploaded_files'] = os.path.abspath(config['paths']['uploaded_files'])
-
-    # Atualizar o arquivo config.json se houver modificações
-    with open(config_path, 'w', encoding='utf-8') as file:
-        json.dump(config, file, indent=4)
 
 # Chamar a função para verificar os caminhos no arquivo config.json
 check_config_paths()

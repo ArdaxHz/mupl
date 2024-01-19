@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import shutil
 import webbrowser
 import subprocess
 from flask import Flask, render_template, request, jsonify
@@ -159,6 +160,12 @@ def clear_folder1():
 
 @app.route('/start_process', methods=['POST'])
 def start_process():
+    uploads_folder = os.path.join(folder_executed, 'to_upload')
+    uploaded_files = os.path.join(folder_executed, 'uploaded')
+    
+    # Copie todos os arquivos de uploads_folder para to_upload
+    shutil.copytree(uploads_folder, os.path.join(folder_executed, 'to_upload'))
+    
     try:
         # Verifique a plataforma para usar o comando apropriado
         if sys.platform.startswith('win'):
