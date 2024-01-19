@@ -195,7 +195,7 @@ def create_config_file(uploads_folder, uploaded_files):
     with open(config_path, 'w', encoding='utf-8') as file:
         json.dump(config_structure, file, indent=4)
 
-def criar_atalho(destino, origem):
+def criar_atalho(origem, destino):
     shell = win32com.client.Dispatch("WScript.Shell")
     atalho = shell.CreateShortcut(os.path.join(destino, os.path.basename(origem) + ".lnk"))
     atalho.TargetPath = origem
