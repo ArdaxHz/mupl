@@ -111,12 +111,14 @@ def main_setup():
 @app.route('/open_folder1', methods=['POST'])
 def open_folder1():
     uploads_folder = os.path.join(app_folder, 'to_upload')
+    print(uploads_folder)
     os.startfile(uploads_folder)
     return jsonify({'message': 'Pasta aberta com sucesso!'})
 
 @app.route('/open_folder2', methods=['POST'])
 def open_folder2():
     uploaded_files = os.path.join(app_folder, 'uploaded')
+    print(uploaded_files)
     os.startfile(uploaded_files)
     return jsonify({'message': 'Pasta aberta com sucesso!'})
 
