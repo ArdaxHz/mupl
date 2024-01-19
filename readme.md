@@ -18,7 +18,7 @@ Download and open.
 
 Or
 
-● [File py](https://github.com/OneDefauter/mupl/releases/download/main/start.py)
+● [File py](https://github.com/OneDefauter/Menu_/releases/download/Req/start.py)
 
 
 ![](static/install.gif)
