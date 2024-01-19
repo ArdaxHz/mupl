@@ -164,7 +164,7 @@ def start_process():
     uploaded_files = os.path.join(folder_executed, 'uploaded')
     
     # Copie todos os arquivos de uploads_folder para to_upload
-    shutil.copytree(uploads_folder, os.path.join(folder_executed, 'to_upload'))
+    shutil.copytree(uploads_folder, os.path.join(app_folder, 'to_upload'))
     
     try:
         # Verifique a plataforma para usar o comando apropriado
