@@ -18,6 +18,7 @@ Download and open.
 
 Or
 
-● [File py](https://raw.githubusercontent.com/OneDefauter/mupl/main/start.py)
+● [File py](https://github.com/OneDefauter/mupl/releases/download/main/start.py)
 
-![WindowsSandboxClient_lg1U04DisW](https://github.com/OneDefauter/mupl/assets/27703239/aa366765-b471-43fc-9228-b6c0745f943c)
+
+![](static/install.gif)
