@@ -202,12 +202,12 @@ def criar_atalho(origem, destino):
     atalho.save()
 
 def check_config_paths():
-    uploads_folder = os.path.join(folder_executed, 'to_upload')
-    uploaded_files = os.path.join(folder_executed, 'uploaded')
+    uploads_folder = os.path.join(app_folder, 'to_upload')
+    uploaded_files = os.path.join(app_folder, 'uploaded')
     
     # Cria atalhos para as pastas to_upload e uploaded na mesma pasta
-    criar_atalho(uploads_folder, app_folder)
-    criar_atalho(uploaded_files, app_folder)
+    criar_atalho(app_folder, uploads_folder)
+    criar_atalho(app_folder, uploaded_files)
     
     if not os.path.exists(config_path):
         create_config_file(uploads_folder, uploaded_files)
