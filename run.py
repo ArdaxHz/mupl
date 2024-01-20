@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-import shutil
 import webbrowser
 import subprocess
 from flask import Flask, render_template, request, jsonify
@@ -168,15 +167,13 @@ def start_process():
     try:
         # Verifique a plataforma para usar o comando apropriado
         if sys.platform.startswith('win'):
-            command = ['cmd', '/c', 'python', mupl_app]
-        else:
             command = ['python', mupl_app]
+        else:
+            command = ['python3', mupl_app]
 
-        # Execute o subprocesso e aguarde a conclusão
-        subprocess.run(command)
-        
-    except subprocess.CalledProcessError as e:
-        print(f"Erro ao executar mupl.py: {e}")
+        # Use subprocess.Popen para iniciar o subprocesso sem esperar que ele termine
+        subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
     except Exception as e:
         print(f"Erro inesperado: {e}")
         

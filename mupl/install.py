@@ -27,5 +27,5 @@ def setup():
             print(f"Módulo {module} não encontrado. Instalando...")
             subprocess.run(['pip', 'install', module])
             
-    os.system('cls')
+    os.system('cls' if os.name == 'nt' else 'clear')
 
