@@ -251,6 +251,8 @@ class FileProcesser:
         
         def match_file(to_upload):
             parts = to_upload.parts
+            index_to_upload = parts.index('to_upload')
+            parts = parts[index_to_upload:]
 
             idiom = None
             obra = None

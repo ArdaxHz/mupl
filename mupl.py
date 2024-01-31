@@ -1,6 +1,3 @@
-import mupl.install as mulp_ins
-mulp_ins.setup()
-
 import argparse
 import asyncio
 import json

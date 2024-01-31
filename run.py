@@ -167,13 +167,15 @@ def start_process():
     try:
         # Verifique a plataforma para usar o comando apropriado
         if sys.platform.startswith('win'):
-            command = ['python', mupl_app]
+            command = ['cmd', '/c', 'python', mupl_app]
         else:
             command = ['python3', mupl_app]
 
-        # Use subprocess.Popen para iniciar o subprocesso sem esperar que ele termine
-        subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
+        # Execute o subprocesso e aguarde a conclusão
+        subprocess.run(command)
+        
+    except subprocess.CalledProcessError as e:
+        print(f"Erro ao executar mupl.py: {e}")
     except Exception as e:
         print(f"Erro inesperado: {e}")
         

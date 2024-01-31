@@ -83,6 +83,8 @@ class ChapterUploader(ChapterUploaderHandler):
         
         if len(self.to_upload.parts) > 3:
             parts = self.to_upload.parts
+            index_to_upload = parts.index('to_upload')
+            parts = parts[index_to_upload:]
 
             idiom = None
             obra = None

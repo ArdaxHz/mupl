@@ -130,7 +130,7 @@ Copie e remova o `.example` de `config.json.example` para começar a usar o arqu
 - `mdauth_path` Arquivo de salvamento local para o token de login do MangaDex. *Padrão: .mdauth*
 
 <details>
-  <summary>Como obter um ID e segredo de cliente.</summary>
+  <summary>Como obter client_id e client_secret.</summary>
 
   ![uma captura de tela do mangadex-mass-uploader](https://github.com/Xnot/mangadex-mass-uploader/blob/main/assets/usage_1.png?raw=true)
   ![uma captura de tela do mangadex-mass-uploader](https://github.com/Xnot/mangadex-mass-uploader/blob/main/assets/usage_2.png?raw=true)

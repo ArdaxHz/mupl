@@ -5,7 +5,6 @@ import subprocess
 
 folder_executed = sys.argv[1]
 
-
 def install_modul():
     # Verificar se os módulos estão instalados
     required_modules = [
@@ -162,6 +161,66 @@ if not os.path.exists(caminho_arquivo):
 if not os.path.exists(os.path.join(app_folder, "static", "background.mp4")):
     download_files({'background.mp4':f'{context_7}/background.mp4'}, os.path.join(app_folder, 'static'))
 
+def create_config_file(uploads_folder, uploaded_files):
+    config_structure = {
+        "options": {
+            "number_of_images_upload": 10,
+            "upload_retry": 3,
+            "ratelimit_time": 2,
+            "max_log_days": 30,
+            "group_fallback_id": None,
+            "number_threads": 3,
+            "language_default": "en"
+        },
+        "credentials": {
+            "mangadex_username": None,
+            "mangadex_password": None,
+            "client_id": None,
+            "client_secret": None
+        },
+        "paths": {
+            "name_id_map_file": "name_id_map.json",
+            "uploads_folder": uploads_folder,
+            "uploaded_files": uploaded_files,
+            "mangadex_api_url": "https://api.mangadex.org",
+            "mangadex_auth_url": "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
+            "mdauth_path": ".mdauth"
+        }
+    }
+
+    with open(config_path, 'w', encoding='utf-8') as file:
+        json.dump(config_structure, file, indent=4)
+
+def check_config_paths():
+    uploads_folder = os.path.join(folder_executed, 'to_upload')
+    uploaded_files = os.path.join(folder_executed, 'uploaded')
+    
+    os.makedirs(uploads_folder, exist_ok=True)
+    os.makedirs(uploaded_files, exist_ok=True)
+    
+    if not os.path.exists(config_path):
+        create_config_file(uploads_folder, uploaded_files)
+
+    with open(config_path, 'r', encoding='utf-8') as file:
+        config = json.load(file)
+
+        # Verificar e corrigir caminhos se necessário
+        if config['paths']['uploads_folder'] != uploads_folder:
+            config['paths']['uploads_folder'] = uploads_folder
+
+        if config['paths']['uploaded_files'] != uploaded_files:
+            config['paths']['uploaded_files'] = uploaded_files
+
+        # Garantir que os caminhos estejam em formato absoluto
+        config['paths']['uploads_folder'] = os.path.abspath(config['paths']['uploads_folder'])
+        config['paths']['uploaded_files'] = os.path.abspath(config['paths']['uploaded_files'])
+
+    # Atualizar o arquivo config.json se houver modificações
+    with open(config_path, 'w', encoding='utf-8') as file:
+        json.dump(config, file, indent=4)
+
+# Chamar a função para verificar os caminhos no arquivo config.json
+check_config_paths()
 
 os.chdir(app_folder)
 
