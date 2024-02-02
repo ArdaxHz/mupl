@@ -94,49 +94,56 @@ class ChapterUploader(ChapterUploaderHandler):
             title = None
             data = None
 
-            idiom = parts[1] # Language
-            obra = parts[2] # Project name
-            group = parts[3] # Group scan
-            
-            if parts[4].startswith("v"):
-                volume = parts[4][1:].strip() # Volume (without 'v')
+            if len(parts) > 2:
+                idiom = parts[1] # Language
+                obra = parts[2] # Project name
+                group = parts[3] # Group scan
                 
-                chapter = parts[5] # Chapter
-                
-                if len(parts) == 7:
-                    title = parts[6] # Title
-                    data_position = title.find("{")  # Encontrar a posição inicial da chave {
+                if parts[4].startswith("v"):
+                    volume = parts[4][1:].strip() # Volume (without 'v')
+                    
+                    chapter = parts[5] # Chapter
+                    
+                    if len(parts) == 7:
+                        title = parts[6] # Title
+                        data_position = title.find("{")  # Encontrar a posição inicial da chave {
     
-                    if data_position != -1:
-                        data_part = title[data_position:].strip()  # Texto da chave { até o final
-                        data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
-                        title = title[:data_position].strip()  # Texto antes da chave {
-
-                    data = data_part if data_position != -1 else None
-            
+                        if data_position != -1:
+                            data_part = title[data_position:].strip()  # Texto da chave { até o final
+                            data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
+                            title = title[:data_position].strip()  # Texto antes da chave {
+    
+                        data = data_part if data_position != -1 else None
+                
+                else:
+                    chapter = parts[4] # Chapter
+                    
+                    if len(parts) == 6:
+                        title = parts[5] # Title
+                        data_position = title.find("{")  # Encontrar a posição inicial da chave {
+    
+                        if data_position != -1:
+                            data_part = title[data_position:].strip()  # Texto da chave { até o final
+                            data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
+                            title = title[:data_position].strip()  # Texto antes da chave {
+    
+                        data = data_part if data_position != -1 else None
+                
+                volume_text = f"(v{volume})" if volume else ""
+                title_text = f"({title})" if title else ""
+                group_text = f"[{group}]" if group else ""
+                text = f"{obra} {idiom} - c{chapter} {volume_text} {title_text} {group_text}"
+                text = text.replace("  ", " ")
             else:
-                chapter = parts[4] # Chapter
-                
-                if len(parts) == 6:
-                    title = parts[5] # Title
-                    data_position = title.find("{")  # Encontrar a posição inicial da chave {
-    
-                    if data_position != -1:
-                        data_part = title[data_position:].strip()  # Texto da chave { até o final
-                        data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
-                        title = title[:data_position].strip()  # Texto antes da chave {
-
-                    data = data_part if data_position != -1 else None
-            
-            volume_text = f"(v{volume})" if volume else ""
-            title_text = f"({title})" if title else ""
-            group_text = f"[{group}]" if group else ""
-            text = f"{obra} {idiom} - c{chapter} {volume_text} {title_text} {group_text}"
-            
-            new_uploaded_zip_path = self.to_upload.rename(
-                os.path.join(self.uploaded_files_path, f"{text}")
-            )
-            logger.debug(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
+                text = parts[-1]
+        
+            try:
+                new_uploaded_zip_path = self.to_upload.rename(
+                    os.path.join(self.uploaded_files_path, f"{text}")
+                )
+                logger.debug(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
+            except:
+                pass
             
             def delete_empty_folders(folder_path):
                 # Percorre recursivamente a árvore de diretórios
