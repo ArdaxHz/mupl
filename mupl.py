@@ -184,7 +184,7 @@ def get_zips_to_upload(names_to_ids: "dict", ImageMagick, allow_ext = ['.png', '
         
         else:
             if ImageMagick:
-                check_images(name_tag, allow_ext)
+                check_images(archive, allow_ext)
             zip_obj = FileProcesser(archive, names_to_ids)
             zip_name_process = zip_obj.process_zip_name()
         
