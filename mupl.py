@@ -1,9 +1,13 @@
-import argparse
-import asyncio
-import json
-import logging
+import os
+import re
 import sys
+import json
 import time
+import shutil
+import asyncio
+import logging
+import argparse
+import subprocess
 from pathlib import Path
 from typing import Optional, List
 
@@ -14,11 +18,57 @@ from mupl.http.client import HTTPClient
 from mupl.updater import check_for_update
 from mupl.uploader.uploader import ChapterUploader
 from mupl.utils.config import config, RATELIMIT_TIME, root_path, VERBOSE, translate_message
+import mupl.utils.imagemagick_check as img_check
 
 logger = logging.getLogger("mupl")
+height_max = 10000
+
+def cup_images(input_images, output_folder, extension, chapter_tag, allow_ext):
+    os.makedirs(output_folder, exist_ok=True)
+    output_filename = os.path.join(output_folder, f"%d.{extension}")
+    command = ["magick", "convert", "-quality", "100", "-crop", "50000x5000"]
+    command += input_images + [output_filename]
+    subprocess.run(command, check=True)
+    
+    for image_file in input_images:
+        os.remove(image_file)
+        
+        count = 1
+
+        output_files = sorted([f for f in os.listdir(output_folder) if f.lower().endswith(tuple(allow_ext))], key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x)])
+
+        for filename in output_files:
+            base, ext = os.path.splitext(filename)
+            new_filename = f"{count:02d}{ext}"
+            os.rename(os.path.join(output_folder, filename), os.path.join(output_folder, new_filename))
+            count += 1
+
+        output_files = [f for f in os.listdir(output_folder) if f.lower().endswith(tuple(allow_ext))]
+        for image in output_files:
+            output_pathfile = os.path.join(output_folder, image)
+            shutil.move(output_pathfile, chapter_tag)
+            
+    os.rmdir(output_folder)
 
 
-def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
+def check_images(path, allow_ext):
+    image_files = [f for f in os.listdir(path) if f.lower().endswith(tuple(allow_ext))]
+    input_images = [os.path.join(path, image) for image in image_files]
+    output_folder = os.path.join(path, "temp")
+    
+    cup = False
+    try:
+        cup = any(int(subprocess.check_output(["magick", "identify", "-format", "%h", image]).decode("utf-8").strip()) > height_max for image in input_images)
+    except:
+        pass
+
+    if cup:
+        cup_images(input_images, output_folder, "jpg", path, allow_ext)
+        
+    return
+
+
+def get_zips_to_upload(names_to_ids: "dict", ImageMagick, allow_ext = ['.png', '.jpg', '.jpeg', '.webp', '.gif']) -> "Optional[List[FileProcesser]]":
     """Get a list of files that end with a zip/cbz extension for uploading."""
     to_upload_folder_path = Path(config["paths"]["uploads_folder"])
     zips_to_upload: "List[FileProcesser]" = []
@@ -56,6 +106,8 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
                                                     for name_tag in chapter_tag.iterdir():
                                                         if name_tag.is_dir():
                                                             
+                                                            if ImageMagick:
+                                                                check_images(name_tag, allow_ext)
                                                             zip_obj = FileProcesser(name_tag, names_to_ids)
                                                             zip_name_process = zip_obj.process_zip_name_extanded()
                                                             
@@ -70,6 +122,8 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
                                                                 zips_no_manga_id.append(name_tag)
                                                         
                                                 else:
+                                                    if ImageMagick:
+                                                        check_images(chapter_tag, allow_ext)
                                                     zip_obj = FileProcesser(chapter_tag, names_to_ids)
                                                     zip_name_process = zip_obj.process_zip_name_extanded()
                                                     
@@ -95,7 +149,9 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
                                             
                                             for name_tag in chapter_tag.iterdir():
                                                 if name_tag.is_dir():
-                                            
+                                                    
+                                                    if ImageMagick:
+                                                        check_images(name_tag, allow_ext)
                                                     zip_obj = FileProcesser(name_tag, names_to_ids)
                                                     zip_name_process = zip_obj.process_zip_name_extanded()
                                                     
@@ -110,6 +166,8 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
                                                         zips_no_manga_id.append(name_tag)
                                             
                                         else:
+                                            if ImageMagick:
+                                                check_images(chapter_tag, allow_ext)
                                             zip_obj = FileProcesser(chapter_tag, names_to_ids)
                                             zip_name_process = zip_obj.process_zip_name_extanded()
                                             
@@ -186,9 +244,11 @@ def open_manga_series_map(files_path: "Path") -> "dict":
 
 
 def main(threaded: "bool" = True):
+    ImageMagick = img_check.setup()
+    
     """Run the mupl on each zip."""
     names_to_ids = open_manga_series_map(root_path)
-    zips_to_upload = get_zips_to_upload(names_to_ids)
+    zips_to_upload = get_zips_to_upload(names_to_ids, ImageMagick)
     if zips_to_upload is None:
         return
 
@@ -246,14 +306,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--update",
-        "-u",
-        default=True,
-        const=False,
-        nargs="?",
-        help="Check for program update.",
-    )
-    parser.add_argument(
         "--verbose",
         "-v",
         action="count",
@@ -276,12 +328,5 @@ if __name__ == "__main__":
     else:
         VERBOSE = True
         logger.setLevel(logging.DEBUG)
-
-    if vargs.get("update", True):
-        try:
-            updated = check_for_update()
-        except (KeyError, PermissionError, TypeError, OSError, ValueError) as e:
-            logger.exception("Update check the error stack")
-            print(translate_message['mulp_text_9'])
 
     main(vargs["threaded"])

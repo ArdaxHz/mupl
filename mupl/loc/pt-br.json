@@ -40,5 +40,12 @@
     "updater_text_5": "Não foi possível atualizar.",
 
     "model_text_1": "401: Não conectado.",
-    "model_text_2": "Conectado."
+    "model_text_2": "Conectado.",
+
+    "img_text_1": "Instalação do ImageMagick",
+    "img_text_2": "ImageMagick não está instalado.\nBaixando e instalando o ImageMagick...",
+    "img_text_3": "Instalação concluída",
+    "img_text_4": "ImageMagick instalado com sucesso.",
+    "img_text_5": "Versão instalada do ImageMagick:",
+    "img_text_6": "A versão instalada está desatualizada. Baixando e instalando nova versão do ImageMagick..."
 }

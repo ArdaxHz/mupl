@@ -40,5 +40,12 @@
     "updater_text_5": "Couldn't update.",
 
     "model_text_1": "401: Not logged in.",
-    "model_text_2": "Logged in."
+    "model_text_2": "Logged in.",
+
+    "img_text_1": "ImageMagick Installation",
+    "img_text_2": "ImageMagick is not installed.\nDownloading and installing ImageMagick...",
+    "img_text_3": "Installation Completed",
+    "img_text_4": "ImageMagick installed successfully.",
+    "img_text_5": "Installed version of ImageMagick:",
+    "img_text_6": "The installed version is outdated. Downloading and installing a new version of ImageMagick..."
 }
