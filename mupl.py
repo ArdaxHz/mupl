@@ -23,32 +23,53 @@ import mupl.utils.imagemagick_check as img_check
 logger = logging.getLogger("mupl")
 height_max = 10000
 
-def cup_images(input_images, output_folder, extension, chapter_tag, allow_ext):
+def cup_images(input_images, output_folder, extension, path, allow_ext):
+    file_list = sorted([f for f in os.listdir(path) if f.lower().endswith(tuple(allow_ext))], key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x)])
+
+    count = 1
+
+    for filename in file_list:
+        base, ext = os.path.splitext(filename)
+        new_filename = f"{base}__{ext}"
+        os.rename(os.path.join(path, filename), os.path.join(path, new_filename))
+
+    file_list = sorted([f for f in os.listdir(path) if f.lower().endswith(tuple(allow_ext))], key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x)])
+
+    for filename in file_list:
+        base, ext = os.path.splitext(filename)
+        new_filename = f"{count:02d}{ext}"
+        os.rename(os.path.join(path, filename), os.path.join(path, new_filename))
+        count += 1
+    
     os.makedirs(output_folder, exist_ok=True)
-    output_filename = os.path.join(output_folder, f"%d.{extension}")
-    command = ["magick", "convert", "-quality", "100", "-crop", "50000x5000"]
-    command += input_images + [output_filename]
+    output_filename = os.path.join(output_folder, f"0.{extension}")
+    command = ["magick", "convert", "-quality", "100", "-crop", "50000x5000", f"{path}\\*.*", output_filename]
     subprocess.run(command, check=True)
     
-    for image_file in input_images:
-        os.remove(image_file)
+    for image_file in os.listdir(path):
+        image_path = os.path.join(path, image_file)
+        if os.path.isfile(image_path):
+            os.remove(image_path)
+    
+    output_files = [f for f in os.listdir(output_folder) if f.lower().endswith(tuple(allow_ext))]
+    for image in output_files:
+        output_pathfile = os.path.join(output_folder, image)
+        shutil.move(output_pathfile, path)
         
-        count = 1
+    count = 1
 
-        output_files = sorted([f for f in os.listdir(output_folder) if f.lower().endswith(tuple(allow_ext))], key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x)])
+    # Obtenha os arquivos da pasta path e renomeie-os
+    file_list = sorted([f for f in os.listdir(path) if f.lower().endswith(tuple(allow_ext))], key=lambda x: [int(c) if c.isdigit() else c for c in re.split(r'(\d+)', x)])
+    count = 1
+    for filename in file_list:
+        base, ext = os.path.splitext(filename)
+        new_filename = f"{count:02d}{ext}"
+        os.rename(os.path.join(path, filename), os.path.join(path, new_filename))
+        count += 1
 
-        for filename in output_files:
-            base, ext = os.path.splitext(filename)
-            new_filename = f"{count:02d}{ext}"
-            os.rename(os.path.join(output_folder, filename), os.path.join(output_folder, new_filename))
-            count += 1
-
-        output_files = [f for f in os.listdir(output_folder) if f.lower().endswith(tuple(allow_ext))]
-        for image in output_files:
-            output_pathfile = os.path.join(output_folder, image)
-            shutil.move(output_pathfile, chapter_tag)
-            
     os.rmdir(output_folder)
+    
+
 
 
 def check_images(path, allow_ext):
