@@ -68,8 +68,6 @@ def cup_images(input_images, output_folder, extension, path, allow_ext):
         count += 1
 
     os.rmdir(output_folder)
-    
-
 
 
 def check_images(path, allow_ext):
