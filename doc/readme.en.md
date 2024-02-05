@@ -49,7 +49,7 @@ There are command line arguments that can be added after the main command to cha
 
 #### Folder Format
 - `Language`
-  - `Work`
+  - `Title`
     - `Group`
       - `Volume`
         - `Chapter`
@@ -59,7 +59,7 @@ There are command line arguments that can be added after the main command to cha
 
 #### Folder Format Parameters
 - `Language` Language code in ISO format. *Required*
-- `Work` Manga title (same as the key in `name_id_map.json`) or MangaDex ID.
+- `Title` Manga title (same as the key in `name_id_map.json`) or MangaDex ID.
 - `Group` List of group names or IDs. If using group names, they must be included in `name_id_map.json` for the IDs. *Separate multiple groups using `+`.* *Leave as 0 (zero) if there is no group.*
 - `Volume` Chapter volume. *Optional.* *Example: v5*
 - `Chapter` Chapter number. *For one-shot chapters, set it as 0000 (four zeros)*
