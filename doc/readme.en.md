@@ -47,6 +47,47 @@ There are command line arguments that can be added after the main command to cha
 - `{publish_date}` Future date of when chapter is released from MangaDex's side. ***MUST** be in the format `YYYY-MM-DDTHH-MM-SS` if included.* *Optional.*
 - `[group]` List of group names or IDs. If group names, they must be included in the `name_id_map.json` for the IDs. *Separate multiple groups using `+`.* *Optional.*
 
+#### Folder Format
+- `Language`
+  - `Work`
+    - `Group`
+      - `Volume`
+        - `Chapter`
+          - `Title {data}`
+      - `Chapter`
+        - `Title {data}`
+
+#### Folder Format Parameters
+- `Language` Language code in ISO format. *Required*
+- `Work` Manga title (same as the key in `name_id_map.json`) or MangaDex ID.
+- `Group` List of group names or IDs. If using group names, they must be included in `name_id_map.json` for the IDs. *Separate multiple groups using `+`.* *Leave as 0 (zero) if there is no group.*
+- `Volume` Chapter volume. *Optional.* *Example: v5*
+- `Chapter` Chapter number. *For one-shot chapters, set it as 0000 (four zeros)*
+- `Title {data}` In *Title*, put the chapter title, and in *{data}*, specify a maximum time of two weeks. *Keep the curly braces {}*
+
+##### Example of {data}
+The date can be defined in several different ways.
+
+**{1d}** == In 1 day
+
+**{5h}** == In 5 hours
+
+**{40m}** == In 40 minutes
+
+**{30s}** == In 30 seconds
+
+Or in the common format.
+**{2024-01-16 22-00-00}**
+
+You can also combine them.
+**{1d 5h 40m 30s}** == In 1 day, 5 hours, 40 minutes, and 30 seconds
+
+You don't need to worry about the order.
+**{30s 5h 1d 40m}**
+
+Don't keep the values together; otherwise, it won't work.
+**{1d5h40m30s}**
+
 #### Accepted Image formats
 - `png`
 - `jpg`/`jpeg`

@@ -88,10 +88,6 @@ Não precisa se preocupar com a ordem.
 Não deixe os valores juntos, se não não vai funcionar.
 **{1d5h40m30s}**
 
-
-
-
-
 #### Formatos de Imagem Aceitos
 - `png`
 - `jpg`/`jpeg`
