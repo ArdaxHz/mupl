@@ -101,8 +101,7 @@ urls_6 = {
     '__init__.py':f'{context_6}/__init__.py',
     'config.py':f'{context_6}/config.py',
     'defaults.json':f'{context_6}/defaults.json',
-    'logs.py':f'{context_6}/logs.py',
-    'imagemagick_check.py':f'{context_6}/imagemagick_check.py'
+    'logs.py':f'{context_6}/logs.py'
 }
 
 urls_7 = {

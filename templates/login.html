@@ -125,9 +125,6 @@
           }
           return response.json();
       })
-      .then(data => {
-          alert(data.success);  // Exiba uma mensagem de sucesso
-      })
       .catch(error => {
           console.error('Erro:', error);
           // alert('Ocorreu um erro ao salvar as credenciais.');

@@ -94,8 +94,7 @@ def login_credential():
 
         # Salve a configuração atualizada
         save_config(config)
-
-        return jsonify({'success': 'Credenciais salvas com sucesso.'})
+        
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
