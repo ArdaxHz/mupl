@@ -88,7 +88,7 @@ class ChapterUploaderHandler:
         batch_start = int(image_batch_list[0]) + 1
         batch_end = int(image_batch_list[-1]) + 1
         if VERBOSE:
-            print(f"{translate_message['handler_text_1']}".format(batch_start, batch_end))
+            print(f"{translate_message['uploading_images']}".format(batch_start, batch_end))
         logger.debug(f"Uploading images {batch_start} to {batch_end}.")
 
         for retry in range(self.number_upload_retry):
@@ -96,7 +96,7 @@ class ChapterUploaderHandler:
 
             if successful_upload_data is None:
                 print(
-                    f"{translate_message['handler_text_2']}".format(
+                    f"{translate_message['uploading_images_error']}".format(
                         batch_start,
                         batch_end,
                         retry + 1,
@@ -229,7 +229,7 @@ class ChapterUploaderHandler:
         )
         logger.error(upload_session_response_json_message)
         upload_session_response_json_message = (
-            f"{translate_message['handler_text_3']}".format(self.zip_name)
+            f"{translate_message['error_create_draft_session']}".format(self.zip_name)
         )
         print(upload_session_response_json_message)
         self.failed_uploads.append(self.to_upload)
@@ -260,7 +260,7 @@ class ChapterUploaderHandler:
             if chapter_commit_response.ok:
                 successful_upload_id = chapter_commit_response.data["data"]["id"]
                 print(
-                    f"{translate_message['handler_text_4']}".format(
+                    f"{translate_message['uploading_successfully']}".format(
                         successful_upload_id, self.zip_name
                     )
                 )
@@ -271,7 +271,7 @@ class ChapterUploaderHandler:
                 return True
 
         logger.error(f"Failed to commit {self.zip_name}, removing upload draft.")
-        print(f"{translate_message['handler_text_5']}".format(self.zip_name))
+        print(f"{translate_message['uploading_failed']}".format(self.zip_name))
         self.remove_upload_session()
         self.failed_uploads.append(self.to_upload)
         return False

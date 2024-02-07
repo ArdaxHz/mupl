@@ -14,11 +14,7 @@
 
 Download and open.
 
-● [App exe](https://github.com/OneDefauter/Menu_/releases/download/Req/mupl.exe) **[virustotal](https://www.virustotal.com/gui/file/8ad91ff449978fd7222aea59e17a9ef688febf28f252077cb7b23a67431dc84f?nocache=1)**
-
-Or
-
-● [File py](https://github.com/OneDefauter/Menu_/releases/download/Req/start.py)
+● [File py](start.py)
 
 
 ![](static/install.gif)

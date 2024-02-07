@@ -1,8 +1,7 @@
-import asyncio
-import logging
 import os
 import time
-from datetime import datetime
+import asyncio
+import logging
 from pathlib import Path
 
 from tqdm import tqdm
@@ -55,6 +54,7 @@ class ChapterUploader(ChapterUploaderHandler):
 
     def move_files(self):
         """Move the uploaded chapters to a different folder."""
+        to_upload_folder_path = Path(config["paths"]["uploads_folder"])
         self.uploaded_files_path.mkdir(parents=True, exist_ok=True)
         # Folders don't have an extension
         if self.folder_upload:
@@ -81,83 +81,104 @@ class ChapterUploader(ChapterUploaderHandler):
             else:
                 break
         
-        if len(self.to_upload.parts) > 3:
-            parts = self.to_upload.parts
-            index_to_upload = parts.index('to_upload')
-            parts = parts[index_to_upload:]
-
-            idiom = None
-            obra = None
-            group = None
-            volume = None
-            chapter = None
-            title = None
-            data = None
-
-            if len(parts) > 2:
-                idiom = parts[1] # Language
-                obra = parts[2] # Project name
-                group = parts[3] # Group scan
+        def check_to_upload_metod(parts):
+            # Define the variables
+            language = None
+            manga_series = None
+            groups = None
+            volume_number = None
+            chapter_number = None
+            chapter_title = None
+            
+            language = parts[1] # Language
+            manga_series = parts[2] # Project name
+            groups = parts[3] # Group scan
+            
+            def volume_number_or_chapter_number(parts):
+                volume_number = parts[4][1:].strip() # Volume (without 'v')
+                volume_number = volume_number.lstrip('0')
                 
-                if parts[4].startswith("v"):
-                    volume = parts[4][1:].strip() # Volume (without 'v')
-                    
-                    chapter = parts[5] # Chapter
-                    
-                    if len(parts) == 7:
-                        title = parts[6] # Title
-                        data_position = title.find("{")  # Encontrar a posição inicial da chave {
-    
-                        if data_position != -1:
-                            data_part = title[data_position:].strip()  # Texto da chave { até o final
-                            data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
-                            title = title[:data_position].strip()  # Texto antes da chave {
-    
-                        data = data_part if data_position != -1 else None
+                chapter_number = str(parts[5]) # Chapter
                 
+                # Check if the value is "0000", if so, it's a oneshot
+                if chapter_number == "0000":
+                    chapter_number = None
+                    self.oneshot = True
                 else:
-                    chapter = parts[4] # Chapter
+                    # Remove all leading zeros
+                    chapter_number = chapter_number.lstrip('0')
                     
-                    if len(parts) == 6:
-                        title = parts[5] # Title
-                        data_position = title.find("{")  # Encontrar a posição inicial da chave {
-    
-                        if data_position != -1:
-                            data_part = title[data_position:].strip()  # Texto da chave { até o final
-                            data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
-                            title = title[:data_position].strip()  # Texto antes da chave {
-    
-                        data = data_part if data_position != -1 else None
+                return volume_number, chapter_number
+
+            def only_chapter_number(parts):
+                # Since there is no Volume part, part 4 is the Chapter.
+                chapter_number = parts[4] # Chapter
                 
-                volume_text = f"(v{volume})" if volume else ""
-                title_text = f"({title})" if title else ""
-                group_text = f"[{group}]" if group else ""
-                text = f"{obra} {idiom} - c{chapter} {volume_text} {title_text} {group_text}"
-                text = text.replace("  ", " ")
+                # Check if the value is "0000", if so, it's a oneshot
+                if chapter_number == "0000":
+                    chapter_number = None
+                    self.oneshot = True
+                
+                return chapter_number
+            
+            def chapter_title_and_publish_date(parts, number):
+                chapter_title = parts[number] # Title
+                return chapter_title
+            
+            # Check if part 4 (Volume or Chapter) starts with "v" to consider it as Volume
+            if parts[4].startswith("v"):
+                volume_number, chapter_number = volume_number_or_chapter_number(parts)
+                
+                # If there are a total of 7 parts (counting "to_upload"), part 6 is the title
+                if len(parts) == 7:
+                    chapter_title = chapter_title_and_publish_date(parts, 6)
+            
             else:
-                text = parts[-1]
-        
+                chapter_number = only_chapter_number(parts)
+                
+                # If there are a total of 6 parts (counting "to_upload"), part 5 is the title
+                if len(parts) == 6:
+                    chapter_title = chapter_title_and_publish_date(parts, 5)
+                
+            return language, manga_series, groups, volume_number, chapter_number, chapter_title
+
+        # Retrieve the parts from "to_upload" and remove everything before "to_upload"
+        index_to_upload = self.to_upload.parts.index('to_upload')
+        parts = self.to_upload.parts[index_to_upload:]
+
+        # Check the number of parts to determine the method used. If it's 2,
+        # use the normal method; if it's more than 3, use the tree method
+        if len(parts) > 3:
+            language, manga_series, groups, volume_number, chapter_number, chapter_title = check_to_upload_metod(parts)
+            
+            chapter_number = f"c{chapter_number}" if chapter_number else ""
+            volume_number = f" (v{volume_number})" if volume_number else ""
+            chapter_title = f" ({chapter_title})" if chapter_title else ""
+            groups = f" [{groups}]" if groups else "[0]"
+            
+            text = f"{manga_series} {language} - {chapter_number}{volume_number}{chapter_title}{groups}"
+            
             try:
                 new_uploaded_zip_path = self.to_upload.rename(
                     os.path.join(self.uploaded_files_path, f"{text}")
                 )
                 logger.debug(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
             except:
-                pass
-            
+                print("File already exists: " + text)
+        
             def delete_empty_folders(folder_path):
-                # Percorre recursivamente a árvore de diretórios
+                # Recursively traverse the directory tree
                 for root, dirs, files in os.walk(folder_path, topdown=False):
                     for dir_name in dirs:
                         dir_path = os.path.join(root, dir_name)
                         
-                        # Verifica se a pasta está vazia
+                        # Check if the folder is empty
                         if not os.listdir(dir_path):
-                            # Exclui a pasta vazia
+                            # Delete the empty folder
                             os.rmdir(dir_path)
+
+            delete_empty_folders(to_upload_folder_path)
             
-            delete_empty_folders("to_upload")
-        
         else:
             new_uploaded_zip_path = self.to_upload.rename(
                 os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}")
@@ -188,7 +209,7 @@ class ChapterUploader(ChapterUploaderHandler):
         try:
             loop.run_until_complete(gathered)
         except KeyboardInterrupt as e:
-            print(translate_message['uploader_text_1'])
+            print(translate_message['keyboard_interrupt_cancel'])
             gathered.cancel()
             self.failed_image_upload = True
 
@@ -213,30 +234,30 @@ class ChapterUploader(ChapterUploaderHandler):
         logger.info(f"Uploading chapter: {repr(self.file_name_obj)}")
         print(
             "Manga id: {manga_series}\n"
-            "{uploader_text_2}: {chapter_number}\n"
-            "{uploader_text_3}: {volume_number}\n"
-            "{uploader_text_4}: {chapter_title}\n"
-            "{uploader_text_5}: {language}\n"
-            "{uploader_text_6}: {groups}\n"
-            "{uploader_text_7}: {publish_date}".format(
+            "{chapter_number_manga}: {chapter_number}\n"
+            "{volume_number_manga}: {volume_number}\n"
+            "{chapter_title_manga}: {chapter_title}\n"
+            "{language_manga}: {language}\n"
+            "{groups_manga}: {groups}\n"
+            "{publish_date_manga}: {publish_date}".format(
                 manga_series=self.file_name_obj.manga_series,
                 chapter_number=self.file_name_obj.chapter_number,
-                volume_number=self.file_name_obj.volume_number if self.file_name_obj.volume_number is not None else translate_message['uploader_text_14'],
-                chapter_title=self.file_name_obj.chapter_title if self.file_name_obj.chapter_title is not None else translate_message['uploader_text_14'],
+                volume_number=self.file_name_obj.volume_number if self.file_name_obj.volume_number is not None else translate_message['not_defined_value'],
+                chapter_title=self.file_name_obj.chapter_title if self.file_name_obj.chapter_title is not None else translate_message['not_defined_value'],
                 language=self.file_name_obj.language.upper(),
-                groups=self.file_name_obj.groups if self.file_name_obj.groups is not None else translate_message['uploader_text_14'],
-                publish_date=self.file_name_obj.publish_date if self.file_name_obj.publish_date is not None else translate_message['uploader_text_14'],
-                uploader_text_2=translate_message["uploader_text_2"],
-                uploader_text_3=translate_message["uploader_text_3"],
-                uploader_text_4=translate_message["uploader_text_4"],
-                uploader_text_5=translate_message["uploader_text_5"],
-                uploader_text_6=translate_message["uploader_text_6"],
-                uploader_text_7=translate_message["uploader_text_7"]
+                groups=self.file_name_obj.groups if self.file_name_obj.groups is not None else translate_message['not_defined_value'],
+                publish_date=self.file_name_obj.publish_date if self.file_name_obj.publish_date is not None else translate_message['not_defined_value'],
+                chapter_number_manga=translate_message["chapter_number_manga"],
+                volume_number_manga=translate_message["volume_number_manga"],
+                chapter_title_manga=translate_message["chapter_title_manga"],
+                language_manga=translate_message["language_manga"],
+                groups_manga=translate_message["groups_manga"],
+                publish_date_manga=translate_message["publish_date_manga"]
             )
         )
 
         if not self.image_uploader_process.valid_images_to_upload:
-            print(translate_message['uploader_text_8'])
+            print(translate_message['invalid_images_to_upload'])
             logger.error(f"No valid images found for {self.zip_name}")
             self.failed_uploads.append(self.to_upload)
             return
@@ -253,10 +274,10 @@ class ChapterUploader(ChapterUploaderHandler):
         logger.info(
             "Created upload session: {self.upload_session_id}, {self.zip_name}."
         )
-        print(f"{translate_message['uploader_text_9']}".format(self.upload_session_id))
+        print(f"{translate_message['draft_create_session']}".format(self.upload_session_id))
         if VERBOSE:
             print(
-                f"{translate_message['uploader_text_10']}".format(
+                f"{translate_message['images_to_upload']}".format(
                     len(
                         [
                             item
@@ -271,7 +292,7 @@ class ChapterUploader(ChapterUploaderHandler):
 
         if self.threaded:
             if VERBOSE:
-                print(translate_message['uploader_text_11'])
+                print(translate_message['threaded_upload_runing'])
 
             spliced_images_list = [
                 self.image_uploader_process.valid_images_to_upload[
@@ -290,7 +311,7 @@ class ChapterUploader(ChapterUploaderHandler):
                     break
         else:
             if VERBOSE:
-                print(translate_message['uploader_text_12'])
+                print(translate_message['threaded_upload_non_runing'])
             self.run_image_uploader(self.image_uploader_process.valid_images_to_upload)
 
         self.tqdm.close()
@@ -299,7 +320,7 @@ class ChapterUploader(ChapterUploaderHandler):
 
         # Skip chapter upload and delete upload session
         if self.failed_image_upload:
-            print(translate_message['uploader_text_13'])
+            print(translate_message['draft_deleting_failed_uplaod'])
             logger.error(
                 f"Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}."
             )

@@ -5,8 +5,6 @@ Read this in other languages:
 [Languages](/readme.md)
 
 ## Table of Contents
-- [How to use](#usage)
-  - [Command Line Arguments](#command-line-arguments)
 - [Upload file name format](#file-name-format)
   - [Name format](#name-format)
   - [Name parameters](#name-parameters)
@@ -20,19 +18,6 @@ Read this in other languages:
 - [Contribution](#contribution)
 - [Translation](#translation)
 
-
-## Usage
-Download the [latest version](https://github.com/OneDefauter/mupl/releases/latest) (the source code zip) from the releases page, unzip the file into a folder and open a terminal in that location.
-
-In the terminal (bash, powershell, cmd) type `python mupl.py` to run the uploader.
-Ensure you have Python 3.9+ installed, use `python` for windows and `python3` for mac and linux.
-
-### Command Line Arguments
-There are command line arguments that can be added after the main command to change the behaviour of the program, for example: `python mupl.py -u`.
-
-##### Options:
-- `--update` `-u` Don't check for a new update at the start of the program.
-- `--verbose` `-v` Make the command line messages and logs more verbose.
 
 ## File Name Format
 #### Name format

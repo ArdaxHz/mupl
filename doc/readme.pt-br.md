@@ -5,8 +5,6 @@ Leia isso em outros idiomas:
 [Idiomas](/readme.md)
 
 ## Sumário
-- [Como usar](#como-usar)
-  - [Argumentos da Linha de Comando](#argumentos-da-linha-de-comando)
 - [Formato do Nome do Arquivo](#formato-do-nome-do-arquivo)
   - [Formato do Nome](#formato-do-nome)
   - [Parâmetros do Nome](#parâmetros-do-nome)
@@ -20,19 +18,6 @@ Leia isso em outros idiomas:
 - [Contribuição](#contribuição)
 - [Tradução](#tradução)
 
-
-## Como usar
-Baixe a [última versão](https://github.com/OneDefauter/mupl/releases/latest) (o arquivo zip do código-fonte) da página de releases, descompacte o arquivo em uma pasta e abra um terminal nessa localização.
-
-No terminal (bash, powershell, cmd), digite `python mupl.py` para executar o uploader.
-Certifique-se de ter o Python 3.9+ instalado, use `python` para o Windows e `python3` para o macOS e Linux.
-
-### Argumentos da Linha de Comando
-Existem argumentos da linha de comando que podem ser adicionados após o comando principal para alterar o comportamento do programa, por exemplo: `python mupl.py -u`.
-
-##### Opções:
-- `--update` `-u` Não verifica se há uma nova atualização no início do programa.
-- `--verbose` `-v` Torna as mensagens e logs da linha de comando mais detalhados.
 
 ## Formato do Nome do Arquivo
 #### Formato do Nome

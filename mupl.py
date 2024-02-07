@@ -14,7 +14,6 @@ import natsort
 
 from mupl.file_validator import FileProcesser
 from mupl.http.client import HTTPClient
-from mupl.updater import check_for_update
 from mupl.uploader.uploader import ChapterUploader
 from mupl.utils.config import config, RATELIMIT_TIME, root_path, VERBOSE, translate_message
 
@@ -199,7 +198,6 @@ def get_zips_to_upload(names_to_ids: "dict", allow_ext = ['.png', '.jpg', '.jpeg
                                             if zip_obj.manga_series is None and zip_obj.zip_name_match is not None:
                                                 zips_no_manga_id.append(chapter_tag)
     
-        
         else:
             check_images(archive, allow_ext)
             zip_obj = FileProcesser(archive, names_to_ids)
@@ -238,7 +236,7 @@ def get_zips_to_upload(names_to_ids: "dict", allow_ext = ['.png', '.jpg', '.jpeg
         )
 
     if not zips_to_upload:
-        print(translate_message['mulp_text_1'])
+        print(translate_message['invalid_folder_to_upload'])
         logger.error(f"Exited due to {len(zips_to_upload)} zips not being valid.")
         return
 
@@ -257,7 +255,7 @@ def open_manga_series_map(files_path: "Path") -> "dict":
             names_to_ids = json.load(json_file)
     except (FileNotFoundError, json.decoder.JSONDecodeError) as e:
         logger.exception("Please check your name-to-id file.")
-        print(translate_message['mulp_text_2'])
+        print(translate_message['check_file_name_to_id'])
         return {"manga": {}, "group": {}}
     return names_to_ids
 
@@ -274,7 +272,7 @@ def main(threaded: "bool" = True):
 
     for index, file_name_obj in enumerate(zips_to_upload, start=1):
         try:
-            print(f"\n\n{translate_message['mulp_text_3']} {str(file_name_obj)}\n{'-'*40}")
+            print(f"\n\n{translate_message['uploading_draft']} {str(file_name_obj)}\n{'-'*40}")
 
             uploader_process = ChapterUploader(
                 http_client, file_name_obj, names_to_ids, failed_uploads, threaded
@@ -288,14 +286,14 @@ def main(threaded: "bool" = True):
             # Delete to save memory on large amounts of uploads
             del uploader_process
 
-            print(f"{'-'*10}\n{translate_message['mulp_text_4']} {str(file_name_obj)}\n{'-'*10}")
+            print(f"{'-'*10}\n{translate_message['finish_upload']} {str(file_name_obj)}\n{'-'*10}")
             logger.debug("Sleeping between zip upload.")
             time.sleep(RATELIMIT_TIME * 2)
         except KeyboardInterrupt:
             logger.warning(
                 f"Keyboard Interrupt detected during upload of {str(file_name_obj)}"
             )
-            print(translate_message['mulp_text_5'])
+            print(translate_message['keyboard_interrupt_exit'])
             try:
                 asyncio.get_event_loop().stop()
                 asyncio.get_event_loop().close()
@@ -311,9 +309,9 @@ def main(threaded: "bool" = True):
 
     if failed_uploads:
         logger.info(f"Failed uploads: {failed_uploads}")
-        print(translate_message['mulp_text_6'])
+        print(translate_message['failed_uploads'])
         for fail in failed_uploads:
-            prefix = translate_message['mulp_text_7'] if fail.is_dir() else translate_message['mulp_text_8']
+            prefix = translate_message['metod_folder'] if fail.is_dir() else translate_message['metod_archive']
             print("{}: {}".format(prefix, fail.name))
 
     sys.exit(0)

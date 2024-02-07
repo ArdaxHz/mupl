@@ -5,8 +5,7 @@ import subprocess
 
 folder_executed = sys.argv[1]
 
-def install_modul():
-    # Verificar se os módulos estão instalados
+def install_modules():
     required_modules = [
         'requests',
         'natsort',
@@ -19,21 +18,17 @@ def install_modul():
     
     for module in required_modules:
         try:
-            if module == 'pywin32':
-                __import__('win32api')
-                
-            elif module == 'Pillow':
+            if module == 'Pillow':
                 __import__('PIL')
             
             else:
                 __import__(module)
                 
         except ImportError:
-            print(f"Módulo {module} não encontrado. Instalando...")
             subprocess.run(['pip', 'install', module])
             
-    os.system('cls')
-install_modul()
+    os.system('cls') if os.name == 'nt' else os.system('clear')
+install_modules()
 
 import requests
 
@@ -42,7 +37,7 @@ temp_folder = os.environ['TEMP']
 app_folder = os.path.join(temp_folder, "MangaDex Uploader (APP)")
 path = os.path.join(temp_folder, "MangaDex Uploader (APP)", "run.py")
 config_path = os.path.join(app_folder, 'config.json')
-caminho_arquivo = os.path.join(app_folder, 'name_id_map.json')
+map_path_file = os.path.join(app_folder, 'name_id_map.json')
 
 os.makedirs(app_folder, exist_ok=True)
 os.makedirs(os.path.join(app_folder, "to_upload"), exist_ok=True)
@@ -105,6 +100,7 @@ urls_6 = {
 }
 
 urls_7 = {
+    'icon.ico':f'{context_7}/icon.ico',
     'style.css':f'{context_7}/style.css',
     'en.json':f'{context_7}/en.json',
     'pt-br.json':f'{context_7}/pt-br.json'
@@ -131,31 +127,31 @@ def download_files(url_dict, folder_path):
             print(f"Error: '{filename}'. Code: {response.status_code}")
 
 
-# Download para a pasta 'mupl'
+# Download 'mupl'
 download_files(urls_1, app_folder)
 
-# Download para a pasta 'mupl/mupl'
+# Download 'mupl/mupl'
 download_files(urls_2, os.path.join(app_folder, 'mupl'))
 
-# Download para a pasta 'mupl/mupl/http'
+# Download 'mupl/mupl/http'
 download_files(urls_3, os.path.join(app_folder, 'mupl', 'http'))
 
-# Download para a pasta 'mupl/mupl/loc'
+# Download 'mupl/mupl/loc'
 download_files(urls_4, os.path.join(app_folder, 'mupl', 'loc'))
 
-# Download para a pasta 'mupl/mupl/uploader'
+# Download 'mupl/mupl/uploader'
 download_files(urls_5, os.path.join(app_folder, 'mupl', 'uploader'))
 
-# Download para a pasta 'mupl/mupl/utils'
+# Download 'mupl/mupl/utils'
 download_files(urls_6, os.path.join(app_folder, 'mupl', 'utils'))
 
-# Download para a pasta 'static'
+# Download 'static'
 download_files(urls_7, os.path.join(app_folder, 'static'))
 
-# Download para a pasta 'templates'
+# Download 'templates'
 download_files(urls_8, os.path.join(app_folder, 'templates'))
 
-if not os.path.exists(caminho_arquivo):
+if not os.path.exists(map_path_file):
     download_files({'name_id_map.json':f'{context_1}/name_id_map.json'}, app_folder)
 
 if not os.path.exists(os.path.join(app_folder, "static", "background.mp4")):
@@ -188,6 +184,7 @@ def create_config_file(uploads_folder, uploaded_files):
         }
     }
 
+    # Create the config.json file
     with open(config_path, 'w', encoding='utf-8') as file:
         json.dump(config_structure, file, indent=4)
 
@@ -204,22 +201,19 @@ def check_config_paths():
     with open(config_path, 'r', encoding='utf-8') as file:
         config = json.load(file)
 
-        # Verificar e corrigir caminhos se necessário
         if config['paths']['uploads_folder'] != uploads_folder:
             config['paths']['uploads_folder'] = uploads_folder
 
         if config['paths']['uploaded_files'] != uploaded_files:
             config['paths']['uploaded_files'] = uploaded_files
 
-        # Garantir que os caminhos estejam em formato absoluto
         config['paths']['uploads_folder'] = os.path.abspath(config['paths']['uploads_folder'])
         config['paths']['uploaded_files'] = os.path.abspath(config['paths']['uploaded_files'])
 
-    # Atualizar o arquivo config.json se houver modificações
+    # Update the config.json file if there are modifications
     with open(config_path, 'w', encoding='utf-8') as file:
         json.dump(config, file, indent=4)
 
-# Chamar a função para verificar os caminhos no arquivo config.json
 check_config_paths()
 
 os.chdir(app_folder)

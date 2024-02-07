@@ -163,7 +163,7 @@ class HTTPModel:
                 response_obj = HTTPResponse(response, successful_codes)
 
                 if response.status_code == 401:
-                    print(translate_message['model_text_1'])
+                    print(translate_message['error_conenction'])
                     self.total_not_login_row += 1
                     if self.total_not_login_row >= self.upload_retry_total:
                         return response_obj
@@ -249,7 +249,7 @@ class HTTPModel:
 
             if self._first_login:
                 logger.info(f"Logged into mangadex.")
-                print(translate_message['model_text_2'])
+                print(translate_message['error_success'])
                 self._first_login = False
             return True
         else:

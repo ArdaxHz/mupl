@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MangaDex</title>
-  <link rel="icon" href="https://i.ibb.co/JqFMZML/avatar.png" type="image/png">
+  <link rel="icon" href="static/icon.ico" type="image/png">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <style>
     canvas {
@@ -34,7 +34,7 @@
 
     <!-- Botão de entrar -->
     <button id="loginButton">
-      <img src="https://i.ibb.co/JqFMZML/avatar.png" alt="MangaDex Icon" border="0">
+      <img src="static/icon.ico" alt="MangaDex Icon" border="0">
       <span id="loginWithMangadex"></span>
     </button>
   </div>
@@ -121,13 +121,12 @@
       })
       .then(response => {
           if (!response.ok) {
-              throw new Error(`Erro ao salvar credenciais: ${response.statusText}`);
+              throw new Error(`Error save credentials: ${response.statusText}`);
           }
           return response.json();
       })
       .catch(error => {
           console.error('Erro:', error);
-          // alert('Ocorreu um erro ao salvar as credenciais.');
       });
 
       window.location.href = '{{ url_for('main_setup') }}';

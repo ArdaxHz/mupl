@@ -54,7 +54,7 @@ class FileProcesser:
         if not zip_name_match:
             logger.error(f"{self.zip_name} isn't in the correct naming format.")
             print(
-                f"{translate_message['file_v_text_1']}".format(self.zip_name)
+                f"{translate_message['naming_format_incorret']}".format(self.zip_name)
             )
             return
         return zip_name_match
@@ -235,7 +235,7 @@ class FileProcesser:
 
         if self.manga_series is None:
             logger.error(f"Couldn't find a manga id for {self.zip_name}, skipping.")
-            print(f"{translate_message['file_v_text_2']}".format(self.zip_name))
+            print(f"{translate_message['skip_no_manga_id']}".format(self.zip_name))
             return False
 
         self.language = self._get_language()
@@ -249,68 +249,82 @@ class FileProcesser:
     def process_zip_name_extanded(self) -> "bool":
         """Extract the respective chapter data from the file name."""
         
-        def match_file(to_upload):
-            parts = to_upload.parts
+        def match_file(parts):
+            # Retrieve the parts from "to_upload" and remove everything before "to_upload"
             index_to_upload = parts.index('to_upload')
             parts = parts[index_to_upload:]
 
-            idiom = None
-            obra = None
-            grup = None
-            volume = None
-            chapter = None
-            title = None
-            data = None
+            # Define the variables
+            language = None
+            manga_series = None
+            groups = None
+            volume_number = None
+            chapter_number = None
+            chapter_title = None
+            publish_date = None
 
-            idiom = parts[1] # Language
-            obra = parts[2] # Project name
-            grup = parts[3] # Group scan
+            language = parts[1] # Language
+            manga_series = parts[2] # Project name
+            groups = parts[3] # Group scan
             
-            if parts[4].startswith("v"):
-                volume = parts[4][1:].strip() # Volume (without 'v')
-                volume = volume.lstrip('0')
+            def volume_number_or_chapter_number(parts):
+                volume_number = parts[4][1:].strip() # Volume (without 'v')
+                volume_number = volume_number.lstrip('0')
                 
-                chapter = str(parts[5]) # Chapter
+                chapter_number = str(parts[5]) # Chapter
                 
-                # Verificar se o valor é "0000"
-                if chapter == "0000":
-                    chapter = None
+                # Check if the value is "0000", if so, it's a oneshot
+                if chapter_number == "0000":
+                    chapter_number = None
                     self.oneshot = True
                 else:
-                    # Remover todos os zeros à esquerda
-                    chapter = chapter.lstrip('0')
-                
-                if len(parts) == 7:
-                    title = parts[6] # Title
-                    data_position = title.find("{")  # Encontrar a posição inicial da chave {
-    
-                    if data_position != -1:
-                        data_part = title[data_position:].strip()  # Texto da chave { até o final
-                        data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
-                        title = title[:data_position].strip()  # Texto antes da chave {
+                    # Remove all leading zeros
+                    chapter_number = chapter_number.lstrip('0')
+                    
+                return volume_number, chapter_number
 
-                    data = data_part if data_position != -1 else None
-            
-            else:
-                chapter = parts[4] # Chapter
-                if chapter == "0000":
-                    chapter = None
+            def only_chapter_number(parts):
+                # Since there is no Volume part, part 4 is the Chapter.
+                chapter_number = parts[4] # Chapter
+                
+                # Check if the value is "0000", if so, it's a oneshot
+                if chapter_number == "0000":
+                    chapter_number = None
                     self.oneshot = True
                 
-                if len(parts) == 6:
-                    title = parts[5] # Title
-                    data_position = title.find("{")  # Encontrar a posição inicial da chave {
-    
-                    if data_position != -1:
-                        data_part = title[data_position:].strip()  # Texto da chave { até o final
-                        data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
-                        title = title[:data_position].strip()  # Texto antes da chave {
+                return chapter_number
+            
+            def chapter_title_and_publish_date(parts, number):
+                chapter_title = parts[number] # Title
+                data_position = chapter_title.find("{")  # Encontrar a posição inicial da chave {
 
-                    data = data_part if data_position != -1 else None
+                # Check if there is a date
+                if data_position != -1:
+                    data_part = chapter_title[data_position:].strip()  # Texto da chave { até o final
+                    data_part = data_part.rstrip("}").replace("{", "")  # Remover a chave } do final
+                    chapter_title = chapter_title[:data_position].strip()  # Texto antes da chave {
+
+                publish_date = data_part if data_position != -1 else None
+                return chapter_title, publish_date
+            
+            # Check if part 4 (Volume or Chapter) starts with "v" to consider it as Volume
+            if parts[4].startswith("v"):
+                volume_number, chapter_number = volume_number_or_chapter_number(parts)
                 
-            return idiom, obra, grup, volume, chapter, title, data
+                # If there are a total of 7 parts (counting "to_upload"), part 6 is the title
+                if len(parts) == 7:
+                    chapter_title, publish_date = chapter_title_and_publish_date(parts, 6)
+            
+            else:
+                chapter_number = only_chapter_number(parts)
+                
+                # If there are a total of 6 parts (counting "to_upload"), part 5 is the title
+                if len(parts) == 6:
+                    chapter_title, publish_date = chapter_title_and_publish_date(parts, 5)
+                
+            return language, manga_series, groups, volume_number, chapter_number, chapter_title, publish_date
         
-        self._zip_name_match = match_file(self.to_upload)
+        self._zip_name_match = match_file(self.to_upload.parts)
         if self._zip_name_match is None:
             logger.error(f"No values processed from {self.to_upload}, skipping.")
             return False
@@ -333,7 +347,7 @@ class FileProcesser:
 
         if self.manga_series is None:
             logger.error(f"Couldn't find a manga id for {self.zip_name}, skipping.")
-            print(f"{translate_message['file_v_text_2']}".format(self.zip_name))
+            print(f"{translate_message['skip_no_manga_id']}".format(self.zip_name))
             return False
         
         def group_get(group):
@@ -368,14 +382,13 @@ class FileProcesser:
                 )
             return groups
 
-
         def publish_get(date):
             if date is None:
                 return None
-            
+
             try:
                 if '-' in date and ' ' in date:
-                    # Processar data no formato "DD-MM-YYYY HH-MM-SS"
+                    # Process date in the format "DD-MM-YYYY HH-MM-SS"
                     date_time_parts = date.split(' ')
                     date_parts = date_time_parts[0].split('-')
                     time_parts = date_time_parts[1].split('-')
@@ -390,37 +403,39 @@ class FileProcesser:
 
                     publish_date = datetime(year, month, day, hour, minute, second, tzinfo=timezone.utc)
                     return publish_date
-                
+
                 else:
+                    # Separate the parts: D H M S
                     parts = date.split()
                     total_seconds = 0
 
+                    # Sum up the seconds for each part
                     for part in parts:
                         if part.endswith('d'):
-                            total_seconds += int(part[:-1]) * 86400  # 1 dia = 24 horas * 60 minutos * 60 segundos
+                            total_seconds += int(part[:-1]) * 86400  # 1 day = 24 hours * 60 minutes * 60 seconds
                         elif part.endswith('h'):
-                            total_seconds += int(part[:-1]) * 3600  # 1 hora = 60 minutos * 60 segundos
+                            total_seconds += int(part[:-1]) * 3600  # 1 hour = 60 minutes * 60 seconds
                         elif part.endswith('m'):
-                            total_seconds += int(part[:-1]) * 60  # 1 minuto = 60 segundos
+                            total_seconds += int(part[:-1]) * 60  # 1 minute = 60 seconds
                         elif part.endswith('s'):
                             total_seconds += int(part[:-1])
                         else:
-                            raise ValueError("Formato de tempo não reconhecido.")
+                            raise ValueError("Unrecognized time format.")
 
-                    if total_seconds > 1209600:  # 2 semanas em segundos
-                        raise ValueError("O tempo máximo permitido é de 2 semanas.")
+                    # Check if it has exceeded 1209600 seconds
+                    if total_seconds > 1209600:  # 2 weeks in seconds
+                        raise ValueError("The maximum allowed time is 2 weeks.")
 
                     publish_date = datetime.now() + timedelta(seconds=total_seconds)
                     publish_date = publish_date.replace(microsecond=0)
                     publish_date = publish_date.isoformat()
                     publish_date = datetime.fromisoformat(publish_date).astimezone(tz=timezone.utc)
-
                     return publish_date
-            
-            except ValueError as e:
-                logger.error(f"{self.zip_name} isn't in the correct date format.")
-                return None
 
+            except ValueError as e:
+                logger.error(f"The date {date} isn't in the correct format.")
+                return None
+    
         self.language = self._zip_name_match[0]
         self.chapter_number = self._zip_name_match[4]
         self.volume_number = self._zip_name_match[3]
