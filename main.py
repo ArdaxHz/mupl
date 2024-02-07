@@ -68,9 +68,7 @@ urls_1 = {
 urls_2 = {
     '__init__.py':f'{context_2}/__init__.py',
     'file_validator.py':f'{context_2}/file_validator.py',
-    'image_validator.py':f'{context_2}/image_validator.py',
-    'install.py':f'{context_2}/install.py',
-    'updater.py':f'{context_2}/updater.py'
+    'image_validator.py':f'{context_2}/image_validator.py'
 }
 
 urls_3 = {
