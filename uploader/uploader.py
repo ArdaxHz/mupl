@@ -35,9 +35,9 @@ class ChapterUploader:
         self.to_upload = self.file_name_obj.to_upload
         self.names_to_ids = names_to_ids
         self.failed_uploads = failed_uploads
-        self.threaded = threaded
-        if NUMBER_THREADS <= 1:
-            self.threaded = False
+        # self.threaded = threaded
+        # if NUMBER_THREADS <= 1:
+        self.threaded = False
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
         self.folder_upload = False
@@ -399,18 +399,17 @@ class ChapterUploader:
             f"{len(flatten(self.image_uploader_process.valid_images_to_upload))} images to upload."
         )
 
-        spliced_images_list = [
-            self.image_uploader_process.valid_images_to_upload[
-                elem : elem + NUMBER_THREADS
-            ]
-            for elem in range(
-                0,
-                len(self.image_uploader_process.valid_images_to_upload),
-                NUMBER_THREADS,
-            )
-        ]
-
         if self.threaded:
+            spliced_images_list = [
+                self.image_uploader_process.valid_images_to_upload[
+                    elem : elem + NUMBER_THREADS
+                ]
+                for elem in range(
+                    0,
+                    len(self.image_uploader_process.valid_images_to_upload),
+                    NUMBER_THREADS,
+                )
+            ]
             print("Running threaded uploader.")
             for spliced_images in spliced_images_list:
                 self.run_threaded_uploader(spliced_images)
