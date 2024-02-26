@@ -5,8 +5,8 @@
     "finish_upload": "Upload Concluído",
     "keyboard_interrupt_exit": "Detectado interrupção do teclado, encerrando.",
     "failed_uploads": "Falhas nos uploads:",
-    "metod_folder": "Pasta",
-    "metod_archive": "Arquivo Compactado",
+    "upload_method_folder": "Pasta",
+    "upload_method_archive": "Arquivo Compactado",
 
     "keyboard_interrupt_cancel": "Interrupção do teclado detectada. Cancelando tarefas...",
     "chapter_number_manga": "Capítulo",
@@ -18,9 +18,9 @@
     "invalid_images_to_upload": "Nenhuma imagem válida para upload, pulando.",
     "draft_create_session": "Sessão de upload criada: {}",
     "images_to_upload": "{} imagens para upload.",
-    "threaded_upload_runing": "Executando uploader em threads.",
-    "threaded_upload_non_runing": "Executando uploader sem threads.",
-    "draft_deleting_failed_uplaod": "Excluindo rascunho devido a falha no upload de imagem.",
+    "threaded_upload_running": "Executando uploader em threads.",
+    "non_threaded_upload_running": "Executando uploader sem threads.",
+    "draft_deleting_failed_upload": "Excluindo rascunho devido a falha no upload de imagem.",
     "not_defined_value": "Não adicionado",
 
     "uploading_images": "Enviando imagens de {} para {}.",
@@ -29,9 +29,9 @@
     "uploading_successfully": "Enviado com sucesso: {}, {}.",
     "uploading_failed": "Falha ao enviar {}",
 
-    "naming_format_incorret": "{} não está no formato de nomeação correto, pulando.",
+    "naming_format_incorrect": "{} não está no formato de nomeação correto, pulando.",
     "skip_no_manga_id": "Pulado {}, nenhum ID de manga encontrado.",
 
-    "error_conenction": "401: Não conectado.",
-    "error_success": "Conectado."
+    "not_logged_in": "401: Não conectado.",
+    "logged_in": "Conectado."
 }

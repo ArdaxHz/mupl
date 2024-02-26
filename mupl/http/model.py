@@ -9,7 +9,13 @@ from mupl import __version__
 from mupl.http import RequestError, http_error_codes
 from mupl.http.response import HTTPResponse
 from mupl.http.oauth import OAuth2
-from mupl.utils.config import UPLOAD_RETRY, config, mangadex_api_url, root_path, translate_message
+from mupl.utils.config import (
+    UPLOAD_RETRY,
+    config,
+    mangadex_api_url,
+    root_path,
+    TRANSLATION,
+)
 
 
 logger = logging.getLogger("mupl")
@@ -163,7 +169,7 @@ class HTTPModel:
                 response_obj = HTTPResponse(response, successful_codes)
 
                 if response.status_code == 401:
-                    print(translate_message['error_conenction'])
+                    print(TRANSLATION["not_logged_in"])
                     self.total_not_login_row += 1
                     if self.total_not_login_row >= self.upload_retry_total:
                         return response_obj
@@ -249,7 +255,7 @@ class HTTPModel:
 
             if self._first_login:
                 logger.info(f"Logged into mangadex.")
-                print(translate_message['error_success'])
+                print(TRANSLATION["logged_in"])
                 self._first_login = False
             return True
         else:

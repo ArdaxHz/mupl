@@ -9,7 +9,7 @@ import requests
 from packaging import version
 
 from mupl import __version__
-from mupl.utils.config import root_path, config
+from mupl.utils.config import root_path, config, TRANSLATION
 
 logger = logging.getLogger("mupl")
 
@@ -33,7 +33,7 @@ def check_for_update():
 
         if remote_version > local_version:
             print(
-                "Update found: {} => {}: {}.".format(
+                TRANSLATION["new_update_found"].format(
                     local_version, remote_version, remote_release_json["name"]
                 )
             )
@@ -42,14 +42,14 @@ def check_for_update():
             )
             if remote_version.major != local_version.major:
                 print(
-                    """The new version may have breaking changes, please check the github releases page for a list of changes
-                    https://github.com/ArdaxHz/mupl/releases/latest"""
+                    TRANSLATION["new_update_warning"]
+                    + "\nhttps://github.com/ArdaxHz/mupl/releases/latest"
                 )
 
             timeout = 10
-            t = Timer(timeout, raise_error, [ValueError("Not updating.")])
+            t = Timer(timeout, raise_error, [ValueError(TRANSLATION["not_updating"])])
             t.start()
-            answer = input("Do you want to update? [y/N] ")
+            answer = input(TRANSLATION["input_want_update"])
             t.cancel()
 
             if answer.lower() in ["true", "1", "t", "y", "yes"]:
@@ -58,7 +58,7 @@ def check_for_update():
                 update = False
 
             if not update:
-                print("Not updating.")
+                print(TRANSLATION["not_updating"])
                 logger.info(f"Skipping update {remote_version}")
                 return False
 
@@ -79,7 +79,7 @@ def check_for_update():
                         fopen.write(file_data)
 
                 Path(config["paths"]["mdauth_path"]).unlink(missing_ok=True)
-                print(f"Updated, restart the uploader to run the new version.")
+                print(TRANSLATION["successfully_updated"])
                 logger.info(
                     f"Updated to version {remote_version}: {remote_release_json['name']}."
                 )
@@ -88,4 +88,4 @@ def check_for_update():
             return False
 
     logger.info("Updating error.")
-    print("Couldn't update.")
+    print(TRANSLATION["update_error"])

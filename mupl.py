@@ -17,9 +17,9 @@ from mupl.utils.config import (
     config,
     RATELIMIT_TIME,
     root_path,
-    VERBOSE,
-    translate_message,
+    TRANSLATION,
 )
+import mupl.utils.config as configM
 
 logger = logging.getLogger("mupl")
 
@@ -65,7 +65,7 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
         )
 
     if not zips_to_upload:
-        print(translate_message["invalid_folder_to_upload"])
+        print(TRANSLATION["invalid_folder_to_upload"])
         logger.error(f"Exited due to {len(zips_to_upload)} zips not being valid.")
         return
 
@@ -84,7 +84,7 @@ def open_manga_series_map(files_path: "Path") -> "dict":
             names_to_ids = json.load(json_file)
     except (FileNotFoundError, json.decoder.JSONDecodeError) as e:
         logger.exception("Please check your name-to-id file.")
-        print(translate_message["check_file_name_to_id"])
+        print(TRANSLATION["check_file_name_to_id"])
         return {"manga": {}, "group": {}}
     return names_to_ids
 
@@ -102,7 +102,7 @@ def main(threaded: "bool" = True):
     for index, file_name_obj in enumerate(zips_to_upload, start=1):
         try:
             print(
-                f"\n\n{translate_message['uploading_draft']} {str(file_name_obj)}\n{'-'*40}"
+                f"\n\n{TRANSLATION['uploading_draft']} {str(file_name_obj)}\n{'-' * 40}"
             )
 
             uploader_process = ChapterUploader(
@@ -118,7 +118,7 @@ def main(threaded: "bool" = True):
             del uploader_process
 
             print(
-                f"{'-'*10}\n{translate_message['finish_upload']} {str(file_name_obj)}\n{'-'*10}"
+                f"{'-'*10}\n{TRANSLATION['finish_upload']} {str(file_name_obj)}\n{'-' * 10}"
             )
             logger.debug("Sleeping between zip upload.")
             time.sleep(RATELIMIT_TIME * 2)
@@ -126,7 +126,7 @@ def main(threaded: "bool" = True):
             logger.warning(
                 f"Keyboard Interrupt detected during upload of {str(file_name_obj)}"
             )
-            print(translate_message["keyboard_interrupt_exit"])
+            print(TRANSLATION["keyboard_interrupt_exit"])
             try:
                 asyncio.get_event_loop().stop()
                 asyncio.get_event_loop().close()
@@ -142,12 +142,12 @@ def main(threaded: "bool" = True):
 
     if failed_uploads:
         logger.info(f"Failed uploads: {failed_uploads}")
-        print(translate_message["failed_uploads"])
+        print(TRANSLATION["failed_uploads"])
         for fail in failed_uploads:
             prefix = (
-                translate_message["metod_folder"]
+                TRANSLATION["upload_method_folder"]
                 if fail.is_dir()
-                else translate_message["metod_archive"]
+                else TRANSLATION["upload_method_archive"]
             )
             print("{}: {}".format(prefix, fail.name))
 
@@ -175,8 +175,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--threaded",
         "-t",
-        default=True,
-        const=False,
+        default=False,
+        const=True,
         nargs="?",
         help="Upload the images concurrently.",
     )
@@ -185,8 +185,9 @@ if __name__ == "__main__":
 
     if vargs["verbose"] == 0:
         logger.setLevel(logging.INFO)
+        configM.VERBOSE = False
     else:
-        VERBOSE = True
+        configM.VERBOSE = True
         logger.setLevel(logging.DEBUG)
 
     if vargs.get("update", True):

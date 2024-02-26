@@ -5,8 +5,15 @@
     "finish_upload": "Finished Uploading",
     "keyboard_interrupt_exit": "Keyboard interrupt detected, exiting.",
     "failed_uploads": "Failed uploads:",
-    "metod_folder": "Folder",
-    "metod_archive": "Archive",
+    "upload_method_folder": "Folder",
+    "upload_method_archive": "Archive",
+
+    "new_update_found": "Update found: {} => {}: {}.",
+    "new_update_warning": "The new version may have breaking changes, please check the github releases page for a list of changes",
+    "not_updating": "Not updating.",
+    "input_want_update": "Do you want to update? [y/N] ",
+    "successfully_updated": "Updated, restart the uploader to run the new version.",
+    "update_error": "Couldn't update.",
 
     "keyboard_interrupt_cancel": "Caught keyboard interrupt. Canceling tasks...",
     "chapter_number_manga": "Chapter",
@@ -18,9 +25,9 @@
     "invalid_images_to_upload": "No valid images to upload, skipping.",
     "draft_create_session": "Created upload session: {}",
     "images_to_upload": "{} images to upload.",
-    "threaded_upload_runing": "Running threaded uploader.",
-    "threaded_upload_non_runing": "Running non-threaded uploader.",
-    "draft_deleting_failed_uplaod": "Deleting draft due to failed image upload.",
+    "threaded_upload_running": "Running threaded uploader.",
+    "non_threaded_upload_running": "Running non-threaded uploader.",
+    "draft_deleting_failed_upload": "Deleting draft due to failed image upload.",
     "not_defined_value": "None",
 
     "uploading_images": "Uploading images {} to {}.",
@@ -29,9 +36,9 @@
     "uploading_successfully": "Successfully uploaded: {}, {}.",
     "uploading_failed": "Failed to upload {}",
 
-    "naming_format_incorret": "{} not in the correct naming format, skipping.",
+    "naming_format_incorrect": "{} not in the correct naming format, skipping.",
     "skip_no_manga_id": "Skipped {}, no manga id found.",
 
-    "error_conenction": "401: Not logged in.",
-    "error_success": "Logged in."
+    "not_logged_in": "401: Not logged in.",
+    "logged_in": "Logged in."
 }
