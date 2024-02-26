@@ -1,12 +1,9 @@
-import os
 import sys
 import json
 import time
-import shutil
 import asyncio
 import logging
 import argparse
-from PIL import Image
 from pathlib import Path
 from typing import Optional, List
 
@@ -15,81 +12,19 @@ import natsort
 from mupl.file_validator import FileProcesser
 from mupl.http.client import HTTPClient
 from mupl.uploader.uploader import ChapterUploader
-from mupl.utils.config import config, RATELIMIT_TIME, root_path, VERBOSE, translate_message
+from mupl.updater import check_for_update
+from mupl.utils.config import (
+    config,
+    RATELIMIT_TIME,
+    root_path,
+    VERBOSE,
+    translate_message,
+)
 
 logger = logging.getLogger("mupl")
 
-# Max height
-height_max = 10000
 
-# Number of desired parts
-num_parts = 5
-
-def cup_images(image, output_folder, path, allow_ext):
-    os.makedirs(output_folder, exist_ok=True)
-    
-    # Open the image
-    image_size = Image.open(image)
-    
-    # Get the dimensions of the image
-    width, height = image_size.size
-    
-    # Height of each part
-    height_part = height // num_parts
-    
-    # Loop to crop the image into parts
-    for i in range(num_parts):
-        # Set the cropping coordinates for the current part
-        left = 0
-        top = i * height_part
-        right = width
-        bottom = (i + 1) * height_part
-
-        # Crop the current part
-        current_part = image_size.crop((left, top, right, bottom))
-
-        # Save the current part with the desired name
-        filename = os.path.basename(image)
-        name, extension = os.path.splitext(filename)
-        part_path = os.path.join(output_folder, f"{name}-{i}.jpg")
-        current_part.save(part_path)
-
-        # Close the image of the current part
-        current_part.close()
-    
-    os.remove(image)
-    
-    output_files = [f for f in os.listdir(output_folder) if f.lower().endswith(tuple(allow_ext))]
-    for image in output_files:
-        output_pathfile = os.path.join(output_folder, image)
-        shutil.move(output_pathfile, path)
-
-
-def check_images(path, allow_ext):
-    image_files = [f for f in os.listdir(path) if f.lower().endswith(tuple(allow_ext))]
-    input_images = [os.path.join(path, image) for image in image_files]
-    output_folder = os.path.join(path, "temp")
-    
-    images_over_limit = []
-    try:
-        for image in input_images:
-            image_size = Image.open(image)
-            height = image_size.height
-            image_size.close()
-            if height > height_max:
-                images_over_limit.append(image)
-    except:
-        pass
-
-    if images_over_limit:
-        for image in images_over_limit:
-            cup_images(image, output_folder, path, allow_ext)
-        
-    if os.path.exists(output_folder):
-        os.rmdir(output_folder)
-
-
-def get_zips_to_upload(names_to_ids: "dict", allow_ext = ['.png', '.jpg', '.jpeg', '.webp']) -> "Optional[List[FileProcesser]]":
+def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
     """Get a list of files that end with a zip/cbz extension for uploading."""
     to_upload_folder_path = Path(config["paths"]["uploads_folder"])
     zips_to_upload: "List[FileProcesser]" = []
@@ -97,115 +32,10 @@ def get_zips_to_upload(names_to_ids: "dict", allow_ext = ['.png', '.jpg', '.jpeg
     zips_no_manga_id = []
 
     for archive in to_upload_folder_path.iterdir():
-        
-        # Language [1]
-        if archive.name.startswith('[') and archive.name.endswith(']'):
-            if archive.is_dir():
-                
-                # Name project [2]
-                for title_tag in archive.iterdir():
-                    if title_tag.is_dir():
-                        
-                        # Group scan [3]
-                        for group_tag in title_tag.iterdir():
-                            if group_tag.is_dir():
-                                
-                                # Volume [4]
-                                for volume_tag in group_tag.iterdir():
-                                    if not volume_tag.name.startswith('v'):
-                                        continue
-                                    
-                                    if volume_tag.is_dir():
-                                        
-                                        # Chapter [5]
-                                        for chapter_tag in volume_tag.iterdir():
-                                            if chapter_tag.is_dir():
-                                                
-                                                # Title chapter [6]
-                                                if any(name_tag.is_dir() for name_tag in chapter_tag.iterdir()):
-                                        
-                                                    for name_tag in chapter_tag.iterdir():
-                                                        if name_tag.is_dir():
-                                                            
-                                                            check_images(name_tag, allow_ext)
-                                                            zip_obj = FileProcesser(name_tag, names_to_ids)
-                                                            zip_name_process = zip_obj.process_zip_name_extanded()
-                                                            
-                                                            if zip_name_process:
-                                                                if not zip_obj in zips_to_upload:
-                                                                    zips_to_upload.append(zip_obj)
-
-                                                            if zip_obj.zip_name_match is None:
-                                                                zips_invalid_file_name.append(name_tag)
-
-                                                            if zip_obj.manga_series is None and zip_obj.zip_name_match is not None:
-                                                                zips_no_manga_id.append(name_tag)
-                                                        
-                                                else:
-                                                    check_images(chapter_tag, allow_ext)
-                                                    zip_obj = FileProcesser(chapter_tag, names_to_ids)
-                                                    zip_name_process = zip_obj.process_zip_name_extanded()
-                                                    
-                                                    if zip_name_process:
-                                                        if not zip_obj in zips_to_upload:
-                                                            zips_to_upload.append(zip_obj)
-
-                                                    if zip_obj.zip_name_match is None:
-                                                        zips_invalid_file_name.append(chapter_tag)
-
-                                                    if zip_obj.manga_series is None and zip_obj.zip_name_match is not None:
-                                                        zips_no_manga_id.append(chapter_tag)
-                                
-                                # Chapter [4]
-                                for chapter_tag in group_tag.iterdir():
-                                    if chapter_tag.is_dir():
-                                        
-                                        if chapter_tag.name.startswith('v'):
-                                            continue
-                                        
-                                        # Title chapter [5]
-                                        if any(name_tag.is_dir() for name_tag in chapter_tag.iterdir()):
-                                            
-                                            for name_tag in chapter_tag.iterdir():
-                                                if name_tag.is_dir():
-                                                    
-                                                    check_images(name_tag, allow_ext)
-                                                    zip_obj = FileProcesser(name_tag, names_to_ids)
-                                                    zip_name_process = zip_obj.process_zip_name_extanded()
-                                                    
-                                                    if zip_name_process:
-                                                        if not zip_obj in zips_to_upload:
-                                                            zips_to_upload.append(zip_obj)
-
-                                                    if zip_obj.zip_name_match is None:
-                                                        zips_invalid_file_name.append(name_tag)
-
-                                                    if zip_obj.manga_series is None and zip_obj.zip_name_match is not None:
-                                                        zips_no_manga_id.append(name_tag)
-                                            
-                                        else:
-                                            check_images(chapter_tag, allow_ext)
-                                            zip_obj = FileProcesser(chapter_tag, names_to_ids)
-                                            zip_name_process = zip_obj.process_zip_name_extanded()
-                                            
-                                            if zip_name_process:
-                                                if not zip_obj in zips_to_upload:
-                                                    zips_to_upload.append(zip_obj)
-
-                                            if zip_obj.zip_name_match is None:
-                                                zips_invalid_file_name.append(chapter_tag)
-
-                                            if zip_obj.manga_series is None and zip_obj.zip_name_match is not None:
-                                                zips_no_manga_id.append(chapter_tag)
-    
-        else:
-            check_images(archive, allow_ext)
-            zip_obj = FileProcesser(archive, names_to_ids)
-            zip_name_process = zip_obj.process_zip_name()
-        
+        zip_obj = FileProcesser(archive, names_to_ids)
+        zip_name_process = zip_obj.process_zip_name()
         if zip_name_process:
-            if not zip_obj in zips_to_upload:
-                zips_to_upload.append(zip_obj)
+            zips_to_upload.append(zip_obj)
 
         if zip_obj.zip_name_match is None:
             zips_invalid_file_name.append(archive)
@@ -213,9 +43,8 @@ def get_zips_to_upload(names_to_ids: "dict", allow_ext = ['.png', '.jpg', '.jpeg
         if zip_obj.manga_series is None and zip_obj.zip_name_match is not None:
             zips_no_manga_id.append(archive)
 
-    # Sort the array to mirror your system's file explorer
+        # Sort the array to mirror your system's file explorer
     zips_to_upload = natsort.os_sorted(zips_to_upload, key=lambda x: x.to_upload)
-    zips_to_upload = natsort.os_sorted(zips_to_upload, key=lambda x: (x.volume_number, x.chapter_number))
 
     if zips_invalid_file_name:
         logger.warning(
@@ -236,7 +65,7 @@ def get_zips_to_upload(names_to_ids: "dict", allow_ext = ['.png', '.jpg', '.jpeg
         )
 
     if not zips_to_upload:
-        print(translate_message['invalid_folder_to_upload'])
+        print(translate_message["invalid_folder_to_upload"])
         logger.error(f"Exited due to {len(zips_to_upload)} zips not being valid.")
         return
 
@@ -255,7 +84,7 @@ def open_manga_series_map(files_path: "Path") -> "dict":
             names_to_ids = json.load(json_file)
     except (FileNotFoundError, json.decoder.JSONDecodeError) as e:
         logger.exception("Please check your name-to-id file.")
-        print(translate_message['check_file_name_to_id'])
+        print(translate_message["check_file_name_to_id"])
         return {"manga": {}, "group": {}}
     return names_to_ids
 
@@ -272,7 +101,9 @@ def main(threaded: "bool" = True):
 
     for index, file_name_obj in enumerate(zips_to_upload, start=1):
         try:
-            print(f"\n\n{translate_message['uploading_draft']} {str(file_name_obj)}\n{'-'*40}")
+            print(
+                f"\n\n{translate_message['uploading_draft']} {str(file_name_obj)}\n{'-'*40}"
+            )
 
             uploader_process = ChapterUploader(
                 http_client, file_name_obj, names_to_ids, failed_uploads, threaded
@@ -286,14 +117,16 @@ def main(threaded: "bool" = True):
             # Delete to save memory on large amounts of uploads
             del uploader_process
 
-            print(f"{'-'*10}\n{translate_message['finish_upload']} {str(file_name_obj)}\n{'-'*10}")
+            print(
+                f"{'-'*10}\n{translate_message['finish_upload']} {str(file_name_obj)}\n{'-'*10}"
+            )
             logger.debug("Sleeping between zip upload.")
             time.sleep(RATELIMIT_TIME * 2)
         except KeyboardInterrupt:
             logger.warning(
                 f"Keyboard Interrupt detected during upload of {str(file_name_obj)}"
             )
-            print(translate_message['keyboard_interrupt_exit'])
+            print(translate_message["keyboard_interrupt_exit"])
             try:
                 asyncio.get_event_loop().stop()
                 asyncio.get_event_loop().close()
@@ -309,9 +142,13 @@ def main(threaded: "bool" = True):
 
     if failed_uploads:
         logger.info(f"Failed uploads: {failed_uploads}")
-        print(translate_message['failed_uploads'])
+        print(translate_message["failed_uploads"])
         for fail in failed_uploads:
-            prefix = translate_message['metod_folder'] if fail.is_dir() else translate_message['metod_archive']
+            prefix = (
+                translate_message["metod_folder"]
+                if fail.is_dir()
+                else translate_message["metod_archive"]
+            )
             print("{}: {}".format(prefix, fail.name))
 
     sys.exit(0)
@@ -320,6 +157,14 @@ def main(threaded: "bool" = True):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
+    parser.add_argument(
+        "--update",
+        "-u",
+        default=True,
+        const=False,
+        nargs="?",
+        help="Check for program update.",
+    )
     parser.add_argument(
         "--verbose",
         "-v",
@@ -343,5 +188,12 @@ if __name__ == "__main__":
     else:
         VERBOSE = True
         logger.setLevel(logging.DEBUG)
+
+    if vargs.get("update", True):
+        try:
+            updated = check_for_update()
+        except (KeyError, PermissionError, TypeError, OSError, ValueError) as e:
+            logger.exception("Update check the error stack")
+            print("Not updating.")
 
     main(vargs["threaded"])
