@@ -96,7 +96,7 @@ Copy and remove the `.example` from `config.json.example` to start using the con
 
 
 ## Name to ID map
-The `name_id_map.json` has the follwing format:
+The `name_id_map.json` has the following format:
 ```json
 {
     "manga": {
@@ -125,10 +125,9 @@ If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-s
 - Pull requests are free to be opened if you think it is needed, but please format any code with Python Black (default settings) before doing so.
 
 ## Translation
-There are two files to translate, this Doc and the [/mupl/loc/en.json](/mupl/loc/en.json) file. 
+There are two files to translate, this readme and the [mupl/loc/en.json](mupl/loc/en.json) file.
 
-The translated Doc should be placed in [/doc/](/doc/) with the name `Doc.<>.md` with the ISO language code between the periods, for example: `Doc.pt-br.md`.
-
-The translated json file should be the named `<>.json` with the ISO language code being used and placed inside the directory [/mupl/loc/](/mupl/loc/). 
+- The translated README should be placed in [doc](doc/) with the name `readme.<>.md` with the ISO language code between the periods, for example: `readme.pt-br.md`.
+- The translated json file should be the named `<>.json` with the ISO language code being used and placed inside the directory [mupl/loc/](mupl/loc/), for example: `pt-br.json`. 
 
 Please submit a PR with these changes.
