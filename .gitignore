@@ -11,3 +11,5 @@ name_id_map.json
 .idea
 venv/
 config.json
+.github/*
+.vscode/*

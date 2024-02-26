@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List
 
-from mupl.utils.config import config
+from mupl.utils.config import config, TRANSLATION
 
 logger = logging.getLogger("mupl")
 
@@ -53,9 +53,7 @@ class FileProcesser:
         zip_name_match = self._file_name_regex.match(self.zip_name)
         if not zip_name_match:
             logger.error(f"{self.zip_name} isn't in the correct naming format.")
-            print(
-                "{} not in the correct naming format, skipping.".format(self.zip_name)
-            )
+            print(TRANSLATION["naming_format_incorrect"].format(self.zip_name))
             return
         return zip_name_match
 
@@ -235,7 +233,7 @@ class FileProcesser:
 
         if self.manga_series is None:
             logger.error(f"Couldn't find a manga id for {self.zip_name}, skipping.")
-            print("Skipped {}, no manga id found.".format(self.zip_name))
+            print(TRANSLATION["skip_no_manga_id"].format(self.zip_name))
             return False
 
         self.language = self._get_language()

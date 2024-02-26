@@ -5,7 +5,8 @@
     "ratelimit_time": 2,
     "max_log_days": 30,
     "group_fallback_id": null,
-    "number_threads": 3
+    "number_threads": 3,
+    "language": "en"
   },
   "credentials": {
     "mangadex_username": null,

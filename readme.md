@@ -2,7 +2,7 @@
 Bulk uploads folders and zips (.zip/.cbz) to MangaDex in a quick and easy fashion. 
 
 Read this in other languages: 
-[Português](mupl/loc/readme.pt-br.md)
+[Português (Brasil)](doc/readme.pt-br.md)
 
 ## Table of Contents
 - [How to use](#usage)
@@ -10,7 +10,7 @@ Read this in other languages:
 - [Upload file name format](#file-name-format)
   - [Name format](#name-format)
   - [Name parameters](#name-parameters)
-  - [Name parameters](#accepted-image-formats)
+  - [Accepted Image Formats](#accepted-image-formats)
 - [Config](#config)
   - [User Options](#options)
   - [MangaDex Credentials](#credentials)
@@ -33,6 +33,7 @@ There are command line arguments that can be added after the main command to cha
 ##### Options:
 - `--update` `-u` Don't check for a new update at the start of the program.
 - `--verbose` `-v` Make the command line messages and logs more verbose.
+- `--threaded` `-t` Run the threaded uploader. *Default: False*
 
 ## File Name Format
 #### Name format
@@ -124,9 +125,9 @@ If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-s
 - Pull requests are free to be opened if you think it is needed, but please format any code with Python Black (default settings) before doing so.
 
 ## Translation
-There are two files to translate, this readme and the [/mupl/loc/en.json](/mupl/loc/en.json) file. 
+There are two files to translate, this Doc and the [/mupl/loc/en.json](/mupl/loc/en.json) file. 
 
-The translated readme should be placed in [/doc/](/doc/) with the name `readme.<>.md` with the ISO language code between the periods, for example: `readme.pt-br.md`.
+The translated Doc should be placed in [/doc/](/doc/) with the name `Doc.<>.md` with the ISO language code between the periods, for example: `Doc.pt-br.md`.
 
 The translated json file should be the named `<>.json` with the ISO language code being used and placed inside the directory [/mupl/loc/](/mupl/loc/). 
 

@@ -1,8 +1,7 @@
-import asyncio
-import logging
 import os
 import time
-from datetime import datetime
+import asyncio
+import logging
 from pathlib import Path
 
 from tqdm import tqdm
@@ -15,6 +14,7 @@ from mupl.utils.config import (
     VERBOSE,
     config,
     RATELIMIT_TIME,
+    TRANSLATION,
 )
 
 logger = logging.getLogger("mupl")
@@ -109,7 +109,7 @@ class ChapterUploader(ChapterUploaderHandler):
         try:
             loop.run_until_complete(gathered)
         except KeyboardInterrupt as e:
-            print("Caught keyboard interrupt. Canceling tasks...")
+            print(TRANSLATION["keyboard_interrupt_cancel"])
             gathered.cancel()
             self.failed_image_upload = True
 
@@ -131,19 +131,51 @@ class ChapterUploader(ChapterUploaderHandler):
 
     def upload(self):
         """Process the zip for uploading."""
+        print(f"{VERBOSE=}")
+
         logger.info(f"Uploading chapter: {repr(self.file_name_obj)}")
         print(
-            "Manga id: {manga_series}, "
-            "chapter: {chapter_number}, "
-            "volume: {volume_number}, "
-            "title: {chapter_title}, "
-            "language: {language}, "
-            "groups: {groups}, "
-            "publish on: {publish_date}.".format(**self.file_name_obj.__dict__)
+            "Manga id: {manga_series}\n"
+            "{chapter_number_manga}: {chapter_number}\n"
+            "{volume_number_manga}: {volume_number}\n"
+            "{chapter_title_manga}: {chapter_title}\n"
+            "{language_manga}: {language}\n"
+            "{groups_manga}: {groups}\n"
+            "{publish_date_manga}: {publish_date}".format(
+                manga_series=self.file_name_obj.manga_series,
+                chapter_number=self.file_name_obj.chapter_number,
+                volume_number=(
+                    self.file_name_obj.volume_number
+                    if self.file_name_obj.volume_number is not None
+                    else TRANSLATION["not_defined_value"]
+                ),
+                chapter_title=(
+                    self.file_name_obj.chapter_title
+                    if self.file_name_obj.chapter_title is not None
+                    else TRANSLATION["not_defined_value"]
+                ),
+                language=self.file_name_obj.language.upper(),
+                groups=(
+                    self.file_name_obj.groups
+                    if self.file_name_obj.groups is not None
+                    else TRANSLATION["not_defined_value"]
+                ),
+                publish_date=(
+                    self.file_name_obj.publish_date
+                    if self.file_name_obj.publish_date is not None
+                    else TRANSLATION["not_defined_value"]
+                ),
+                chapter_number_manga=TRANSLATION["chapter_number_manga"],
+                volume_number_manga=TRANSLATION["volume_number_manga"],
+                chapter_title_manga=TRANSLATION["chapter_title_manga"],
+                language_manga=TRANSLATION["language_manga"],
+                groups_manga=TRANSLATION["groups_manga"],
+                publish_date_manga=TRANSLATION["publish_date_manga"],
+            )
         )
 
         if not self.image_uploader_process.valid_images_to_upload:
-            print("No valid images to upload, skipping.")
+            print(TRANSLATION["invalid_images_to_upload"])
             logger.error(f"No valid images found for {self.zip_name}")
             self.failed_uploads.append(self.to_upload)
             return
@@ -158,12 +190,12 @@ class ChapterUploader(ChapterUploaderHandler):
         self.upload_session_id = upload_session_response_json["data"]["id"]
 
         logger.info(
-            "Created upload session: {self.upload_session_id}, {self.zip_name}."
+            f"Created upload session: {self.upload_session_id}, {self.zip_name}."
         )
-        print("Created upload session: {}".format(self.upload_session_id))
+        print(TRANSLATION["draft_create_session"].format(self.upload_session_id))
         if VERBOSE:
             print(
-                "{} images to upload.".format(
+                TRANSLATION["images_to_upload"].format(
                     len(
                         [
                             item
@@ -178,7 +210,7 @@ class ChapterUploader(ChapterUploaderHandler):
 
         if self.threaded:
             if VERBOSE:
-                print("Running threaded uploader.")
+                print(TRANSLATION["threaded_upload_running"])
 
             spliced_images_list = [
                 self.image_uploader_process.valid_images_to_upload[
@@ -197,7 +229,7 @@ class ChapterUploader(ChapterUploaderHandler):
                     break
         else:
             if VERBOSE:
-                print("Running non-threaded uploader.")
+                print(TRANSLATION["non_threaded_upload_running"])
             self.run_image_uploader(self.image_uploader_process.valid_images_to_upload)
 
         self.tqdm.close()
@@ -206,7 +238,7 @@ class ChapterUploader(ChapterUploaderHandler):
 
         # Skip chapter upload and delete upload session
         if self.failed_image_upload:
-            print("Deleting draft due to failed image upload.")
+            print(TRANSLATION["draft_deleting_failed_upload"])
             logger.error(
                 f"Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}."
             )
