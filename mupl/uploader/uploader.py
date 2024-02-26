@@ -144,19 +144,27 @@ class ChapterUploader(ChapterUploaderHandler):
             "{publish_date_manga}: {publish_date}".format(
                 manga_series=self.file_name_obj.manga_series,
                 chapter_number=self.file_name_obj.chapter_number,
-                volume_number=self.file_name_obj.volume_number
-                if self.file_name_obj.volume_number is not None
-                else TRANSLATION["not_defined_value"],
-                chapter_title=self.file_name_obj.chapter_title
-                if self.file_name_obj.chapter_title is not None
-                else TRANSLATION["not_defined_value"],
+                volume_number=(
+                    self.file_name_obj.volume_number
+                    if self.file_name_obj.volume_number is not None
+                    else TRANSLATION["not_defined_value"]
+                ),
+                chapter_title=(
+                    self.file_name_obj.chapter_title
+                    if self.file_name_obj.chapter_title is not None
+                    else TRANSLATION["not_defined_value"]
+                ),
                 language=self.file_name_obj.language.upper(),
-                groups=self.file_name_obj.groups
-                if self.file_name_obj.groups is not None
-                else TRANSLATION["not_defined_value"],
-                publish_date=self.file_name_obj.publish_date
-                if self.file_name_obj.publish_date is not None
-                else TRANSLATION["not_defined_value"],
+                groups=(
+                    self.file_name_obj.groups
+                    if self.file_name_obj.groups is not None
+                    else TRANSLATION["not_defined_value"]
+                ),
+                publish_date=(
+                    self.file_name_obj.publish_date
+                    if self.file_name_obj.publish_date is not None
+                    else TRANSLATION["not_defined_value"]
+                ),
                 chapter_number_manga=TRANSLATION["chapter_number_manga"],
                 volume_number_manga=TRANSLATION["volume_number_manga"],
                 chapter_title_manga=TRANSLATION["chapter_title_manga"],
