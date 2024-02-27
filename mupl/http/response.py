@@ -5,9 +5,9 @@ from typing import Optional
 
 import requests
 
-from uploader.http import http_error_codes
+from mupl.http import http_error_codes
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 class HTTPResponse:
@@ -43,7 +43,9 @@ class HTTPResponse:
     def json(self) -> "Optional[dict]":
         """Convert the api response into a parsable json."""
         critical_decode_error_message = (
-            f"{self.status_code}: Couldn't convert mangadex api response into a json."
+            "{}: Couldn't convert mangadex API response into a JSON.".format(
+                self.status_code
+            )
         )
 
         logger.info(f"Request id: {self.response.headers.get('x-request-id', None)}")

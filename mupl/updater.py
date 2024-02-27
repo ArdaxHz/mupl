@@ -8,10 +8,10 @@ from zipfile import ZipFile
 import requests
 from packaging import version
 
-from uploader import __version__
-from uploader.utils.config import root_path, config
+from mupl import __version__
+from mupl.utils.config import root_path, config, TRANSLATION
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 def raise_error(ex):
@@ -25,7 +25,7 @@ def check_for_update():
     update = False
     local_version = version.parse(__version__)
     remote_release = requests.get(
-        "https://api.github.com/repos/ArdaxHz/mangadex_bulk_uploader/releases/latest"
+        "https://api.github.com/repos/ArdaxHz/mupl/releases/latest"
     )
     if remote_release.ok:
         remote_release_json = remote_release.json()
@@ -33,21 +33,23 @@ def check_for_update():
 
         if remote_version > local_version:
             print(
-                f"Update found: {local_version} => {remote_version}: {remote_release_json['name']}."
+                TRANSLATION["new_update_found"].format(
+                    local_version, remote_version, remote_release_json["name"]
+                )
             )
             logger.info(
                 f"Update found: {local_version} => {remote_version}: {remote_release_json['name']}."
             )
             if remote_version.major != local_version.major:
                 print(
-                    f"""The new version may have breaking changes, please check the github releases page for a list of changes
-                    https://github.com/ArdaxHz/mangadex_bulk_uploader/releases/latest"""
+                    TRANSLATION["new_update_warning"]
+                    + "\nhttps://github.com/ArdaxHz/mupl/releases/latest"
                 )
 
             timeout = 10
-            t = Timer(timeout, raise_error, [ValueError("Not updating.")])
+            t = Timer(timeout, raise_error, [ValueError(TRANSLATION["not_updating"])])
             t.start()
-            answer = input("Do you want to update? [y/N] ")
+            answer = input(TRANSLATION["input_want_update"])
             t.cancel()
 
             if answer.lower() in ["true", "1", "t", "y", "yes"]:
@@ -56,7 +58,7 @@ def check_for_update():
                 update = False
 
             if not update:
-                print(f"Not updating.")
+                print(TRANSLATION["not_updating"])
                 logger.info(f"Skipping update {remote_version}")
                 return False
 
@@ -76,8 +78,8 @@ def check_for_update():
                     with open(filename, "wb") as fopen:
                         fopen.write(file_data)
 
-                Path(config["Paths"]["mdauth_path"]).unlink(missing_ok=True)
-                print(f"Updated, restart the uploader to run the new version.")
+                Path(config["paths"]["mdauth_path"]).unlink(missing_ok=True)
+                print(TRANSLATION["successfully_updated"])
                 logger.info(
                     f"Updated to version {remote_version}: {remote_release_json['name']}."
                 )
@@ -85,5 +87,5 @@ def check_for_update():
         else:
             return False
 
-    logger.info(f"Updating error.")
-    print(f"Couldn't update.")
+    logger.info("Updating error.")
+    print(TRANSLATION["update_error"])

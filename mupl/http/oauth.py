@@ -5,12 +5,12 @@ import time
 from configparser import SectionProxy
 from typing import Optional, TYPE_CHECKING
 
-from uploader.utils.config import mangadex_auth_url
+from mupl.utils.config import mangadex_auth_url
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 if TYPE_CHECKING:
-    from uploader.http.client import HTTPClient
+    from mupl.http.client import HTTPClient
 
 
 class OAuth2:
@@ -29,8 +29,12 @@ class OAuth2:
         self.__client_id: "str" = credential_config.get("client_id")
         self.__client_secret: "str" = credential_config.get("client_secret")
 
-        self.__access_token: "Optional[str]" = access_token
-        self.__refresh_token: "Optional[str]" = refresh_token
+        self.__access_token: "Optional[str]" = (
+            None if self.__token_expired(access_token) else access_token
+        )
+        self.__refresh_token: "Optional[str]" = (
+            None if self.__token_expired(refresh_token) else refresh_token
+        )
 
     def __update_token(self, data: "dict"):
         """Update local vars with new tokens."""
@@ -129,6 +133,8 @@ class OAuth2:
 
     @staticmethod
     def __token_expired(token: "str") -> "bool":
+        if not token:
+            return True
         payload_string = base64.b64decode(token.split(".")[1] + "===").decode("utf-8")
         expiry_time = json.loads(payload_string)["exp"]
         current_time = int(time.time())

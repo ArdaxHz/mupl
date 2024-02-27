@@ -1,0 +1,25 @@
+{
+  "options": {
+    "number_of_images_upload": 10,
+    "upload_retry": 3,
+    "ratelimit_time": 2,
+    "max_log_days": 30,
+    "group_fallback_id": null,
+    "number_threads": 3,
+    "language": "en"
+  },
+  "credentials": {
+    "mangadex_username": null,
+    "mangadex_password": null,
+    "client_id": null,
+    "client_secret": null
+  },
+  "paths": {
+    "name_id_map_file": "name_id_map.json",
+    "uploads_folder": "to_upload",
+    "uploaded_files": "uploaded",
+    "mangadex_api_url": "https://api.mangadex.org",
+    "mangadex_auth_url": "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
+    "mdauth_path": ".mdauth"
+  }
+}

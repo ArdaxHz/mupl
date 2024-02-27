@@ -10,3 +10,6 @@ name_id_map.json
 .mdauth
 .idea
 venv/
+config.json
+.github/*
+.vscode/*

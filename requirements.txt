@@ -2,3 +2,5 @@ requests
 natsort
 packaging
 Pillow
+tqdm
+

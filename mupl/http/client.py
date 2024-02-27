@@ -1,4 +1,4 @@
-from uploader.http.model import HTTPModel
+from mupl.http.model import HTTPModel
 
 
 class HTTPClient(HTTPModel):

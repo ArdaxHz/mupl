@@ -4,10 +4,29 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List
 
-from uploader.utils.config import config
-from uploader.utils.misc import FILE_NAME_REGEX, UUID_REGEX
+from mupl.utils.config import config, TRANSLATION
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
+
+
+FILE_NAME_REGEX = re.compile(
+    r"^(?:\[(?P<artist>.+?)?\])?\s?"  # Artist
+    r"(?P<title>.+?)"  # Manga title
+    r"(?:\s?\[(?P<language>[a-z]{2}(?:-[a-z]{2})?|[a-zA-Z]{3}|[a-zA-Z]+)?\])?\s-\s"  # Language
+    r"(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)"  # Chapter number and prefix
+    r"(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?"  # Volume number
+    r"(?:\s?\((?P<chapter_title>.+)\))?"  # Chapter title
+    r"(?:\s?\{(?P<publish_date>(?P<publish_year>\d{4})-(?P<publish_month>\d{2})-(?P<publish_day>\d{2})(?:[T\s](?P<publish_hour>\d{2})[\:\-](?P<publish_minute>\d{2})(?:[\:\-](?P<publish_microsecond>\d{2}))?(?:(?P<publish_offset>[+-])(?P<publish_timezone>\d{2}[\:\-]?\d{2}))?)?)\})?"  # Publish date
+    r"(?:\s?\[(?:(?P<group>.+))?\])?"  # Groups
+    r"(?:\s?\{v?(?P<version>\d)?\})?"  # Chapter version
+    r"(?:\.(?P<extension>zip|cbz))?$",  # File extension
+    re.IGNORECASE,
+)
+
+UUID_REGEX = re.compile(
+    r"[0-9a-fA-F]{8}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{4}\-[0-9a-fA-F]{12}",
+    re.IGNORECASE,
+)
 
 
 class FileProcesser:
@@ -34,7 +53,7 @@ class FileProcesser:
         zip_name_match = self._file_name_regex.match(self.zip_name)
         if not zip_name_match:
             logger.error(f"{self.zip_name} isn't in the correct naming format.")
-            print(f"{self.zip_name} not in the correct naming format, skipping.")
+            print(TRANSLATION["naming_format_incorrect"].format(self.zip_name))
             return
         return zip_name_match
 
@@ -160,14 +179,14 @@ class FileProcesser:
         publish_date = datetime.fromisoformat(publish_date).astimezone(tz=timezone.utc)
 
         if publish_date > datetime.now(tz=timezone.utc) + timedelta(weeks=2):
-            publish_date_over_2_weeks_error = f"Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
-            logger.warning(publish_date_over_2_weeks_error)
-            print(publish_date_over_2_weeks_error)
+            logger.warning(
+                "Chosen publish date is over 2 weeks, this might cause an error with the Mangadex API."
+            )
 
         if publish_date < datetime.now(tz=timezone.utc):
-            publish_date_before_current_error = f"Chosen publish date is before the current date, not setting a publish date."
-            logger.warning(publish_date_before_current_error)
-            print(publish_date_before_current_error)
+            logger.warning(
+                "Chosen publish date is before the current date, not setting a publish date."
+            )
             publish_date = None
         return publish_date
 
@@ -198,8 +217,8 @@ class FileProcesser:
         if not groups:
             groups = (
                 []
-                if config["User Set"]["group_fallback_id"] == ""
-                else [config["User Set"]["group_fallback_id"]]
+                if not config["options"]["group_fallback_id"]
+                else [config["options"]["group_fallback_id"]]
             )
         return groups
 
@@ -214,7 +233,7 @@ class FileProcesser:
 
         if self.manga_series is None:
             logger.error(f"Couldn't find a manga id for {self.zip_name}, skipping.")
-            print(f"Skipped {self.zip_name}, no manga id found.")
+            print(TRANSLATION["skip_no_manga_id"].format(self.zip_name))
             return False
 
         self.language = self._get_language()
@@ -240,7 +259,7 @@ class FileProcesser:
 
     def __repr__(self):
         return (
-            f"<FileProcessor "
+            f"<{self.__class__.__name__} "
             f"{self.zip_name}: "
             f"{self.manga_series=}, "
             f"{self.chapter_number=}, "

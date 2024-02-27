@@ -2,7 +2,7 @@ import logging
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from uploader.utils.config import MAX_LOG_DAYS, root_path
+from mupl.utils.config import MAX_LOG_DAYS, root_path
 
 
 def format_log_dir_path():
@@ -45,12 +45,12 @@ last_date_keep_logs = current_date - timedelta(days=MAX_LOG_DAYS)
 
 
 setup_logs(
-    logger_name="md_uploader",
+    logger_name="mupl",
     path=log_folder_path,
-    logger_filename="md_uploader",
+    logger_filename="mupl",
 )
 
-_logger = logging.getLogger("md_uploader")
+_logger = logging.getLogger("mupl")
 
 
 def clear_old_logs(folder_path: "Path"):

@@ -5,20 +5,26 @@ from datetime import datetime
 
 import requests
 
-from uploader import __version__
-from uploader.http import RequestError, http_error_codes
-from uploader.http.response import HTTPResponse
-from uploader.http.oauth import OAuth2
-from uploader.utils.config import UPLOAD_RETRY, config, mangadex_api_url, root_path
+from mupl import __version__
+from mupl.http import RequestError, http_error_codes
+from mupl.http.response import HTTPResponse
+from mupl.http.oauth import OAuth2
+from mupl.utils.config import (
+    UPLOAD_RETRY,
+    config,
+    mangadex_api_url,
+    root_path,
+    TRANSLATION,
+)
 
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 class HTTPModel:
     def __init__(self) -> None:
         self.session = requests.Session()
-        self.session.headers.update({"User-Agent": f"md_uploader/{__version__}"})
+        self.session.headers.update({"User-Agent": f"mupl/{__version__}"})
 
         self.upload_retry_total = UPLOAD_RETRY
         self.max_requests = 5
@@ -27,12 +33,12 @@ class HTTPModel:
         self.total_not_login_row = 0
 
         self._config = config
-        self._token_file = root_path.joinpath(config["Paths"]["mdauth_path"])
+        self._token_file = root_path.joinpath(config["paths"]["mdauth_path"])
         self._file_token = self._open_auth_file()
         self._md_auth_api_url = f"{mangadex_api_url}/auth"
 
         self.oauth = OAuth2(
-            self._config["MangaDex Credentials"],
+            self._config["credentials"],
             self,
             self._file_token.get("access"),
             self._file_token.get("refresh"),
@@ -163,7 +169,7 @@ class HTTPModel:
                 response_obj = HTTPResponse(response, successful_codes)
 
                 if response.status_code == 401:
-                    print("401: Not logged in.")
+                    print(TRANSLATION["not_logged_in"])
                     self.total_not_login_row += 1
                     if self.total_not_login_row >= self.upload_retry_total:
                         return response_obj
@@ -249,7 +255,7 @@ class HTTPModel:
 
             if self._first_login:
                 logger.info(f"Logged into mangadex.")
-                print("Logged in.")
+                print(TRANSLATION["logged_in"])
                 self._first_login = False
             return True
         else:

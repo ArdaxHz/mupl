@@ -9,10 +9,10 @@ from typing import List, Dict, Union, Literal, Optional
 import natsort
 from PIL import Image, ImageSequence
 
-from uploader.file_validator import FileProcesser
-from uploader.utils.config import NUMBER_OF_IMAGES_UPLOAD
+from mupl.file_validator import FileProcesser
+from mupl.utils.config import NUMBER_OF_IMAGES_UPLOAD
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 class Format(enum.Enum):

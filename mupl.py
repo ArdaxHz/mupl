@@ -1,26 +1,32 @@
-import argparse
+import sys
+import json
+import time
 import asyncio
 import logging
-import sys
-import time
+import argparse
 from pathlib import Path
 from typing import Optional, List
 
 import natsort
 
-from uploader.file_validator import FileProcesser
-from uploader.http.client import HTTPClient
-from uploader.updater import check_for_update
-from uploader.uploader import ChapterUploader
-from uploader.utils.config import config, RATELIMIT_TIME, root_path
-from uploader.utils.misc import open_manga_series_map
+from mupl.file_validator import FileProcesser
+from mupl.http.client import HTTPClient
+from mupl.uploader.uploader import ChapterUploader
+from mupl.updater import check_for_update
+from mupl.utils.config import (
+    config,
+    RATELIMIT_TIME,
+    root_path,
+    TRANSLATION,
+)
+import mupl.utils.config as configM
 
-logger = logging.getLogger("md_uploader")
+logger = logging.getLogger("mupl")
 
 
 def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
     """Get a list of files that end with a zip/cbz extension for uploading."""
-    to_upload_folder_path = Path(config["Paths"]["uploads_folder"])
+    to_upload_folder_path = Path(config["paths"]["uploads_folder"])
     zips_to_upload: "List[FileProcesser]" = []
     zips_invalid_file_name = []
     zips_no_manga_id = []
@@ -37,7 +43,7 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
         if zip_obj.manga_series is None and zip_obj.zip_name_match is not None:
             zips_no_manga_id.append(archive)
 
-    # Sort the array to mirror your system's file explorer
+        # Sort the array to mirror your system's file explorer
     zips_to_upload = natsort.os_sorted(zips_to_upload, key=lambda x: x.to_upload)
 
     if zips_invalid_file_name:
@@ -47,23 +53,44 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
 
     if zips_no_manga_id:
         zips_no_manga_id_skip_message = (
-            f"Skipping {len(zips_no_manga_id)} files as they have a missing manga id"
+            "Skipping {} files as they have a missing manga id".format(
+                len(zips_no_manga_id)
+            )
         )
         logger.warning(f"{zips_no_manga_id_skip_message}: {zips_no_manga_id}")
-        print(f"{zips_no_manga_id_skip_message}, check the logs for the file names.")
+        print(
+            "{}, check the logs for the file names.".format(
+                zips_no_manga_id_skip_message
+            )
+        )
 
     if not zips_to_upload:
-        no_zips_found_error_message = "No valid files found to upload, exiting."
-        print(no_zips_found_error_message)
-        logger.error(no_zips_found_error_message)
+        print(TRANSLATION["invalid_folder_to_upload"])
+        logger.error(f"Exited due to {len(zips_to_upload)} zips not being valid.")
         return
 
     logger.debug(f"Uploading files: {zips_to_upload}")
     return zips_to_upload
 
 
+def open_manga_series_map(files_path: "Path") -> "dict":
+    """Get the manga-name-to-id map."""
+    try:
+        with open(
+            files_path.joinpath(config["paths"]["name_id_map_file"]),
+            "r",
+            encoding="utf-8",
+        ) as json_file:
+            names_to_ids = json.load(json_file)
+    except (FileNotFoundError, json.decoder.JSONDecodeError) as e:
+        logger.exception("Please check your name-to-id file.")
+        print(TRANSLATION["check_file_name_to_id"])
+        return {"manga": {}, "group": {}}
+    return names_to_ids
+
+
 def main(threaded: "bool" = True):
-    """Run the uploader on each zip."""
+    """Run the mupl on each zip."""
     names_to_ids = open_manga_series_map(root_path)
     zips_to_upload = get_zips_to_upload(names_to_ids)
     if zips_to_upload is None:
@@ -74,10 +101,14 @@ def main(threaded: "bool" = True):
 
     for index, file_name_obj in enumerate(zips_to_upload, start=1):
         try:
+            print(
+                f"\n\n{TRANSLATION['uploading_draft']} {str(file_name_obj)}\n{'-' * 40}"
+            )
+
             uploader_process = ChapterUploader(
                 http_client, file_name_obj, names_to_ids, failed_uploads, threaded
             )
-            uploader_process.start_chapter_upload()
+            uploader_process.upload()
             if not uploader_process.folder_upload:
                 uploader_process.myzip.close()
 
@@ -86,11 +117,16 @@ def main(threaded: "bool" = True):
             # Delete to save memory on large amounts of uploads
             del uploader_process
 
+            print(
+                f"{'-'*10}\n{TRANSLATION['finish_upload']} {str(file_name_obj)}\n{'-' * 10}"
+            )
             logger.debug("Sleeping between zip upload.")
             time.sleep(RATELIMIT_TIME * 2)
         except KeyboardInterrupt:
-            logger.warning("Keyboard Interrupt detected, exiting.")
-            print("Keyboard interrupt detected, exiting.")
+            logger.warning(
+                f"Keyboard Interrupt detected during upload of {str(file_name_obj)}"
+            )
+            print(TRANSLATION["keyboard_interrupt_exit"])
             try:
                 asyncio.get_event_loop().stop()
                 asyncio.get_event_loop().close()
@@ -106,10 +142,14 @@ def main(threaded: "bool" = True):
 
     if failed_uploads:
         logger.info(f"Failed uploads: {failed_uploads}")
-        print(f"Failed uploads:")
+        print(TRANSLATION["failed_uploads"])
         for fail in failed_uploads:
-            prefix = "Folder" if fail.is_dir() else "Archive"
-            print(f"{prefix}: {fail.name}")
+            prefix = (
+                TRANSLATION["upload_method_folder"]
+                if fail.is_dir()
+                else TRANSLATION["upload_method_archive"]
+            )
+            print("{}: {}".format(prefix, fail.name))
 
     sys.exit(0)
 
@@ -135,8 +175,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--threaded",
         "-t",
-        default=True,
-        const=False,
+        default=False,
+        const=True,
         nargs="?",
         help="Upload the images concurrently.",
     )
@@ -145,14 +185,16 @@ if __name__ == "__main__":
 
     if vargs["verbose"] == 0:
         logger.setLevel(logging.INFO)
+        configM.VERBOSE = False
     else:
+        configM.VERBOSE = True
         logger.setLevel(logging.DEBUG)
 
     if vargs.get("update", True):
         try:
             updated = check_for_update()
         except (KeyError, PermissionError, TypeError, OSError, ValueError) as e:
-            logger.error(f"Update check error: {e}")
-            print(f"Not updating.")
+            logger.exception("Update check the error stack")
+            print("Not updating.")
 
     main(vargs["threaded"])
