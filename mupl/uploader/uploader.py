@@ -131,8 +131,6 @@ class ChapterUploader(ChapterUploaderHandler):
 
     def upload(self):
         """Process the zip for uploading."""
-        print(f"{VERBOSE=}")
-
         logger.info(f"Uploading chapter: {repr(self.file_name_obj)}")
         print(
             "Manga id: {manga_series}\n"

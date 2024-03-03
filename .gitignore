@@ -13,3 +13,5 @@ venv/
 config.json
 .github/*
 .vscode/*
+mupl/loc/* export-ignore
+!mupl/loc/en.json
