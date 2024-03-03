@@ -4,6 +4,8 @@ Bulk uploads folders and zips (.zip/.cbz) to MangaDex in a quick and easy fashio
 Read this in other languages: 
 [Português (Brasil)](doc/readme.pt-br.md)
 
+***By default, only the English translation file will be downloaded for the uploader. If you want to use the uploader in other languages, please download the corresponding file from [uploader translations folder](mupl/loc/).***
+
 ## Table of Contents
 - [How to use](#usage)
   - [Command Line Arguments](#command-line-arguments)
@@ -124,10 +126,10 @@ If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-s
 - Make sure there aren't any duplicate issues opened before opening one
 - Pull requests are free to be opened if you think it is needed, but please format any code with Python Black (default settings) before doing so.
 
-## Translation
+### Translation
 There are two files to translate, this readme and the [mupl/loc/en.json](mupl/loc/en.json) file.
 
-- The translated README should be placed in [doc](doc/) with the name `readme.<>.md` with the ISO language code between the periods, for example: `readme.pt-br.md`.
+- The translated README should be placed in [doc](doc/) with the name `readme.<>.md` with the ISO language code between the periods, for example: `readme.pt-br.md`. Update your readme to link back to this readme under the "Read this in other languages" list.
 - The translated json file should be the named `<>.json` with the ISO language code being used and placed inside the directory [mupl/loc/](mupl/loc/), for example: `pt-br.json`. 
 
-Please submit a PR with these changes.
+After you have translated these files, update this readme with the link to your translated readme. Please submit a PR with these changes.
