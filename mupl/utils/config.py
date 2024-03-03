@@ -2,6 +2,7 @@ import json
 import logging
 from copy import copy
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger("mupl")
 
@@ -70,9 +71,13 @@ def read_localisation_file(path: "Path") -> "dict":
         return {}
 
 
-def load_localisation(lang: "str"):
+def load_localisation(lang: Optional["str"]):
+    if not lang:
+        lang = "en"
+
+    lang = lang.lower()
     language_loc_dir = root_path.joinpath("mupl", "loc")
-    language_json_path = language_loc_dir.joinpath(lang.lower()).with_suffix(".json")
+    language_json_path = language_loc_dir.joinpath(lang).with_suffix(".json")
     en_lang_json_path = language_loc_dir.joinpath("en").with_suffix(".json")
 
     en_localisation = read_localisation_file(en_lang_json_path)
@@ -81,6 +86,9 @@ def load_localisation(lang: "str"):
             f"No localisation file found for {lang}, not running uploader."
         )
         raise FileNotFoundError(f"No localisation file found for {lang}.")
+
+    if lang == "en":
+        return en_localisation
 
     lang_localisation = read_localisation_file(language_json_path)
     if not lang_localisation:
