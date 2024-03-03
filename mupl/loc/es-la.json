@@ -1,0 +1,44 @@
+{
+    "invalid_folder_to_upload": "No se encontraron archivos válidos para subir, cerrando el programa...",
+    "check_file_name_to_id": "Por favor, verifica tu archivo de nombre a ID.",
+    "uploading_draft": "Subiendo",
+    "finish_upload": "Subida finalizada",
+    "keyboard_interrupt_exit": "Interrupción de teclado detectada, cerrando el programa...",
+    "failed_uploads": "Subidas fallidas:",
+    "upload_method_folder": "Carpeta",
+    "upload_method_archive": "Archivo",
+
+    "new_update_found": "Actualización encontrada: {} => {}: {}.",
+    "new_update_warning": "La nueva versión puede tener cambios críticos, por favor consulta la página de versiones de github para ver la lista de cambios.",
+    "not_updating": "No actualizando.",
+    "input_want_update": "¿Quieres actualizar? [y/N] ",
+    "successfully_updated": "Actualizado, reinicia el programa para ejecutar la nueva versión.",
+    "update_error": "No se pudo actualizar.",
+
+    "keyboard_interrupt_cancel": "Detectada interrupción de teclado. Cancelando tareas...",
+    "chapter_number_manga": "Capítulo",
+    "volume_number_manga": "Volumen",
+    "chapter_title_manga": "Título",
+    "language_manga": "Lenguaje",
+    "groups_manga": "Grupos",
+    "publish_date_manga": "Publicar el",
+    "invalid_images_to_upload": "No se encontraron imágenes válidas para subir, omitiendo.",
+    "draft_create_session": "Creada sesión de subida: {}",
+    "images_to_upload": "{} imagen(es) para subir.",
+    "threaded_upload_running": "Ejecutando subidor multihilo.",
+    "non_threaded_upload_running": "Ejecutando subidor no-multihilo.",
+    "draft_deleting_failed_upload": "Eliminando borrador debido a una subida de imagen fallida.",
+    "not_defined_value": "Ninguno",
+
+    "uploading_images": "Subiendo imagenes {} a {}.",
+    "uploading_images_error": "Error de subida para {} a {}, intento {}/{},.",
+    "error_create_draft_session": "No se pudo crear sesión de subida para {}.",
+    "uploading_successfully": "Subido correctamente: {}, {}.",
+    "uploading_failed": "No se pudo subir {}",
+
+    "naming_format_incorrect": "{} no tiene el formato de nomenclatura correcto, omitiendo.",
+    "skip_no_manga_id": "Omitido {}, no se encontró ID de manga.",
+
+    "not_logged_in": "401: No iniciado sesión.",
+    "logged_in": "Sesión iniciada."
+}
