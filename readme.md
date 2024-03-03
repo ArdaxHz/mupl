@@ -3,6 +3,7 @@ Bulk uploads folders and zips (.zip/.cbz) to MangaDex in a quick and easy fashio
 
 Read this in other languages: 
 [Português (Brasil)](doc/readme.pt-br.md)
+[Español (LATAM)](doc/readme.es-la.md)
 
 ## Table of Contents
 - [How to use](#usage)
