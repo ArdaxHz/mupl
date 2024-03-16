@@ -4,7 +4,6 @@ Sube carpetas y zips (.zip/.cbz) a MangaDex de forma rápida y sencilla.
 Lee esto en otros lenguajes: 
 [English](doc/readme.md) 
 [Português (Brasil)](doc/readme.pt-br.md)
-[French](doc/readme.fr.md)
 
 ## Tabla de contenidos
 - [Cómo usar](#cómo-usar)
