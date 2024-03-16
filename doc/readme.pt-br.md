@@ -141,7 +141,7 @@ Suponha que eu queira carregar o capítulo `hyakkano - c025 (v04) [XuN].cbz`. No
 
 O programa então procuraria por essa chave no arquivo para o `hyakkano` e para a chave `XuN` para seus IDs atribuídos.
 
-Se eu tiver um arquivo chamado `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-san) [XuN+00e03853-1b96-4f41-9542-c71b8692033b]`, o programa pegaria o ID do manga diretamente do arquivo, o idioma como espanhol com o código `es`, número do capítulo como nulo (capítulo único) sem volume, título do capítulo como `Momi-san` com os grupos `XuN` (ID retirado de `name_id_map.json`) e `00e03853-1b96-4f41-9542-c71b8692033b`.
+Se eu tiver um arquivo chamado `efb4278c-a761-406b-9d69-19603c5e4c8b [es] - 000 (Momi-san) [XuN+00e03853-1b96-4f41-9542-c71b8692033b]`, o programa pegaria o ID do manga diretamente do arquivo, o idioma como espanhol com o código `es`, número do capítulo como nulo (capítulo único) sem volume, título do capítulo como `Momi-san` com os grupos `XuN` (ID retirado de `name_id_map.json`) e `00e03853-1b96-4f41-9542-c71b8692033b`.
 
 
 ## Contribuição
