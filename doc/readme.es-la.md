@@ -2,7 +2,9 @@
 Sube carpetas y zips (.zip/.cbz) a MangaDex de forma rápida y sencilla.
 
 Lee esto en otros lenguajes: 
-[English](doc/readme.md) [Português (Brasil)](doc/readme.pt-br.md)
+[English](doc/readme.md) 
+[Português (Brasil)](doc/readme.pt-br.md)
+[French](doc/readme.fr.md)
 
 ## Tabla de contenidos
 - [Cómo usar](#cómo-usar)
@@ -117,7 +119,7 @@ Tomando de ejemplo el capítulo `hyakkano - c025 (v04) [XuN].cbz` como el cual q
 
 El programa entonces leerá el valor de `hyakkano` y el de `XuN`, así obteniendo las IDs que les corresponden.
 
-Si tengo un archivo llamado `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-san) [XuN+00e03853-1b96-4f41-9542-c71b8692033b]`, el programa tomará la ID del manga directamente del archivo, el lenguaje será español, usando el código ISO `es`, el número de capítulo será null (oneshot) y no tendrá volumen; tendrá como título `Momi-san` y será asignado a los grupos `XuN` (id tomada del `name_id_map.json`) y `00e03853-1b96-4f41-9542-c71b8692033b`.
+Si tengo un archivo llamado `efb4278c-a761-406b-9d69-19603c5e4c8b [es] - 000 (Momi-san) [XuN+00e03853-1b96-4f41-9542-c71b8692033b]`, el programa tomará la ID del manga directamente del archivo, el lenguaje será español, usando el código ISO `es`, el número de capítulo será null (oneshot) y no tendrá volumen; tendrá como título `Momi-san` y será asignado a los grupos `XuN` (id tomada del `name_id_map.json`) y `00e03853-1b96-4f41-9542-c71b8692033b`.
 
 
 ## Contribuir
