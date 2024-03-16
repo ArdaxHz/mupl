@@ -7,7 +7,7 @@ README original :
 
 ## Table des matières
 - [Guide d'utilisation](#guide-d'utilisation)
-  - [Arguments de ligne de commande](#grguments-de-ligne-de-commande)
+  - [Arguments de ligne de commande](#arguments-de-ligne-de-commande)
 - [Format de nom des fichiers à upload](#format-de-nom-des-fichiers-à-upload)
   - [Format](#format)
   - [Paramètres du format](#paramètres-du-format)
@@ -71,7 +71,7 @@ Copiez le fichier `config.json.example` et retirez le suffixe `.example` pour en
 - `number_threads`: Nombre de threads pour l'upload d'images simultané. **Peut vous faire dépasser la fréquence limite de requêtes d'upload.** Minimum-maximum : 1-3. *Par défaut: 3*
 - `language`: Langue utilisée pour les messages affichés sur le terminal. *Par défaut: null*
 
-#### Authentifiants
+#### Authentifiants MangaDex
 ***Ces valeurs sont nécessaires pour utiliser l'uploader.***
 - `mangadex_username` Nom d'utilisateur MangaDex.
 - `mangadex_password` Mot de passe MangaDex.
@@ -112,7 +112,7 @@ Copiez le fichier `config.json.example` et retirez le suffixe `.example` pour en
 
 Chaque paire nom-ID doit être séparée d'une virgule en fin de ligne (sauf pour la dernière paire) et de deux points (`:`) entre le nom et l'ID.
 
-#### Exemple
+#### Exemples
 
 Prenons `hyakkano - c025 (v04) [XuN].cbz` comme chapitre à upload. Dans mon fichier `name_id_map.json`, j'aurai alors besoin de la clef `hyakkano` avec pour valeur `efb4278c-a761-406b-9d69-19603c5e4c8b`, qui est l'ID MangaDex du manga auquel appartient mon chapitre. J'aurai également la clef `XuN` dans la partie "group" avec la valeur `b6d57ade-cab7-4be7-b2b8-be68484b3ad3`, ID MangaDex du groupe en question.
 
