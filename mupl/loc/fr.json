@@ -1,0 +1,44 @@
+{
+    "invalid_folder_to_upload": "Aucun fichier valide à upload trouvé, arrêt en cours ...",
+    "check_file_name_to_id": "Veuillez vérifier votre fichier associant les noms aux ID (name_id_map.json).",
+    "uploading_draft": "Upload en cours.",
+    "finish_upload": "Upload terminé.",
+    "keyboard_interrupt_exit": "Interruption clavier détectée, arrêt en cours ...",
+    "failed_uploads": "Uploads échoués:",
+    "upload_method_folder": "Dossier",
+    "upload_method_archive": "Archive",
+
+    "new_update_found": "Mise à jour disponible: {} => {}: {}.",
+    "new_update_warning": "La nouvelle version pourrait comporter des changements importants, la liste de ceux-ci est disponible sur la page github de la version concernée.",
+    "not_updating": "Pas de mise à jour.",
+    "input_want_update": "Voulez-vous faire la mise à jour ? [y/N] ",
+    "successfully_updated": "Mise à jour terminée, relancez l'uploader pour utiliser la nouvelle version.",
+    "update_error": "Échec de la mise à jour.",
+
+    "keyboard_interrupt_cancel": "Interruption clavier détectée. Abandon des tâches en cours ...",
+    "chapter_number_manga": "Chapitre",
+    "volume_number_manga": "Volume",
+    "chapter_title_manga": "Titre",
+    "language_manga": "Langue",
+    "groups_manga": "Groupes",
+    "publish_date_manga": "Publié le",
+    "invalid_images_to_upload": "Aucune image valide à upload trouvée, passage à l'upload suivant.",
+    "draft_create_session": "Session d'upload créée: {}",
+    "images_to_upload": "{} images à upload.",
+    "threaded_upload_running": "Upload en mode multithread.",
+    "non_threaded_upload_running": "Upload en mode monothread.",
+    "draft_deleting_failed_upload": "Session d'upload supprimée : au moins une image n'a pu être upload.",
+    "not_defined_value": "Indéfini",
+
+    "uploading_images": "Upload des images {} à {}.",
+    "uploading_images_error": "Error d'upload des images {} à {}, tentative {}/{},.",
+    "error_create_draft_session": "Echec de la création d'une session d'upload pour {}.",
+    "uploading_successfully": "Upload réussi: {}, {}.",
+    "uploading_failed": "Upload échoué: {}",
+
+    "naming_format_incorrect": "{} : nom au format invalide, passage à l'upload suivant.",
+    "skip_no_manga_id": "{} sauté, ID du manga introuvable.",
+
+    "not_logged_in": "401: Non authentifié.",
+    "logged_in": "Authentifié."
+}

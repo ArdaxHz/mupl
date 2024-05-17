@@ -4,6 +4,7 @@ Bulk uploads folders and zips (.zip/.cbz) to MangaDex in a quick and easy fashio
 Read this in other languages: 
 [Português (Brasil)](doc/readme.pt-br.md)
 [Español (LATAM)](doc/readme.es-la.md)
+[Français](doc/readme.fr.md)
 
 ***By default, only the English translation file will be downloaded for the uploader. If you want to use the uploader in other languages, please download the corresponding file from [uploader translations folder](mupl/loc/).***
 
@@ -120,17 +121,17 @@ Take `hyakkano - c025 (v04) [XuN].cbz` as the chapter I want to upload. In my `n
 
 The program would then look through this file for the `hyakkano` key and for the `XuN` key for their assigned ids.
 
-If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [spa] - 000 (Momi-san) [XuN+00e03853-1b96-4f41-9542-c71b8692033b]`, the progam would take the manga id directly from the file, the language as Spanish with the code `es`, chapter number as null (oneshot) with no volume, chapter title as `Momi-san` with groups `XuN` (id taken form `name_id_map.json`) and `00e03853-1b96-4f41-9542-c71b8692033b`.
+If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [es] - 000 (Momi-san) [XuN+00e03853-1b96-4f41-9542-c71b8692033b]`, the program would take the manga id directly from the file, the language as Spanish with the code `es`, chapter number as null (oneshot) with no volume, chapter title as `Momi-san` with groups `XuN` (id taken form `name_id_map.json`) and `00e03853-1b96-4f41-9542-c71b8692033b`.
 
 
 ## Contribution
-- Make sure there aren't any duplicate issues opened before opening one
+- Make sure there aren't any duplicate issues opened before opening one.
 - Pull requests are free to be opened if you think it is needed, but please format any code with Python Black (default settings) before doing so.
 
 ### Translation
 There are two files to translate, this readme and the [mupl/loc/en.json](mupl/loc/en.json) file.
 
 - The translated README should be placed in [doc](doc/) with the name `readme.<>.md` with the ISO language code between the periods, for example: `readme.pt-br.md`. Update your readme to link back to this readme under the "Read this in other languages" list.
-- The translated json file should be the named `<>.json` with the ISO language code being used and placed inside the directory [mupl/loc/](mupl/loc/), for example: `pt-br.json`. 
+- The translated json file should be named `<>.json` with the ISO language code being used and placed inside the directory [mupl/loc/](mupl/loc/), for example: `pt-br.json`. 
 
 After you have translated these files, update this readme with the link to your translated readme. Please submit a PR with these changes.
