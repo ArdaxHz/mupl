@@ -1,0 +1,44 @@
+{
+    "invalid_folder_to_upload": "Ez dira igotzeko fitxategi baliogarririk aurkitu, amaitzen.",
+    "check_file_name_to_id": "Mesedez, zure izen-ID mapa ondo dagoela egiaztatu.",
+    "uploading_draft": "Igotzen",
+    "finish_upload": "Igoera amaitu da",
+    "keyboard_interrupt_exit": "Teklatuaren etenaldia detektatu da, programa amaitzen...",
+    "failed_uploads": "Huts egin dituzten kapituluak:",
+    "upload_method_folder": "Karpeta",
+    "upload_method_archive": "Fitxategi konprimitua",
+
+    "new_update_found": "Bertsio eguneratu bat aurkitu da: {} => {}: {}.",
+    "new_update_warning": "Bertsio berriak aldaketa kritikoak izan ditzake, mesedez, begiratu github-eko bertsio orriak aldaketaren zerrenda ikusteko.",
+    "not_updating": "Ez da eguneratuko.",
+    "input_want_update": "Eguneratu nahi duzu? [y/N] ",
+    "successfully_updated": "Eguneratua, bertsio berria erabiltzeko programa berrabiarazi.",
+    "update_error": "Ezin izan da eguneratu.",
+
+    "keyboard_interrupt_cancel": "Teklatuaren etenaldia detektatu da. Geratzen diren zereginak bertan behera uzten...",
+    "chapter_number_manga": "Kapitulua",
+    "volume_number_manga": "Bolumena",
+    "chapter_title_manga": "Izenburua",
+    "language_manga": "Hizkuntza",
+    "groups_manga": "Taldeak",
+    "publish_date_manga": "Argitalpen data",
+    "invalid_images_to_upload": "Ez dira igotzeko irudi baliogarririk aurkitu, hurrengo igoerara salto egiten.",
+    "draft_create_session": "Igoera saioa sortu da: {}",
+    "images_to_upload": "{} irudi igotzeko.",
+    "threaded_upload_running": "Hari multiprozesuan igotzen.",
+    "non_threaded_upload_running": "Hari bakarrean igotzen.",
+    "draft_deleting_failed_upload": "Igotzeko saioa ezabatzen irudi bat huts egin duelako.",
+    "not_defined_value": "Ez zehaztua",
+
+    "uploading_images": "{}-tik {}-ra irudiak igotzen.",
+    "uploading_images_error": "Errorea {}-tik {}-rako irudiak igotzean, {}/{} saiakera.",
+    "error_create_draft_session": "Ezin izan da igoera saioa sortu {}-rako.",
+    "uploading_successfully": "Ondo igota: {}, {}.",
+    "uploading_failed": "{} igotzean huts egin da",
+
+    "naming_format_incorrect": "{} ez du izen formatu egokia, hurrengo igoerara salto egiten.",
+    "skip_no_manga_id": "{} salto egiten, ez da IDa aurkitu.",
+
+    "not_logged_in": "401: Ez dago saioa hasita.",
+    "logged_in": "Saioa hasita."
+}
