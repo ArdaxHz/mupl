@@ -2,7 +2,7 @@
 Realiza uploads em massa de pastas e arquivos zip (.zip/.cbz) para o MangaDex de maneira rápida e fácil.
 
 Leia isso em outros idiomas:
-[Idiomas](../readme.md)
+[English](doc/readme.md)
 
 ## Sumário
 - [Formato do Nome do Arquivo](#formato-do-nome-do-arquivo)
