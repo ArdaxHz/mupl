@@ -2,10 +2,10 @@
 Bulk uploads folders and zips (.zip/.cbz) to MangaDex in a quick and easy fashion. 
 
 Read this in other languages:  
-[Português (Brasil)](../readme.pt-br.md)\
-[Español (LATAM)](../readme.es-la.md)\
-[Français](../readme.fr.md)\
-[Euskara](../readme.eu.md)
+[Português (Brasil)](doc/readme.pt-br.md)\
+[Español (LATAM)](doc/readme.es-la.md)\
+[Français](doc/readme.fr.md)\
+[Euskara](doc/readme.eu.md)
 
 ***By default, only the English translation file will be downloaded for the uploader. If you want to use the uploader in other languages, please download the corresponding file from [uploader translations folder](mupl/loc/).***
 
