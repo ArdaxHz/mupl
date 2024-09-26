@@ -1,7 +1,7 @@
 # mupl - MangaDex Bulk Uploader
 Upload de masse de dossiers et d'archives (.zip/.cbz) sur Mangadex rapidement et facilement.
 
-README original :
+README original:
 [English](doc/readme.md)
 
 
