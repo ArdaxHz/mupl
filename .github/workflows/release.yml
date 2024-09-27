@@ -1,9 +1,6 @@
 name: Add Releases
 
-on:  
-  push:
-    tags:
-      - '*'
+on: push
 
 jobs:
   build:
@@ -12,21 +9,13 @@ jobs:
     - name: Checkout Repository
       uses: actions/checkout@v3
 
-    - name: Add Commit Author
-      run: |
-        git config --global user.email "github-actions[bot]@users.noreply.github.com"
-        git config --global user.name "github-actions"
-
-    - name: Create Separate Branch
-      run: |
-        git rm -r doc -- ':!*fr*'
-        git rm -r mupl/loc -- ':!*fr*'
-        git switch -c fr-release
-        git commit -m 'fr release'
-        git switch -
-
-    - name: Archive Branch
-      run: git archive --format=zip --output ./release-fr.zip fr-release
+    - name: Archive FR artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-fr
+        path: |
+          .
+          !*fr*
   
     - name: Release Test
       uses: ncipollo/release-action@v1.12.0
