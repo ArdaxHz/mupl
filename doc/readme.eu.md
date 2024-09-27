@@ -2,7 +2,7 @@
 Karpetak eta (.zip/.cbz) fitxategiak igotzen ditu MangaDexera modu azkar eta errazean.
 
 Jatorrizko bertsioa:
-[English](/readme.md)
+[English](../readme.md)
 
 ## Eduki Taula
 - [Nola erabili](#erabilera)
