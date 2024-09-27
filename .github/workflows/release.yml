@@ -13,7 +13,6 @@ jobs:
       run: |
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git config --global user.name "github-actions"
-        done
 
     - name: Create Separate Branch
       run: |
@@ -22,7 +21,6 @@ jobs:
         git switch -c fr-release
         git commit -m 'fr release'
         git switch -
-        done
 
     - name: Archive Branch
       run: git archive --format=zip --output ./release-fr.zip fr-release
