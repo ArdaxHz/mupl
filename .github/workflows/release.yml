@@ -11,7 +11,7 @@ jobs:
 
     - name: Create Separate Branch
       run: |
-        git rm -r doc -- ':!*fr*
+        git rm -r doc -- ':!*fr*'
         git rm -r mupl/loc -- ':!*fr*'
         git switch -c fr-release
         git commit -m 'fr release'
