@@ -26,7 +26,7 @@ jobs:
     steps:
     - name: Create Matrix of Languages
       id: ls_sed_jq
-      run: echo "::set-output name=version_matrix::$(ls mupl/loc | sed 's/.json//g' | jq -R -s -c 'split("\n")[:-1]')"
+      run: echo "version_matrix=$(ls mupl/loc | sed 's/.json//g' | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
 
     outputs:
       mupl-langs: ${{ steps.ls_sed_jq.outputs.version_matrix }}
