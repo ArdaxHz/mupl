@@ -31,6 +31,9 @@ jobs:
       id: ls_sed_jq
       run: echo "version_matrix=$(ls mupl/loc | sed 's/.json//g' | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
 
+    - name: Output matrix value
+      run: echo ${{ steps.ls_seq_jq.outputs.version_matrix }}
+
     outputs:
       mupl-langs: ${{ steps.ls_sed_jq.outputs.version_matrix }}
 
@@ -39,7 +42,7 @@ jobs:
     needs: [draft, matrixify]
     strategy:
       matrix:
-        lang: ${{ needs.matrixify.outputs.mupl-langs }}
+        lang: ${{ fromJson(needs.matrixify.outputs.mupl-langs) }}
     
     steps:
     - name: Checkout Repository
