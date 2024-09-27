@@ -24,6 +24,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    
     - name: Create Matrix of Languages
       id: ls_sed_jq
       run: echo "version_matrix=$(ls mupl/loc | sed 's/.json//g' | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
