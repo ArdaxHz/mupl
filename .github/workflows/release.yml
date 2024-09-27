@@ -1,0 +1,29 @@
+name: Add Releases
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Create Separate Branch
+      run: |
+        git rm -r doc -- ':!*fr*
+        git rm -r mupl/loc -- ':!*fr*'
+        git switch -c fr-release
+        git commit -m 'fr release'
+        git switch -
+        done
+
+    - name: Archive Branch
+      run: git archive --format=zip --output ./release-fr.zip fr-release
+  
+    - name: Release Test
+      uses: ncipollo/release-action@v1.12.0
+      with:
+        artifacts: "release-fr.zip"
+        token: ${{ secrets.GITHUB_TOKEN }}
+        draft: true
