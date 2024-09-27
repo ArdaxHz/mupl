@@ -7,7 +7,7 @@ Read this in other languages:
 [Français](doc/readme.fr.md)\
 [Euskara](doc/readme.eu.md)
 
-***By default, only the English translation file will be downloaded for the uploader. If you want to use the uploader in other languages, please download the corresponding file from [uploader translations folder](mupl/loc/).***
+***There will be a release for each language, with English included in each one. To download all the languages, download the source files zip.***
 
 ## Table of Contents
 - [How to use](#usage)

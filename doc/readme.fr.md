@@ -2,7 +2,7 @@
 Upload de masse de dossiers et d'archives (.zip/.cbz) sur Mangadex rapidement et facilement.
 
 README original:
-[English](doc/readme.md)
+[English](/readme.md)
 
 
 ## Table des matières
