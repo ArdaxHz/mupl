@@ -24,12 +24,23 @@ jobs:
     outputs:
       release-upload-url: ${{ steps.create_release.outputs.upload_url }}
 
+  matrixify:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Create Matrix of Languages
+      id: ls_sed_jq
+      run: echo "::set-output name=version_matrix::$(ls mupl/loc | sed 's/.json//g' | jq -R -s -c 'split("\n")[:-1]')"
+
+    outputs:
+      mupl-langs: ${{ steps.ls_sed_jq.outputs.version_matrix }}
+
   build:
     runs-on: ubuntu-latest
-    needs: draft
+    needs: [draft, matrixify]
     strategy:
       matrix:
-        lang: ['fr', 'es-la', 'pt-br', 'en']
+        lang: ${{ needs.matrixify.outputs.mupl-langs }}
     
     steps:
     - name: Checkout Repository
