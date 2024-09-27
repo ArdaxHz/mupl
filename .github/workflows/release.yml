@@ -43,7 +43,7 @@ jobs:
     - name: Create Separate Branch for ${{ matrix.lang }}
       run: |
         git rm -r doc -- ':!*${{ matrix.lang }}*'
-        git rm -r mupl/loc -- ':!*${{ matrix.lang }}*'
+        git rm -r mupl/loc -- ':!*${{ matrix.lang }}*' ':!*en*'
         git switch -c ${{ matrix.lang }}-release
         git commit -m '${{ github.event.release.tag_name }} ${{ matrix.lang }} release'
         git switch -
