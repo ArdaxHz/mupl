@@ -1,6 +1,10 @@
 name: Add Releases
 
-on: push
+on:
+  push:
+    # Pattern matched against refs/tags
+    tags:        
+      - '**' # Push events to every tag including hierarchical tags like v1.0/beta
 
 jobs:
   draft:
@@ -12,7 +16,7 @@ jobs:
       id: create_release
       with:
         draft: true
-        release_name: draft-split-rel
+        release_name: (Draft) Release ${{ github.event.release.tag_name }}
         tag_name: ${{ github.ref }}
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -41,11 +45,11 @@ jobs:
         git rm -r doc -- ':!*${{ matrix.lang }}*'
         git rm -r mupl/loc -- ':!*${{ matrix.lang }}*'
         git switch -c ${{ matrix.lang }}-release
-        git commit -m '${{ matrix.lang }} release'
+        git commit -m '${{ github.event.release.tag_name }} ${{ matrix.lang }} release'
         git switch -
     
     - name: Archive Branch
-      run: git archive --format=zip --output ./release-${{ matrix.lang }}.zip ${{ matrix.lang }}-release
+      run: git archive --format=zip --output ./mupl-${{ github.event.release.tag_name }}-${{ matrix.lang }}.zip ${{ matrix.lang }}-release
   
     - name: upload ${{ matrix.lang }} artifact
       uses: actions/upload-release-asset@v1
@@ -53,6 +57,6 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
       with:
         upload_url: ${{ needs.draft.outputs.release-upload-url }}
-        asset_path: ./release-${{ matrix.lang }}.zip
-        asset_name: release-${{ matrix.lang }}.zip
+        asset_path: ./mupl-${{ github.event.release.tag_name }}-${{ matrix.lang }}.zip
+        asset_name: mupl-${{ github.event.release.tag_name }}-${{ matrix.lang }}.zip
         asset_content_type: application/zip
