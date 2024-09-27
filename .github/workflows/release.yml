@@ -17,9 +17,20 @@ jobs:
           .
           !*fr*
   
-    - name: Release Test
-      uses: ncipollo/release-action@v1.12.0
+    - name: Release
+      uses: actions/create-release@v1
+      id: create_release
       with:
-        artifacts: "release-fr.zip"
-        token: ${{ secrets.GITHUB_TOKEN }}
         draft: true
+        release_name: release separate
+        tag_name: ${{ github.ref }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    - name: upload fr artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./release-fr.zip
