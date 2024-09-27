@@ -5,6 +5,11 @@ on: push
 jobs:
   build:
     runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        lang: ['fr', 'es-la', 'pt-br', 'en']
+    
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v3
@@ -14,16 +19,16 @@ jobs:
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
         git config --global user.name "github-actions"
     
-    - name: Create Separate Branch
+    - name: Create Separate Branch for ${{ matrix.lang }}
       run: |
-        git rm -r doc -- ':!*fr*'
-        git rm -r mupl/loc -- ':!*fr*'
-        git switch -c fr-release
-        git commit -m 'fr release'
+        git rm -r doc -- ':!*${{ matrix.lang }}*'
+        git rm -r mupl/loc -- ':!*${{ matrix.lang }}*'
+        git switch -c ${{ matrix.lang }}-release
+        git commit -m '${{ matrix.lang }} release'
         git switch -
     
     - name: Archive Branch
-      run: git archive --format=zip --output ./release-fr.zip fr-release
+      run: git archive --format=zip --output ./release-${{ matrix.lang }}.zip ${{ matrix.lang }}-release
   
     - name: Create Draft Release
       uses: actions/create-release@v1
@@ -35,12 +40,12 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ github.token }}
 
-    - name: upload fr artifact
+    - name: upload ${{ matrix.lang }} artifact
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ github.token }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./release-fr.zip
-        asset_name: release-fr.zip
+        asset_path: ./release-${{ matrix.lang }}.zip
+        asset_name: release-${{ matrix.lang }}.zip
         asset_content_type: application/zip
