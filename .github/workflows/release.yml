@@ -16,7 +16,7 @@ jobs:
       id: create_release
       with:
         draft: true
-        release_name: (Draft) Release ${{ github.event.release.tag_name }}
+        release_name: (Draft) Release ${{ github.ref }}
         tag_name: ${{ github.ref }}
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -65,7 +65,7 @@ jobs:
         git rm -r mupl/loc -- ':!*${{ matrix.lang }}*' ':!*en*'
         git switch -c ${{ matrix.lang }}-release
         git commit -m '${{ github.event.release.tag_name }} ${{ matrix.lang }} release'
-        git switch -
+        git checkout ${{ github.ref }}
     
     - name: Archive Branch
       run: git archive --format=zip --output ./mupl-${{ github.event.release.tag_name }}-${{ matrix.lang }}.zip ${{ matrix.lang }}-release
