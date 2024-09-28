@@ -1,0 +1,81 @@
+name: Add Releases
+
+on:
+  push:
+    # Pattern matched against refs/tags
+    tags:        
+      - '**' # Push events to every tag including hierarchical tags like v1.0/beta
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Create Draft Release
+      uses: actions/create-release@v1
+      id: create_release
+      with:
+        draft: true
+        release_name: (Draft) Release ${{ github.event.release.tag_name }}
+        tag_name: ${{ github.ref }}
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    outputs:
+      release-upload-url: ${{ steps.create_release.outputs.upload_url }}
+
+  matrixify:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+    
+    - name: Create Matrix of Languages
+      id: ls_sed_jq
+      run: echo "version_matrix=$(ls mupl/loc | sed 's/.json//g' | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+
+    - name: Output matrix value
+      env:
+          LANG_MATRIX: ${{ toJson(steps.ls_sed_jq.outputs.version_matrix) }}
+      run: echo "$LANG_MATRIX"
+
+    outputs:
+      mupl-langs: ${{ steps.ls_sed_jq.outputs.version_matrix }}
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [draft, matrixify]
+    strategy:
+      matrix:
+        lang: ${{ fromJson(needs.matrixify.outputs.mupl-langs) }}
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    - name: Add Commit Author
+      run: |
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        git config --global user.name "github-actions"
+    
+    - name: Create Separate Branch for ${{ matrix.lang }}
+      run: |
+        git rm -r doc -- ':!*${{ matrix.lang }}*'
+        git rm -r mupl/loc -- ':!*${{ matrix.lang }}*' ':!*en*'
+        git switch -c ${{ matrix.lang }}-release
+        git commit -m '${{ github.event.release.tag_name }} ${{ matrix.lang }} release'
+        git switch -
+    
+    - name: Archive Branch
+      run: git archive --format=zip --output ./mupl-${{ github.event.release.tag_name }}-${{ matrix.lang }}.zip ${{ matrix.lang }}-release
+  
+    - name: upload ${{ matrix.lang }} artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ needs.draft.outputs.release-upload-url }}
+        asset_path: ./mupl-${{ github.event.release.tag_name }}-${{ matrix.lang }}.zip
+        asset_name: mupl-${{ github.event.release.tag_name }}-${{ matrix.lang }}.zip
+        asset_content_type: application/zip
