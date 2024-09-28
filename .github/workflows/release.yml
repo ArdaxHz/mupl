@@ -64,11 +64,11 @@ jobs:
         git rm -r doc -- ':!*${{ matrix.lang }}*'
         git rm -r mupl/loc -- ':!*${{ matrix.lang }}*' ':!*en*'
         git switch -c ${{ matrix.lang }}-release
-        git commit -m '${{ github.event.release.tag_name }} ${{ matrix.lang }} release'
+        git commit -m '${{ github.ref }} ${{ matrix.lang }} release'
         git checkout ${{ github.ref }}
     
     - name: Archive Branch
-      run: git archive --format=zip --output ./mupl-${{ github.event.release.tag_name }}-${{ matrix.lang }}.zip ${{ matrix.lang }}-release
+      run: git archive --format=zip --output ./mupl-${{ github.ref }}-${{ matrix.lang }}.zip ${{ matrix.lang }}-release
   
     - name: upload ${{ matrix.lang }} artifact
       uses: actions/upload-release-asset@v1
@@ -76,6 +76,6 @@ jobs:
         GITHUB_TOKEN: ${{ github.token }}
       with:
         upload_url: ${{ needs.draft.outputs.release-upload-url }}
-        asset_path: ./mupl-${{ github.event.release.tag_name }}-${{ matrix.lang }}.zip
-        asset_name: mupl-${{ github.event.release.tag_name }}-${{ matrix.lang }}.zip
+        asset_path: ./mupl-${{ github.ref }}-${{ matrix.lang }}.zip
+        asset_name: mupl-${{ github.ref }}-${{ matrix.lang }}.zip
         asset_content_type: application/zip
