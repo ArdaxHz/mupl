@@ -85,23 +85,28 @@ class ImageProcessorBase:
             if height < 10_000:
                 return [image_bytes]
 
-            ext = ImageProcessorBase.get_image_format(image_bytes)
-            ext = ext.name.lower()
+            desired_max_chunk_height = 3000
+            min_chunk_height = 1500
+            initial_num_chunks = math.ceil(height / desired_max_chunk_height)
+            chunk_height = math.ceil(height / initial_num_chunks)
+            if chunk_height < min_chunk_height:
+                chunk_height = min_chunk_height
+                num_chunks = math.ceil(height / chunk_height)
+            else:
+                num_chunks = initial_num_chunks
 
-            max_height = 3000
-            num_chunks = math.ceil(height / max_height)
             logger.info(f"Split {image_name} into {num_chunks} chunks.")
             print(f"Split {image_name} into {num_chunks} chunks.")
             for i in range(num_chunks):
                 left = 0
-                upper = i * max_height
+                upper = i * chunk_height
                 right = width
-                lower = min((i + 1) * max_height, height)
+                lower = min((i + 1) * chunk_height, height)
                 bbox = (left, upper, right, lower)
                 working_slice = image.crop(bbox)
 
                 img_byte_arr = io.BytesIO()
-                working_slice.save(img_byte_arr, format=ext)
+                working_slice.save(img_byte_arr, format=image.format)
                 img_byte_arr = img_byte_arr.getvalue()
                 split_image.append(img_byte_arr)
 
