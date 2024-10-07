@@ -21,7 +21,7 @@ Image.MAX_IMAGE_PIXELS = None
 
 class Format(enum.Enum):
     PNG = 0
-    JPG = 1
+    JPEG = 1
     GIF = 2
 
     # Converted to one of the md supported format
@@ -47,7 +47,7 @@ class ImageProcessorBase:
             b"JFIF",
             b"Exif",
         ):
-            return Format.JPG
+            return Format.JPEG
 
         if image_bytes.startswith(
             (b"\x47\x49\x46\x38\x37\x61", b"\x47\x49\x46\x38\x39\x61")

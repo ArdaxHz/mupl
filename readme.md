@@ -11,9 +11,12 @@ Read this in other languages:
 
 ## Table of Contents
 - [How to use](#usage)
+  - [Downloading](#downloading)
+  - [Installing](#installing)
+  - [Running](#running)
   - [Command Line Arguments](#command-line-arguments)
-- [Upload file name format](#file-name-format)
-  - [Name format](#name-format)
+- [Upload file name structure](#file-name-structure)
+  - [Name convention](#name-convention)
   - [Name parameters](#name-parameters)
   - [Accepted Image Formats](#accepted-image-formats)
 - [Config](#config)
@@ -27,21 +30,35 @@ Read this in other languages:
 
 
 ## Usage
-Download the [latest version](https://github.com/ArdaxHz/mupl/releases/latest) (the source code zip) from the releases page, unzip the file into a folder and open a terminal in that location.
+### This uploader is tested for Python 3.10+.
 
-In the terminal (bash, powershell, cmd) type `python mupl.py` to run the uploader.
-Ensure you have Python 3.9+ installed, use `python` for windows and `python3` for mac and linux.
+
+### Downloading
+Download the [latest version](https://github.com/ArdaxHz/mupl/releases/latest) from the releases page.
+
+Extract the archive to a folder, and open a new terminal window. On the terminal, navigate to the folder created using `cd "<path_to_folder>"`.
+
+### Installing
+
+Before running the uploader, you will need to install the required modules. 
+To install the modules, run the command `pip install -r requirements.txt`, use `pip3` if on mac or linux instead of `pip`.
+
+In the folder you extracted the archive to, create the `to_upload` and `uploaded` folders.
+
+### Running
+
+To run the uploader, in the terminal window, use `python mupl.py` to start the uploader. Use `python3` instead if on mac or linux.
 
 ### Command Line Arguments
-There are command line arguments that can be added after the main command to change the behaviour of the program, for example: `python mupl.py -u`.
+There are command line arguments that can be added after the main command to change the behaviour of the program, for example: `python mupl.py -t`.
 
 ##### Options:
 - `--update` `-u` Don't check for a new update at the start of the program.
 - `--verbose` `-v` Make the command line messages and logs more verbose.
 - `--threaded` `-t` Run the threaded uploader. *Default: False*
 
-## File Name Format
-#### Name format
+## File Name Structure
+#### Name convention
 `manga_title [lang] - cXXX (vYY) (chapter_title) {publish_date} [group]`
 
 #### Name parameters
@@ -57,13 +74,16 @@ There are command line arguments that can be added after the main command to cha
 - `png`
 - `jpg`/`jpeg`
 - `gif`
-- `webp` *Will be converted to either `png`, `jpg`, or `gif` during the upload process.*
+- `webp` *Will be converted to either `png`, `jpg`, or `gif` during the upload process. This will not change the local file.*
 
 ## Config
 User changeable settings are available in the `config.json` file. This is also where you put your MangaDex credentials.
 Copy and remove the `.example` from `config.json.example` to start using the config file.
 
-*Note: JSON values cannot be empty, hence use (`null`) where a value is meant to be empty, a string (`"username"`) for string values, or a digit (`1`) for number values.*
+*Note: JSON values cannot be empty, and the type of value matters*
+- Use (`null`) where a value is meant to be empty
+- Text should be in quotation marks (`"username"`)
+- Numbers are numbers by themselves (`1.1`)
 
 
 #### Options
@@ -132,7 +152,7 @@ If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [es] - 000 (Momi-sa
 ### Translation
 There are two files to translate, this readme and the [mupl/loc/en.json](mupl/loc/en.json) file.
 
-- The translated README should be placed in [doc](doc/) with the name `readme.<>.md` with the ISO language code between the periods, for example: `readme.pt-br.md`. Update your readme to link back to this readme under the "Read this in other languages" list.
+- The translated README should be placed in [doc/](doc/) with the name `readme.<>.md` with the ISO language code between the periods, for example: `readme.pt-br.md`. Update your readme to link back to this readme under the "Read this in other languages" list.
 - The translated json file should be named `<>.json` with the ISO language code being used and placed inside the directory [mupl/loc/](mupl/loc/), for example: `pt-br.json`. 
 
 After you have translated these files, update this readme with the link to your translated readme. Please submit a PR with these changes.
