@@ -133,7 +133,7 @@ The `name_id_map.json` has the following format:
     }
 }
 ```
-`manga` and `group` comtain the map of name to ID for the manga to upload to and group to upload to respectively. The name should be the same as the upload file. To avoid potential problems when uploading, try use a name that is lowercase and doesn't have spaces.
+`manga` and `group` contain the map of name to ID for the manga to upload to and group to upload to respectively. The name should be the same as the upload file. To avoid potential problems when uploading, try use a name that is lowercase and doesn't have spaces.
 
 Each new name-id pair should be separated by a comma at the end of the line and a colon between the name and ID. The last pair of each map should not have a comma.
 
