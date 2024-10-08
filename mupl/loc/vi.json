@@ -1,6 +1,6 @@
 {
     "invalid_folder_to_upload": "Không tìm thấy tệp hợp lệ để tải lên, đang thoát.",
-    "check_file_name_to_id": "Vui lòng kiểm tra tệp tên-id của bạn."
+    "check_file_name_to_id": "Vui lòng kiểm tra tệp tên-id của bạn.",
     "uploading_draft": "Đang tải lên",
     "finish_upload": "Hoàn thành tải lên",
     "keyboard_interrupt_exit": "Phát hiện ngắt bàn phím, đang thoát.",
