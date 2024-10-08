@@ -5,7 +5,8 @@ Read this in other languages:
 [Português (Brasil)](doc/readme.pt-br.md)\
 [Español (LATAM)](doc/readme.es-la.md)\
 [Français](doc/readme.fr.md)\
-[Euskara](doc/readme.eu.md)
+[Euskara](doc/readme.eu.md)\
+[Tiếng Việt](doc/readme.vi.md)
 
 ***There will be a release for each language, with English included in each one. To download all the languages, download the source files zip.***
 
