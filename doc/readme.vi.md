@@ -6,27 +6,26 @@ Tải hàng loạt thư mục và tệp nén (.zip/.cbz) lên MangaDex một cá
 ***Sẽ có một bản phát hành cho mỗi ngôn ngữ, bao gồm tiếng Anh trong mỗi bản. Để tải xuống tất cả các ngôn ngữ, hãy tải tệp nguồn zip.***
 
 ## Mục lục
-- [Cách sử dụng](#cach-dung)
-  - [Tải xuống](#tai-xuong)
-  - [Cài đặt](#cai-dat)
-  - [Chạy](#chay)
-  - [Đối số dòng lệnh](#doi-so)
-- [Cấu trúc tên tệp tải lên](#cau-truc)
-  - [Quy ước đặt tên](#quy-uoc)
-  - [Tham số tên](#tham-so)
-  - [Định dạng hình ảnh được chấp nhận](#dinh-dang)
-- [Tập tin cấu hình](#cau-hinh)
-  - [Tùy chọn người dùng
-](#tuy-chon-nguoi-dung)
-  - [Thông tin đăng nhập MangaDex](#thong-tin)
-  - [Đường dẫn chương trình](#duong-dan)
-- [Tệp tên-id](#tep-ten-id)
-  - [Ví dụ về tệp tên-id](#vi-du)
-- [Đóng góp](#dong-gop)
-- [Translation](#dich-thuat)
+- [Cách sử dụng](#cách-sử-dụng)
+  - [Tải xuống](#tải-xuống)
+  - [Cài đặt](#cài-đặt)
+  - [Chạy](#chạy)
+  - [Đối số dòng lệnh](#đối-số-dòng-lệnh)
+- [Cấu trúc tên tệp tải lên](#cấu-trúc-tên-tệp)
+  - [Quy ước đặt tên](#quy-ước-đặt-tên)
+  - [Tham số tên](#tham-số-tên)
+  - [Định dạng hình ảnh được chấp nhận](#định-dạng-hình-ảnh-được-chấp-nhận)
+- [Tập tin cấu hình](#cấu-hình)
+  - [Tùy chọn người dùng](#tuỳ-chọn)
+  - [Thông tin đăng nhập MangaDex](#thông-tin-đăng-nhập)
+  - [Đường dẫn chương trình](#đường-dẫn)
+- [Tệp tên-id](#tên-id)
+  - [Ví dụ về tệp tên-id](#ví-dụ)
+- [Đóng góp](#đóng-góp)
+- [Dịch thuật](#dịch-thuật)
 
 
-## Usage
+## Cách sử dụng
 ### Trình tải này được thử nghiệm cho Python 3.10+.
 
 
@@ -82,7 +81,7 @@ Sao chép và bỏ `.example` khỏi `config.json.example` để bắt đầu s�
 - Số phải để một mình (`1.1`)
 
 
-#### Tùy chọn
+#### Tuỳ chọn
 - `number_of_images_upload` Số lượng hình ảnh tải lên cùng một lúc. *Mặc định: 10*
 - `upload_retry` Số lần thử tải lại hình ảnh hoặc chương. *Mặc định: 3*
 - `ratelimit_time` Thời gian nghỉ (tính bằng giây) sau các lần gọi API. *Mặc định: 2*
