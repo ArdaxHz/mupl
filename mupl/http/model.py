@@ -237,7 +237,7 @@ class HTTPModel:
 
         raise RequestError(formatted_request_string)
 
-    def _login(self) -> "bool":
+    def _login(self, recursed=False) -> "bool":
         if self._first_login:
             logger.debug("Trying to login through the mdauth file.")
 
@@ -259,8 +259,13 @@ class HTTPModel:
                 self._first_login = False
             return True
         else:
+            if not recursed:
+                if self._token_file.exists():
+                    self._token_file.unlink()
+                    self._login(recursed=True)
+
             logger.critical("Couldn't login.")
-            raise Exception("Couldn't login.")
+            raise Exception("Couldn't login, check logs for error.")
 
     def _open_auth_file(self) -> "dict":
         """Open auth file and read saved tokens."""
