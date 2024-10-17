@@ -43,7 +43,7 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
         if zip_obj.manga_series is None and zip_obj.zip_name_match is not None:
             zips_no_manga_id.append(archive)
 
-        # Sort the array to mirror your system's file explorer
+    # Sort the array to mirror your system's file explorer
     zips_to_upload = natsort.os_sorted(zips_to_upload, key=lambda x: x.to_upload)
 
     if zips_invalid_file_name:
@@ -52,14 +52,13 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
         )
 
     if zips_no_manga_id:
-        zips_no_manga_id_skip_message = (
-            "Skipping {} files as they have a missing manga id".format(
-                len(zips_no_manga_id)
-            )
-        )
+        zips_no_manga_id_skip_message = TRANSLATION[
+            "zips_no_manga_id_skip_message"
+        ].format(len(zips_no_manga_id))
+
         logger.warning(f"{zips_no_manga_id_skip_message}: {zips_no_manga_id}")
         print(
-            "{}, check the logs for the file names.".format(
+            TRANSLATION["zips_no_manga_id_skip_message_logs"].format(
                 zips_no_manga_id_skip_message
             )
         )
@@ -89,7 +88,7 @@ def open_manga_series_map(files_path: "Path") -> "dict":
     return names_to_ids
 
 
-def main(threaded: "bool" = True):
+def main(threaded: "bool" = True, combine: "bool" = False):
     """Run the mupl on each zip."""
     names_to_ids = open_manga_series_map(root_path)
     zips_to_upload = get_zips_to_upload(names_to_ids)
@@ -106,7 +105,12 @@ def main(threaded: "bool" = True):
             )
 
             uploader_process = ChapterUploader(
-                http_client, file_name_obj, names_to_ids, failed_uploads, threaded
+                http_client,
+                file_name_obj,
+                names_to_ids,
+                failed_uploads,
+                threaded,
+                combine,
             )
             uploader_process.upload()
             if not uploader_process.folder_upload:
@@ -180,6 +184,14 @@ if __name__ == "__main__":
         nargs="?",
         help="Upload the images concurrently.",
     )
+    parser.add_argument(
+        "--combine",
+        "-c",
+        default=False,
+        const=True,
+        nargs="?",
+        help="Combine images less than 120px with images that are taller.",
+    )
 
     vargs = vars(parser.parse_args())
 
@@ -195,6 +207,6 @@ if __name__ == "__main__":
             updated = check_for_update()
         except (KeyError, PermissionError, TypeError, OSError, ValueError) as e:
             logger.exception("Update check the error stack")
-            print("Not updating.")
+            print(TRANSLATION["not_updating"])
 
-    main(vargs["threaded"])
+    main(vargs["threaded"], vargs["combine"])

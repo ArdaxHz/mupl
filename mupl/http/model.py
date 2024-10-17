@@ -261,6 +261,7 @@ class HTTPModel:
         else:
             if not recursed:
                 if self._token_file.exists():
+                    logger.warning(f"Deleting mdauth file and trying again.")
                     self._token_file.unlink()
                     self._login(recursed=True)
 

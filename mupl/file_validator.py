@@ -48,6 +48,9 @@ class FileProcesser:
         self.chapter_title = None
         self.publish_date = None
 
+        self.longstrip = False
+        self.widestrip = False
+
     def _match_file_name(self) -> "Optional[re.Match[str]]":
         """Check for a full regex match of the file."""
         zip_name_match = self._file_name_regex.match(self.zip_name)
@@ -242,7 +245,31 @@ class FileProcesser:
         self.groups = self._get_groups()
         self.chapter_title = self._get_chapter_title()
         self.publish_date = self._get_publish_date()
+
+        self.longstrip = self._is_longstrip()
+        self.widestrip = self._is_widestrip()
+
         return True
+
+    def _is_longstrip(self) -> "bool":
+        """Check if the file is a longstrip."""
+        return (
+            self.manga_series
+            in self._names_to_ids.get("formats", {}).get("longstrip", [])
+            and self.manga_series
+            not in self._names_to_ids.get("formats", {}).get("widestrip", [])
+            is not None
+        )
+
+    def _is_widestrip(self) -> "bool":
+        """Check if the file is a widestrip."""
+        return (
+            self.manga_series
+            in self._names_to_ids.get("formats", {}).get("widestrip", [])
+            and self.manga_series
+            not in self._names_to_ids.get("formats", {}).get("longstrip", [])
+            is not None
+        )
 
     @property
     def zip_name_match(self):

@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import asyncio
 import logging
@@ -28,8 +29,9 @@ class ChapterUploader(ChapterUploaderHandler):
         names_to_ids: "dict",
         failed_uploads: "list",
         threaded: "bool",
+        combine: "bool",
     ):
-        super().__init__(http_client, file_name_obj, failed_uploads)
+        super().__init__(http_client, file_name_obj, failed_uploads, combine)
         self.names_to_ids = names_to_ids
         self.threaded = threaded
         if NUMBER_THREADS <= 1:
