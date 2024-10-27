@@ -1,5 +1,7 @@
 {
     "invalid_folder_to_upload": "Không tìm thấy tệp hợp lệ để tải lên, đang thoát.",
+    "zips_no_manga_id_skip_message": "Bỏ qua các tệp {} vì thiếu id manga",
+    "zips_no_manga_id_skip_message_logs": "{}, hãy kiểm tra nhật ký để tìm tên tệp.",
     "check_file_name_to_id": "Vui lòng kiểm tra tệp tên-id của bạn.",
     "uploading_draft": "Đang tải lên",
     "finish_upload": "Hoàn thành tải lên",
@@ -32,13 +34,21 @@
 
     "uploading_images": "Đang tải hình ảnh {} đến {}.",
     "uploading_images_error": "Lỗi tải hình ảnh {} đến {}, thử {}/{}.",
+    "successful_upload_message": "Thành công: Đã tải lên trang {}, kích thước: {} mb.",
     "error_create_draft_session": "Không thể tạo phiên tải lên cho {}.",
     "uploading_successfully": "Đã tải lên thành công: {}, {}.",
     "uploading_failed": "Không thể tải lên {}",
+    "image_split": "{} có kích thước trên 10000px {}, đã chia thành {} ảnh.",
+    "image_split_not_defined": "Hình ảnh {} vượt quá 10,000px ở {}. Bạn đã thêm ID manga vào bản đồ ID để xác định nó là {} và cần được chia tách chưa?",
+    "image_combine": "Đang kết hợp `{}` với `{}` vì `{}` nhỏ hơn {}px.",
+    "image_skip": "Bỏ qua `{}` vì nó nhỏ hơn {}px và không khớp {} của hình ảnh trước.",
+
 
     "naming_format_incorrect": "{} không đúng định dạng tên, bỏ qua.",
     "skip_no_manga_id": "Đã bỏ qua {}, không tìm thấy id manga.",
 
     "not_logged_in": "401: Chưa đăng nhập.",
     "logged_in": "Đã đăng nhập."
+
+    "unable_convert_api_response_to_json": "{}: Không thể chuyển đổi phản hồi API của mangadex thành JSON."
 }
