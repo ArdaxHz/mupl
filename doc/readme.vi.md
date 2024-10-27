@@ -1,5 +1,5 @@
 # mupl - MangaDex Bulk Uploader
-Tải hàng loạt thư mục và tệp nén (.zip/.cbz) lên MangaDex một cách nhanh chóng và dễ dàng.
+Tải hàng loạt thư mục và lưu trữ (.zip/.cbz) lên MangaDex một cách nhanh chóng và dễ dàng.
 
 Đọc phần này bằng các ngôn ngữ khác: [Tiếng Anh](/readme.md)
 
@@ -10,11 +10,15 @@ Tải hàng loạt thư mục và tệp nén (.zip/.cbz) lên MangaDex một cá
   - [Tải xuống](#tải-xuống)
   - [Cài đặt](#cài-đặt)
   - [Chạy](#chạy)
+  - [Cập nhật](#cập-nhật)
   - [Đối số dòng lệnh](#đối-số-dòng-lệnh)
 - [Cấu trúc tên tệp tải lên](#cấu-trúc-tên-tệp)
   - [Quy ước đặt tên](#quy-ước-đặt-tên)
   - [Tham số tên](#tham-số-tên)
   - [Định dạng hình ảnh được chấp nhận](#định-dạng-hình-ảnh-được-chấp-nhận)
+  - [Kích thước hình ảnh](#kích-thước-hình-ảnh)
+    - [Tách ảnh](#tách-ảnh)
+    - [Gộp ảnh](#gôp-ảnh)
 - [Tập tin cấu hình](#cấu-hình)
   - [Tùy chọn người dùng](#tuỳ-chọn)
   - [Thông tin đăng nhập MangaDex](#thông-tin-đăng-nhập)
@@ -44,6 +48,12 @@ Trong thư mục bạn đã giải nén, tạo hai thư mục tên là `to_uploa
 
 Để chạy trình tải lên, trong cửa sổ terminal, sử dụng `python mupl.py` để bắt đầu. Sử dụng `python3` nếu chạy trên macOS hoặc Linux.
 
+### Cập nhật
+
+Trình cập nhật sẽ tự động kiểm tra khi bắt đầu chương trình nếu có phiên bản mới trên trang phát hành. Nếu có phiên bản mới, chương trình sẽ nhắc bạn cập nhật.
+
+Nếu bạn muốn vô hiệu hóa trình cập nhật, bạn có thể thêm `--update` vào các tham số dòng lệnh. Ví dụ: `python mupl.py --update`.
+
 ### Đối số dòng lệnh
 Có các đối số dòng lệnh có thể thêm sau lệnh chính để thay đổi hành vi của chương trình, ví dụ: `python mupl.py -t`.
 
@@ -51,6 +61,7 @@ Có các đối số dòng lệnh có thể thêm sau lệnh chính để thay �
 - `--update` `-u` Không kiểm tra bản cập nhật mới khi bắt đầu chương trình.
 - `--verbose` `-v` Làm cho các thông báo và nhật ký dòng lệnh chi tiết hơn.
 - `--threaded` `-t` Chạy trình tải lên theo luồng. *Mặc định: False*
+- `--combine` `-c` Kết hợp các hình ảnh nhỏ hơn hoặc bằng 128px với hình ảnh trước đó. *Mặc định: False*
 
 ## Cấu trúc tên tệp
 #### Quy ước đặt tên
@@ -71,6 +82,18 @@ Có các đối số dòng lệnh có thể thêm sau lệnh chính để thay �
 - `gif`
 - `webp` *Sẽ được chuyển đổi thành png, jpg hoặc gif trong quá trình tải lên. Điều này không thay đổi tệp cục bộ.*
 
+#### Kích thước hình ảnh
+##### Tách ảnh
+Hình ảnh không được vượt quá `10,000px` về chiều rộng hoặc chiều cao. Để chia hình ảnh thành các phần nhỏ hơn, ID manga phải nằm trong mảng `longstrip` hoặc `widestrip` trong bản đồ ID manga, được minh họa [bên dưới](#tên-id).
+
+Nếu thiếu ID thì hình ảnh sẽ không được tách và **SẼ** bị bỏ qua.
+
+##### Gộp ảnh
+Nếu `--combine` được sử dụng, các hình ảnh nhỏ hơn hoặc bằng `128px` sẽ được kết hợp với hình ảnh trước đó **NẾU** chúng có cùng chiều rộng hoặc chiều cao với hình ảnh trước đó (tùy thuộc vào việc hình ảnh thuộc loại `longstrip` hay `widestrip`).
+
+Nếu không được sử dụng hoặc các hình ảnh không có cùng chiều rộng hoặc chiều cao với hình ảnh trước đó, hình ảnh **SẼ** bị bỏ qua.
+
+
 ## Cấu hình
 Cài đặt có thể thay đổi của người dùng có sẵn trong tệp `config.json`. Đây cũng là nơi bạn đặt thông tin đăng nhập MangaDex của mình.
 Sao chép và bỏ `.example` khỏi `config.json.example` để bắt đầu sử dụng tệp cấu hình.
@@ -87,8 +110,8 @@ Sao chép và bỏ `.example` khỏi `config.json.example` để bắt đầu s�
 - `ratelimit_time` Thời gian nghỉ (tính bằng giây) sau các lần gọi API. *Mặc định: 2*
 - `max_log_days` Số ngày lưu trữ nhật ký. *Mặc định: 30*
 - `group_fallback_id` ID nhóm sử dụng nếu không tìm thấy trong tệp hoặc bản đồ ID, để trống nếu không tải lên nhóm.  *Mặc định: null*
-- `number_threads`: Số luồng để tải hình ảnh đồng thời. **Điều này có thể làm bạn bị hạn chế số lượng request.** Các luồng bị giới hạn từ 1-3. *Default: 3*
-- `language`: Ngôn ngữ cho các thông báo dòng lệnh. *Mặc định: null*
+- `number_threads`: Số luồng để tải hình ảnh đồng thời. **Điều này có thể làm bạn bị hạn chế số lượng request.** Các luồng bị giới hạn từ 1-3. *Mặc định: 3*
+- `language`: Ngôn ngữ cho các thông báo dòng lệnh. *Mặc định: en*
 
 #### Thông tin đăng nhập
 ***Các giá trị này không thể để trống, nếu không trình tải lên sẽ không chạy.***
@@ -124,12 +147,18 @@ Tệp `name_id_map.json` có định dạng sau:
     },
     "group": {
         "XuN": "b6d57ade-cab7-4be7-b2b8-be68484b3ad3"
+    },
+    "formats": {
+        "longstrip": ["efb4278c-a761-406b-9d69-19603c5e4c8b"],
+        "widestrip": ["69b4df2d-5ca3-4e58-91bd-74827629dcce"]
     }
 }
 ```
 Tệp chứa bản đồ tên-ID cho manga và nhóm tải lên tương ứng. Tên nên giống với tệp tải lên. Để tránh các vấn đề khi tải lên, hãy sử dụng tên viết thường và không có dấu cách.
 
 Mỗi cặp tên-id mới nên được phân tách bằng dấu phẩy ở cuối dòng và dấu hai chấm giữa tên và ID. Cặp cuối cùng không có dấu phẩy.
+
+`formats` chứa một danh sách các ID cho các định dạng là `longstrip` (hình ảnh dài) hoặc `widestrip` (hình ảnh rộng). Có thể có nhiều ID trong mỗi mảng, nhưng không được phép trùng lặp bất kì ID nào.
 
 #### Ví dụ
 
