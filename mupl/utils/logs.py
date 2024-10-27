@@ -26,7 +26,7 @@ def setup_logs(
     filename = f"{logger_filename}_{str(current_date)}.log"
 
     logs_path = path.joinpath(filename)
-    fileh = logging.FileHandler(logs_path, "a")
+    fileh = logging.FileHandler(logs_path, "a", encoding="utf8")
     formatter = logging.Formatter(
         "%(asctime)s %(levelname)-8s [%(filename)s:%(funcName)s:%(lineno)d] %(message)s"
     )

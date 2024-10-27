@@ -21,11 +21,13 @@ class ChapterUploaderHandler:
         http_client: "HTTPClient",
         file_name_obj: "FileProcesser",
         failed_uploads: "list",
+        combine: "bool",
     ):
         self.http_client = http_client
         self.file_name_obj = file_name_obj
         self.to_upload = self.file_name_obj.to_upload
         self.failed_uploads = failed_uploads
+        self.combine = combine
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
         self.folder_upload = False
@@ -43,7 +45,7 @@ class ChapterUploaderHandler:
         self.failed_image_upload = False
 
         self.image_uploader_process = ImageProcessor(
-            self.file_name_obj, self.folder_upload
+            self.file_name_obj, self.folder_upload, self.combine
         )
 
     def _images_upload(self, image_batch: "Dict[str, bytes]"):
@@ -81,8 +83,6 @@ class ChapterUploaderHandler:
         """Try to upload every 10 (default) images to the upload session."""
         if not image_batch:
             return True
-
-        successful_upload_message = "Success: Uploaded page {}, size: {} MB."
 
         image_batch_list = list(image_batch.keys())
         batch_start = int(image_batch_list[0]) + 1
@@ -131,7 +131,7 @@ class ChapterUploaderHandler:
 
                 if VERBOSE:
                     print(
-                        successful_upload_message.format(
+                        TRANSLATION["successful_upload_message"].format(
                             formatted_name_message,
                             round(file_size * 0.00000095367432, 2),
                         )

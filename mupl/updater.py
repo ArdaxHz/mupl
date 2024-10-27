@@ -13,6 +13,8 @@ from mupl.utils.config import root_path, config, TRANSLATION
 
 logger = logging.getLogger("mupl")
 
+skip_update_files = ["name_id_map.json"]
+
 
 def raise_error(ex):
     raise ex
@@ -96,6 +98,10 @@ def check_for_update():
                     filename = root_path.joinpath(
                         fileinfo.filename.replace(zip_root, "")
                     )
+                    if filename.name in skip_update_files:
+                        logger.debug(f"Skipping update for {filename.name}")
+                        continue
+
                     filename.parent.mkdir(parents=True, exist_ok=True)
                     file_data = myzip.read(fileinfo)
 
