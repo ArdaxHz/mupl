@@ -48,7 +48,7 @@
     "skip_no_manga_id": "Đã bỏ qua {}, không tìm thấy id manga.",
 
     "not_logged_in": "401: Chưa đăng nhập.",
-    "logged_in": "Đã đăng nhập."
+    "logged_in": "Đã đăng nhập.",
 
     "unable_convert_api_response_to_json": "{}: Không thể chuyển đổi phản hồi API của mangadex thành JSON."
 }
