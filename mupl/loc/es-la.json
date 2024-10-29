@@ -1,6 +1,9 @@
 {
     "invalid_folder_to_upload": "No se encontraron archivos válidos para subir, cerrando el programa...",
     "check_file_name_to_id": "Por favor, verifica tu archivo de nombre a ID.",
+    "zips_no_manga_id_skip_message": "Omitiendo los archivos {} ya que les falta la ID del manga",
+    "zips_no_manga_id_skip_message_logs": "{}, revisa los registros del programa para los nombres de los archivos.",
+    "check_file_name_to_id": "Por favor revisa tu archivo nombre-a-id.",
     "uploading_draft": "Subiendo",
     "finish_upload": "Subida finalizada",
     "keyboard_interrupt_exit": "Interrupción de teclado detectada, cerrando el programa...",
@@ -35,10 +38,16 @@
     "error_create_draft_session": "No se pudo crear sesión de subida para {}.",
     "uploading_successfully": "Subido correctamente: {}, {}.",
     "uploading_failed": "No se pudo subir {}",
+    "image_split": "{} sobrepasa los 10000px {}, separando en {} imagenes.",
+    "image_split_not_defined": "La imagen {} sobrepasa los 10000px en {}. ¿Agregaste la ID del manga al mapa de IDs para indicar que es un {} y necesita ser separado?",
+    "image_combine": "Combinando de `{}` a `{}` ya que `{}` tiene una resolución de {}px.",
+    "image_skip": "Omitiendo `{}` ya que tiene una resolución menor a {}px y no concuerda con los {} de la imagen anterior.",
 
-    "naming_format_incorrect": "{} no tiene el formato de nomenclatura correcto, omitiendo.",
+    "naming_format_incorrect": "{} no tiene el formato de nombre correcto, omitiendo.",
     "skip_no_manga_id": "Omitido {}, no se encontró ID de manga.",
 
     "not_logged_in": "401: No iniciado sesión.",
-    "logged_in": "Sesión iniciada."
+    "logged_in": "Sesión iniciada.",
+
+    "unable_convert_api_response_to_json": "{}: No se pudo convertir la respuesta de la API en un JSON."
 }
