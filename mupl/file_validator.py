@@ -13,8 +13,8 @@ FILE_NAME_REGEX = re.compile(
     r"^(?:\[(?P<artist>.+?)?\])?\s?"  # Artist
     r"(?P<title>.+?)"  # Manga title
     r"(?:\s?\[(?P<language>[a-z]{2}(?:-[a-z]{2})?|[a-zA-Z]{3}|[a-zA-Z]+)?\])?\s-\s"  # Language
-    r"(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d)?)"  # Chapter number and prefix
-    r"(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d)?)?\))?"  # Volume number
+    r"(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d+)?)"  # Chapter number and prefix
+    r"(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d+)?)?\))?"  # Volume number
     r"(?:\s?\((?P<chapter_title>.+)\))?"  # Chapter title
     r"(?:\s?\{(?P<publish_date>(?P<publish_year>\d{4})-(?P<publish_month>\d{2})-(?P<publish_day>\d{2})(?:[T\s](?P<publish_hour>\d{2})[\:\-](?P<publish_minute>\d{2})(?:[\:\-](?P<publish_microsecond>\d{2}))?(?:(?P<publish_offset>[+-])(?P<publish_timezone>\d{2}[\:\-]?\d{2}))?)?)\})?"  # Publish date
     r"(?:\s?\[(?:(?P<group>.+))?\])?"  # Groups
@@ -47,6 +47,9 @@ class FileProcesser:
         self.groups = None
         self.chapter_title = None
         self.publish_date = None
+
+        self.longstrip = False
+        self.widestrip = False
 
     def _match_file_name(self) -> "Optional[re.Match[str]]":
         """Check for a full regex match of the file."""
@@ -242,7 +245,31 @@ class FileProcesser:
         self.groups = self._get_groups()
         self.chapter_title = self._get_chapter_title()
         self.publish_date = self._get_publish_date()
+
+        self.longstrip = self._is_longstrip()
+        self.widestrip = self._is_widestrip()
+
         return True
+
+    def _is_longstrip(self) -> "bool":
+        """Check if the file is a longstrip."""
+        return (
+            self.manga_series
+            in self._names_to_ids.get("formats", {}).get("longstrip", [])
+            and self.manga_series
+            not in self._names_to_ids.get("formats", {}).get("widestrip", [])
+            is not None
+        )
+
+    def _is_widestrip(self) -> "bool":
+        """Check if the file is a widestrip."""
+        return (
+            self.manga_series
+            in self._names_to_ids.get("formats", {}).get("widestrip", [])
+            and self.manga_series
+            not in self._names_to_ids.get("formats", {}).get("longstrip", [])
+            is not None
+        )
 
     @property
     def zip_name_match(self):

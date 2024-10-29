@@ -13,9 +13,26 @@ from mupl.utils.config import root_path, config, TRANSLATION
 
 logger = logging.getLogger("mupl")
 
+skip_update_files = ["name_id_map.json"]
+
 
 def raise_error(ex):
     raise ex
+
+
+def remove_other_langs(current_downloaded_langs, zip_files):
+    """Remove extra languages from update not already downloaded."""
+    for zfile in reversed(zip_files):
+        lang_files = [
+            l for l in Path(zfile.filename).parts if "loc" in Path(zfile.filename).parts
+        ]
+        if lang_files:
+            lang_file = next(
+                filter(lambda x: x.endswith((".json", ".md")), lang_files), None
+            )
+            if lang_file not in current_downloaded_langs:
+                zip_files.remove(zfile)
+    return zip_files
 
 
 def check_for_update():
@@ -62,16 +79,29 @@ def check_for_update():
                 logger.info(f"Skipping update {remote_version}")
                 return False
 
+            current_downloaded_langs = [
+                lang.name for lang in root_path.rglob("loc/*.json")
+            ]
+            if "en.json" not in current_downloaded_langs:
+                current_downloaded_langs.append("en.json")
+
+            logger.debug(f"{current_downloaded_langs=}")
+
             zip_resp = requests.get(remote_release_json["zipball_url"])
             if zip_resp.ok:
                 myzip = ZipFile(BytesIO(zip_resp.content))
                 zip_root = [z for z in myzip.infolist() if z.is_dir()][0].filename
                 zip_files = [z for z in myzip.infolist() if not z.is_dir()]
+                zip_files = remove_other_langs(current_downloaded_langs, zip_files)
 
                 for fileinfo in zip_files:
                     filename = root_path.joinpath(
                         fileinfo.filename.replace(zip_root, "")
                     )
+                    if filename.name in skip_update_files:
+                        logger.debug(f"Skipping update for {filename.name}")
+                        continue
+
                     filename.parent.mkdir(parents=True, exist_ok=True)
                     file_data = myzip.read(fileinfo)
 

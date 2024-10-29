@@ -1,5 +1,7 @@
 {
     "invalid_folder_to_upload": "No valid files found to upload, exiting.",
+    "zips_no_manga_id_skip_message": "Skipping {} files as they have a missing manga id",
+    "zips_no_manga_id_skip_message_logs": "{}, check the logs for the file names.",
     "check_file_name_to_id": "Please check your name-to-id file.",
     "uploading_draft": "Uploading",
     "finish_upload": "Finished Uploading",
@@ -21,7 +23,7 @@
     "chapter_title_manga": "Title",
     "language_manga": "Language",
     "groups_manga": "Groups",
-    "publish_date_manga": "Publish on",
+    "publish_date_manga": "Publish at",
     "invalid_images_to_upload": "No valid images to upload, skipping.",
     "draft_create_session": "Created upload session: {}",
     "images_to_upload": "{} images to upload.",
@@ -31,14 +33,21 @@
     "not_defined_value": "None",
 
     "uploading_images": "Uploading images {} to {}.",
-    "uploading_images_error": "Image upload error for {} to {}, try {}/{},.",
+    "uploading_images_error": "Image upload error, images {} to {}, try {}/{},.",
     "error_create_draft_session": "Couldn't create an upload session for {}.",
+    "successful_upload_message": "Success: Uploaded page {}, size: {} mb.",
     "uploading_successfully": "Successfully uploaded: {}, {}.",
     "uploading_failed": "Failed to upload {}",
+    "image_split": "{} is over 10000px {}, splitting into {} images.",
+    "image_split_not_defined": "Image {} exceeds 10000px in {}. Have you added the manga id to the id map to indicate it's {} and needs to be split?",
+    "image_combine": "Combining `{}` to `{}` as `{}` is smaller than {}px.",
+    "image_skip": "Skipping `{}` as it is smaller than {}px and doesn't match the {} of the previous image.",
 
     "naming_format_incorrect": "{} not in the correct naming format, skipping.",
     "skip_no_manga_id": "Skipped {}, no manga id found.",
 
     "not_logged_in": "401: Not logged in.",
-    "logged_in": "Logged in."
+    "logged_in": "Logged in.",
+
+    "unable_convert_api_response_to_json": "{}: Couldn't convert mangadex API response into a JSON."
 }
