@@ -15,6 +15,7 @@ Read this in other languages:
   - [Downloading](#downloading)
   - [Installing](#installing)
   - [Running](#running)
+  - [Updating](#updating)
   - [Command Line Arguments](#command-line-arguments)
 - [Upload file name structure](#file-name-structure)
   - [Name convention](#name-convention)
