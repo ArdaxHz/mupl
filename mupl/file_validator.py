@@ -28,6 +28,17 @@ UUID_REGEX = re.compile(
     re.IGNORECASE,
 )
 
+WINDOWS_ILLEGAL_CHAR_MAP = {
+    '{backslash}': '\\',
+    '{slash}': '/',
+    '{colon}': ':',
+    '{asterisk}': '*',
+    '{question_mark}': '?',
+    '{quote}': '"',
+    '{less_than}': '<',
+    '{greater_than}': '>',
+    '{pipe}': '|'
+}
 
 class FileProcesser:
     def __init__(self, to_upload: "Path", names_to_ids: "dict") -> None:
@@ -120,8 +131,10 @@ class FileProcesser:
         """Get the chapter title from the file if it exists."""
         chapter_title = self._zip_name_match.group("chapter_title")
         if chapter_title is not None:
-            # Add the question mark back to the chapter title
-            chapter_title = chapter_title.strip().replace(r"{question_mark}", "?")
+            chapter_title = chapter_title.strip()
+            # Replace illegal characters in the chapter title
+            for placeholder, char in WINDOWS_ILLEGAL_CHAR_MAP.items():
+                chapter_title = chapter_title.replace(placeholder, char)
         return chapter_title
 
     def _get_publish_date(self) -> "Optional[str]":
