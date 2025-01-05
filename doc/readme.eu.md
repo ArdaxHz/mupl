@@ -10,6 +10,7 @@ Jatorrizko bertsioa:
 - [Igo beharreko fitxategien izenaren formatua](#fitxategi-izen-formatua)
   - [Izenaren formatua](#izen-formatua)
   - [Izenaren parametroak](#izen-parametroak)
+    - [Kapitulu izenburuen karaktere ordezkatzeak](#kapitulu-izenburuen-karaktere-ordezkatzeak)
   - [Onartutako Fitxategi Formatuak](#onartutako-fitxategi-formatuak)
 - [Konfigurazioa](#konfigurazioa)
   - [Erabiltzailearen Ezarpenak](#erabiltzailearen-ezarpenak)
@@ -44,9 +45,20 @@ Komando-lerroko argumentuak daude komando nagusiaren ondoren gehi daitezkeenak p
 - `[hizkuntza]` Kapituluaren hizkuntza-kodea ISO formatuan. *Ingeleserako ez da beharrezkoa.*
 - `cXXX` Kapituluaren zenbakia. *Kendu kapituluaren aurrizkia titulua kapitulu bakarrekoa bada (Oneshot), adibidez `cXXX` > `XXX`.*
 - `(vYY)` Kapituluaren bolumena. *Ez da derrigorrezkoa.*
-- `(kapitulu_izena)` Kapituluaren izenburua. `?` karakterearen ordez, `{question_mark}` erabili. *Ez da derrigorrezkoa.*
+- `(kapitulu_izena)` Kapituluaren izenburua. Ikus [Kapitulu izenburuen karaktere ordezkatzeak](#kapitulu-izenburuen-karaktere-ordezkatzeak). *Ez da derrigorrezkoa.*
 - `{argitaratze_data}` Kapitulua MangaDexen argitaratzeko nahi den etorkizuneko data. **Ezartzen bada, `YYYY-MM-DDTHH-MM-SS` formatua jarraitu behar du.** *Ez da derrigorrezkoa.*
 - `[taldea(k)]` Taldeen izenen edo IDen zerrenda. Talde-izenak badira, `name_id_map.json`-en IDekin batera sartu behar dira. *Talde bat baino gehiago bereizi `+` erabiliz.* *Ez da derrigorrezkoa.*
+
+##### Kapitulu izenburuen karaktere ordezkatzeak
+- `{asterisk}`: `*` *`{asterisk}` ordezkapena `*` bezala irakurriko da igoera prozesuan.*
+- `{backslash}`: `\` *`{backslash}` ordezkapena `\` bezala irakurriko da igoera prozesuan.*
+- `{slash}`: `/` *`{slash}` ordezkapena `/` bezala irakurriko da igoera prozesuan.*
+- `{colon}`: `:` *`{colon}` ordezkapena `:` bezala irakurriko da igoera prozesuan.*
+- `{greater_than}`: `>` *`{greater_than}` ordezkapena `>` bezala irakurriko da igoera prozesuan.*
+- `{less_than}`: `<` *`{less_than}` ordezkapena `<` bezala irakurriko da igoera prozesuan.*
+- `{question_mark}`: `?` *`{question_mark}` ordezkapena `?` bezala irakurriko da igoera prozesuan.*
+- `{quote}`: `"` *`{quote}` ordezkapena `"` bezala irakurriko da igoera prozesuan.*
+- `{pipe}`: `|` *`{pipe}` ordezkapena `|` bezala irakurriko da igoera prozesuan.*
 
 #### Onartutako Fitxategi Formatuak
 - `png`

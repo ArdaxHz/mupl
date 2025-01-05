@@ -20,6 +20,7 @@ Read this in other languages:
 - [Upload file name structure](#file-name-structure)
   - [Name convention](#name-convention)
   - [Name parameters](#name-parameters)
+    - [Chapter title replacement characters](#chapter-title-replacement-characters)
   - [Accepted Image Formats](#accepted-image-formats)
   - [Image size](#image-size)
     - [Image Splitting](#image-splitting)
@@ -78,9 +79,20 @@ There are command line arguments that can be added after the main command to cha
 - `[lang]` Language code in the ISO format. *Omitted for English.*
 - `cXXX` Chapter number. *Omit the chapter prefix if the chapter is a oneshot, e.g. `cXXX` > `XXX`.*
 - `(vYY)` Chapter volume. *Optional.*
-- `(chapter_title)` Chapter title. Use `{question_mark}` in place where there would be a `?`. *Optional.*
+- `(chapter_title)` Chapter title. See [Chapter title replacement characters](#chapter-title-replacement-characters) for special characters. *Optional.*
 - `{publish_date}` Future date of when chapter is released from MangaDex's side. ***MUST** be in the format `YYYY-MM-DDTHH-MM-SS` if included.* *Optional.*
 - `[group]` List of group names or IDs. If group names, they must be included in the `name_id_map.json` for the IDs. *Separate multiple groups using `+`.* *Optional.*
+
+##### Chapter title replacement characters
+- `{asterisk}` `*` *`{asterisk}` will be replaced with `*` during the upload process.*
+- `{backslash}` `\` *`{backslash}` will be replaced with `\` during the upload process.*
+- `{slash}` `/` *`{slash}` will be replaced with `/` during the upload process.*
+- `{colon}` `:` *`{colon}` will be replaced with `:` during the upload process.*
+- `{greater_than}` `>` *`{greater_than}` will be replaced with `>` during the upload process.*
+- `{less_than}` `<` *`{less_than}` will be replaced with `<` during the upload process.*
+- `{question_mark}` `?` *`{question_mark}` will be replaced with `?` during the upload process.*
+- `{quote}` `"` *`{quote}` will be replaced with `"` during the upload process.*
+- `{pipe}` `|` *`{pipe}` will be replaced with `|` during the upload process.*
 
 #### Accepted Image formats
 - `png`
