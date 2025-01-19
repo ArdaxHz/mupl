@@ -15,8 +15,8 @@ FILE_NAME_REGEX = re.compile(
     r"(?:\s?\[(?P<language>[a-z]{2}(?:-[a-z]{2})?|[a-zA-Z]{3}|[a-zA-Z]+)?\])?\s-\s"  # Language
     r"(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d+)?)"  # Chapter number and prefix
     r"(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d+)?)?\))?"  # Volume number
-    r"(?:\s?\((?P<chapter_title>.+)\))?"  # Chapter title
-    r"(?:\s?\{(?P<publish_date>(?P<publish_year>\d{4})-(?P<publish_month>\d{2})-(?P<publish_day>\d{2})(?:[T\s](?P<publish_hour>\d{2})[\:\-](?P<publish_minute>\d{2})(?:[\:\-](?P<publish_microsecond>\d{2}))?(?:(?P<publish_offset>[+-])(?P<publish_timezone>\d{2}[\:\-]?\d{2}))?)?)\})?"  # Publish date
+    r"(?:\s?\((?P<chapter_title>.+)?\))?"  # Chapter title
+    r"(?:\s?\{(?P<publish_date>(?P<publish_year>\d{4})-(?P<publish_month>\d{2})-(?P<publish_day>\d{2})(?:[T\s](?P<publish_hour>\d{2})[\:\-](?P<publish_minute>\d{2})(?:[\:\-](?P<publish_microsecond>\d{2}))?(?:(?P<publish_offset>[+-])(?P<publish_timezone>\d{2}[\:\-]?\d{2}))?)?)?\})?"  # Publish date
     r"(?:\s?\[(?:(?P<group>.+))?\])?"  # Groups
     r"(?:\s?\{v?(?P<version>\d)?\})?"  # Chapter version
     r"(?:\.(?P<extension>zip|cbz))?$",  # File extension
