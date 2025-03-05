@@ -103,14 +103,7 @@ class ImageProcessorBase:
         for img_name, img_bytes in images:
             with Image.open(io.BytesIO(img_bytes)) as img:
                 width, height = img.size
-
-                if not ImageProcessorBase._is_image_large_enough(img_bytes, min_size):
-                    logger.info(
-                        f"Skipping {img_name} as it is smaller than {min_size}."
-                    )
-                    print(TRANSLATION["image_skip"].format(img_name, min_size, "size"))
-                    continue
-
+                
                 if current_image is None:
                     current_image = img.copy()
                     current_name = img_name
