@@ -103,7 +103,7 @@ class ImageProcessorBase:
         for img_name, img_bytes in images:
             with Image.open(io.BytesIO(img_bytes)) as img:
                 width, height = img.size
-                
+
                 if current_image is None:
                     current_image = img.copy()
                     current_name = img_name
@@ -165,7 +165,6 @@ class ImageProcessorBase:
     def split_image(
         image_name: "str",
         image_bytes: "bytes",
-        is_longstrip: bool,
         is_widestrip: bool,
     ) -> "List[bytes]":
         with Image.open(io.BytesIO(image_bytes)) as image:
@@ -174,33 +173,18 @@ class ImageProcessorBase:
             if height < 10_000 and width < 10_000:
                 return [image_bytes]
 
-            if (height >= 10_000 and not is_longstrip) or (
-                width >= 10_000 and not is_widestrip
-            ):
-                logger.warning(
-                    f"Image {image_name} exceeds 10000px in {'height' if height >= 10_000 else 'width'} and is not marked as {'longstrip' if height >= 10_000 else 'widestrip'}. Removing from upload."
-                )
-                print(
-                    TRANSLATION["image_split_not_defined"].format(
-                        image_name,
-                        "height" if height >= 10_000 else "width",
-                        "longstrip" if height >= 10_000 else "widestrip",
-                    )
-                )
-                return []
-
             split_image = []
 
-            if height >= 10_000 and is_longstrip:
-                dimension = height
-                desired_max_chunk_size = 3000
-                min_chunk_size = 1500
-                is_tall = True
-            else:
+            if height >= 10_000 and is_widestrip:
                 dimension = width
                 desired_max_chunk_size = 2500
                 min_chunk_size = 1000
                 is_tall = False
+            else:
+                dimension = height
+                desired_max_chunk_size = 3000
+                min_chunk_size = 1500
+                is_tall = True
 
             initial_num_chunks = math.ceil(dimension / desired_max_chunk_size)
             chunk_size = math.ceil(dimension / initial_num_chunks)
@@ -244,15 +228,12 @@ class ImageProcessorBase:
 
 class ImageProcessor:
     def __init__(
-        self,
-        file_name_obj: "FileProcesser",
-        folder_upload: "bool",
-        combine: "bool",
+        self, file_name_obj: "FileProcesser", folder_upload: "bool", **kwargs
     ) -> None:
         self.file_name_obj = file_name_obj
         self.to_upload = self.file_name_obj.to_upload
         self.folder_upload = folder_upload
-        self.combine = combine
+        self.combine = kwargs.get("combine", False)
         self.myzip = None
         if not self.folder_upload:
             self.myzip = self._read_zip()
@@ -321,7 +302,6 @@ class ImageProcessor:
             split = ImageProcessorBase.split_image(
                 image_name,
                 image_bytes,
-                self.file_name_obj.longstrip,
                 self.file_name_obj.widestrip,
             )
             if split:

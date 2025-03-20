@@ -69,6 +69,7 @@ There are command line arguments that can be added after the main command to cha
 - `--verbose` `-v` Make the command line messages and logs more verbose.
 - `--threaded` `-t` Run the threaded uploader. *Default: False*
 - `--combine` `-c` Combine images that are smaller than or equal to 128px with the previous image. *Default: False*
+- `--widestrip` `-w` Splits images over 10000px wide into multiple, smaller images. *Default: False*
 
 ## File Name Structure
 #### Name convention
@@ -102,9 +103,8 @@ There are command line arguments that can be added after the main command to cha
 
 #### Image size
 ##### Image Splitting
-Images cannot exceed `10000px` in width or height. To split the image into smaller chunks, the manga id must be in the longstrip or widestrip array in the manga id map, as shown [below](#name-to-id-map). 
+Images cannot exceed `10000px` in width or height. Images over 10000px height will be split as a longstrip image. To split a widestrip image, use the CLI argument `--widestrip` `-w`. 
 
-If the id is missing, the image will not be split and **WILL** be skipped.
 
 ##### Image Combining
 If the `--combine` flag is used, images smaller than or equal to `128px` will be combined with the previous image **IF** they are the same width or height as the previous image. (Depends on if the image is a longstrip or widestrip.)
@@ -165,18 +165,12 @@ The `name_id_map.json` has the following format:
     },
     "group": {
         "XuN": "b6d57ade-cab7-4be7-b2b8-be68484b3ad3"
-    },
-    "formats": {
-        "longstrip": ["efb4278c-a761-406b-9d69-19603c5e4c8b"],
-        "widestrip": ["69b4df2d-5ca3-4e58-91bd-74827629dcce"]
     }
 }
 ```
 `manga` and `group` contain the map of name to ID for the manga to upload to and group to upload to respectively. The name should be the same as the upload file. To avoid potential problems when uploading, try use a name that is lowercase and doesn't have spaces.
 
 Each new name-id pair should be separated by a comma at the end of the line and a colon between the name and ID. The last pair of each map should not have a comma.
-
-`formats` contains a list of ids for the formats that are longstrip (long image) or widestrip (wide image). There can be multiple ids in each array, but there must not be any duplicate ids.
 
 #### Example
 

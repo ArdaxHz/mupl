@@ -29,19 +29,20 @@ UUID_REGEX = re.compile(
 )
 
 WINDOWS_ILLEGAL_CHAR_MAP = {
-    '{backslash}': '\\',
-    '{slash}': '/',
-    '{colon}': ':',
-    '{asterisk}': '*',
-    '{question_mark}': '?',
-    '{quote}': '"',
-    '{less_than}': '<',
-    '{greater_than}': '>',
-    '{pipe}': '|'
+    "{backslash}": "\\",
+    "{slash}": "/",
+    "{colon}": ":",
+    "{asterisk}": "*",
+    "{question_mark}": "?",
+    "{quote}": '"',
+    "{less_than}": "<",
+    "{greater_than}": ">",
+    "{pipe}": "|",
 }
 
+
 class FileProcesser:
-    def __init__(self, to_upload: "Path", names_to_ids: "dict") -> None:
+    def __init__(self, to_upload: "Path", names_to_ids: "dict", **kwargs) -> None:
         self.to_upload = to_upload
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
@@ -59,8 +60,7 @@ class FileProcesser:
         self.chapter_title = None
         self.publish_date = None
 
-        self.longstrip = False
-        self.widestrip = False
+        self.widestrip = kwargs.get("widestrip", False)
 
     def _match_file_name(self) -> "Optional[re.Match[str]]":
         """Check for a full regex match of the file."""
@@ -258,31 +258,7 @@ class FileProcesser:
         self.groups = self._get_groups()
         self.chapter_title = self._get_chapter_title()
         self.publish_date = self._get_publish_date()
-
-        self.longstrip = self._is_longstrip()
-        self.widestrip = self._is_widestrip()
-
         return True
-
-    def _is_longstrip(self) -> "bool":
-        """Check if the file is a longstrip."""
-        return (
-            self.manga_series
-            in self._names_to_ids.get("formats", {}).get("longstrip", [])
-            and self.manga_series
-            not in self._names_to_ids.get("formats", {}).get("widestrip", [])
-            is not None
-        )
-
-    def _is_widestrip(self) -> "bool":
-        """Check if the file is a widestrip."""
-        return (
-            self.manga_series
-            in self._names_to_ids.get("formats", {}).get("widestrip", [])
-            and self.manga_series
-            not in self._names_to_ids.get("formats", {}).get("longstrip", [])
-            is not None
-        )
 
     @property
     def zip_name_match(self):

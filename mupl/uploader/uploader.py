@@ -28,12 +28,11 @@ class ChapterUploader(ChapterUploaderHandler):
         file_name_obj: "FileProcesser",
         names_to_ids: "dict",
         failed_uploads: "list",
-        threaded: "bool",
-        combine: "bool",
+        **kwargs,
     ):
-        super().__init__(http_client, file_name_obj, failed_uploads, combine)
+        super().__init__(http_client, file_name_obj, failed_uploads, **kwargs)
         self.names_to_ids = names_to_ids
-        self.threaded = threaded
+        self.threaded = kwargs.get("threaded", False)
         if NUMBER_THREADS <= 1:
             self.threaded = False
 

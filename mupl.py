@@ -24,7 +24,9 @@ import mupl.utils.config as configM
 logger = logging.getLogger("mupl")
 
 
-def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
+def get_zips_to_upload(
+    names_to_ids: "dict", **kwargs
+) -> "Optional[List[FileProcesser]]":
     """Get a list of files that end with a zip/cbz extension for uploading."""
     to_upload_folder_path = Path(config["paths"]["uploads_folder"])
     zips_to_upload: "List[FileProcesser]" = []
@@ -32,7 +34,7 @@ def get_zips_to_upload(names_to_ids: "dict") -> "Optional[List[FileProcesser]]":
     zips_no_manga_id = []
 
     for archive in to_upload_folder_path.iterdir():
-        zip_obj = FileProcesser(archive, names_to_ids)
+        zip_obj = FileProcesser(archive, names_to_ids, **kwargs)
         zip_name_process = zip_obj.process_zip_name()
         if zip_name_process:
             zips_to_upload.append(zip_obj)
@@ -88,7 +90,7 @@ def open_manga_series_map(files_path: "Path") -> "dict":
     return names_to_ids
 
 
-def main(threaded: "bool" = True, combine: "bool" = False):
+def main(**kwargs):
     """Run the mupl on each zip."""
     names_to_ids = open_manga_series_map(root_path)
     zips_to_upload = get_zips_to_upload(names_to_ids)
@@ -105,12 +107,7 @@ def main(threaded: "bool" = True, combine: "bool" = False):
             )
 
             uploader_process = ChapterUploader(
-                http_client,
-                file_name_obj,
-                names_to_ids,
-                failed_uploads,
-                threaded,
-                combine,
+                http_client, file_name_obj, names_to_ids, failed_uploads, **kwargs
             )
             uploader_process.upload()
             if not uploader_process.folder_upload:
@@ -192,6 +189,14 @@ if __name__ == "__main__":
         nargs="?",
         help="Combine images less than 120px with images that are taller.",
     )
+    parser.add_argument(
+        "--widestrip",
+        "-w",
+        default=False,
+        const=True,
+        nargs="?",
+        help="Chapters uploaded have widestrip images, so split based on width.",
+    )
 
     vargs = vars(parser.parse_args())
 
@@ -209,4 +214,4 @@ if __name__ == "__main__":
             logger.exception("Update check the error stack")
             print(TRANSLATION["not_updating"])
 
-    main(vargs["threaded"], vargs["combine"])
+    main(**vargs)

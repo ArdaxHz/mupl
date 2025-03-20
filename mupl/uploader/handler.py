@@ -21,13 +21,13 @@ class ChapterUploaderHandler:
         http_client: "HTTPClient",
         file_name_obj: "FileProcesser",
         failed_uploads: "list",
-        combine: "bool",
+        **kwargs,
     ):
         self.http_client = http_client
         self.file_name_obj = file_name_obj
         self.to_upload = self.file_name_obj.to_upload
         self.failed_uploads = failed_uploads
-        self.combine = combine
+        self.combine = kwargs.get("combine", False)
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
         self.folder_upload = False
@@ -45,7 +45,7 @@ class ChapterUploaderHandler:
         self.failed_image_upload = False
 
         self.image_uploader_process = ImageProcessor(
-            self.file_name_obj, self.folder_upload, self.combine
+            self.file_name_obj, self.folder_upload, **kwargs
         )
 
     def _images_upload(self, image_batch: "Dict[str, bytes]"):
