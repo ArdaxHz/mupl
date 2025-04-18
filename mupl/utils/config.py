@@ -4,6 +4,8 @@ from copy import copy
 from pathlib import Path
 from typing import Optional
 
+from mupl.exceptions import MuplConfigNotFoundError, MuplLocalizationNotFoundError
+
 logger = logging.getLogger("mupl")
 
 
@@ -53,7 +55,7 @@ def open_config_file(root_path: "Path") -> "dict":
         config = json.loads(config_file_path.read_bytes())
     else:
         logger.critical("Config file not found, exiting.")
-        raise FileNotFoundError("Config file not found.")
+        raise MuplConfigNotFoundError("Config file not found.")
 
     load_config_info(config, defaults_file)
     return config
@@ -85,7 +87,7 @@ def load_localisation(lang: Optional["str"]):
         logger.exception(
             f"No localisation file found for {lang}, not running uploader."
         )
-        raise FileNotFoundError(f"No localisation file found for {lang}.")
+        raise MuplLocalizationNotFoundError(f"No localisation file found for {lang}.")
 
     if lang == "en":
         return en_localisation

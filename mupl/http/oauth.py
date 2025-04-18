@@ -6,6 +6,7 @@ from configparser import SectionProxy
 from typing import Optional, TYPE_CHECKING
 
 from mupl.utils.config import mangadex_auth_url
+from mupl.exceptions import MuplOAuthError
 
 logger = logging.getLogger("mupl")
 
@@ -51,7 +52,7 @@ class OAuth2:
         if not username or not password or not client_id or not client_secret:
             critical_message = "Login details missing."
             logger.critical(critical_message)
-            raise Exception(critical_message)
+            raise MuplOAuthError(critical_message)
 
         token_response = self.__client.post(
             self.token_url,

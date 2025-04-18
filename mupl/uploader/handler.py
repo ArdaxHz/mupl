@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional, Dict
 
 from mupl.file_validator import FileProcesser
+from mupl.exceptions import MuplUploadSessionError
 from mupl.http import RequestError
 from mupl.http.client import HTTPClient
 from mupl.image_validator import ImageProcessor
@@ -200,7 +201,7 @@ class ChapterUploaderHandler:
                 return
 
         logger.error("Exising upload session not deleted.")
-        raise Exception(f"Couldn't delete existing upload session.")
+        raise MuplUploadSessionError(f"Couldn't delete existing upload session.")
 
     def _create_upload_session(self) -> "Optional[dict]":
         """Try create an upload session 3 times."""

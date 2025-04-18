@@ -69,7 +69,7 @@ class ImageProcessorBase:
             try:
                 _ = ImageSequence.Iterator(image)[1]
                 return "GIF"
-            except IndexError:
+            except MuplIndexError:
                 pass
 
             # Lossless WebP and lossy (with alpha) WebP

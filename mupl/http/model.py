@@ -6,6 +6,7 @@ from datetime import datetime
 import requests
 
 from mupl import __version__
+from mupl.exceptions import MuplLoginError
 from mupl.http import RequestError, http_error_codes
 from mupl.http.response import HTTPResponse
 from mupl.http.oauth import OAuth2
@@ -266,7 +267,7 @@ class HTTPModel:
                     self._login(recursed=True)
 
             logger.critical("Couldn't login.")
-            raise Exception("Couldn't login, check logs for error.")
+            raise MuplLoginError("Couldn't login, check logs for error.")
 
     def _open_auth_file(self) -> "dict":
         """Open auth file and read saved tokens."""
