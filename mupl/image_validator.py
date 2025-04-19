@@ -43,7 +43,7 @@ class ImageProcessorBase:
     @staticmethod
     def get_image_format(image_bytes: "bytes") -> "Optional[Format]":
         """Returns the image type from the first few bytes."""
-        if image_bytes.startswith(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"):
+        if image_bytes.startswith(b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a"):
             return Format.PNG
 
         if image_bytes[0:3] == b"\xff\xd8\xff" or image_bytes[6:10] in (
@@ -69,7 +69,7 @@ class ImageProcessorBase:
             try:
                 _ = ImageSequence.Iterator(image)[1]
                 return "GIF"
-            except MuplIndexError:
+            except IndexError:
                 pass
 
             # Lossless WebP and lossy (with alpha) WebP

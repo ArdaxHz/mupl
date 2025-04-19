@@ -119,4 +119,4 @@ class HTTPClient(HTTPModel):
 
     def login(self):
         """Login to MD account using details or saved token."""
-        self._login()
+        return self._login()
