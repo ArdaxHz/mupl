@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional, List
 
-from mupl.utils.config import config, TRANSLATION
+from src.utils.config import config, TRANSLATION
 
 logger = logging.getLogger("mupl")
 

@@ -1,12 +1,12 @@
 import logging
 from typing import List, Optional, Dict
 
-from mupl.file_validator import FileProcesser
-from mupl.exceptions import MuplUploadSessionError
-from mupl.http import RequestError
-from mupl.http.client import HTTPClient
-from mupl.image_validator import ImageProcessor
-from mupl.utils.config import (
+from src.file_validator import FileProcesser
+from src.exceptions import MuplUploadSessionError
+from src.http import RequestError
+from src.http.client import HTTPClient
+from src.image_validator import ImageProcessor
+from src.utils.config import (
     VERBOSE,
     mangadex_api_url,
     UPLOAD_RETRY,

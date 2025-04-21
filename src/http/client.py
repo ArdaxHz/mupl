@@ -1,4 +1,4 @@
-from mupl.http.model import HTTPModel
+from src.http.model import HTTPModel
 
 
 class HTTPClient(HTTPModel):

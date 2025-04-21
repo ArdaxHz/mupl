@@ -4,7 +4,7 @@ from copy import copy
 from pathlib import Path
 from typing import Optional
 
-from mupl.exceptions import MuplConfigNotFoundError, MuplLocalizationNotFoundError
+from src.exceptions import MuplConfigNotFoundError, MuplLocalizationNotFoundError
 
 logger = logging.getLogger("mupl")
 
@@ -48,7 +48,7 @@ def load_config_info(config: "dict", defaults: "dict"):
 def open_config_file(root_path: "Path") -> "dict":
     """Try to open the config file if it exists."""
     config_file_path = root_path.joinpath("config").with_suffix(".json")
-    defaults_path = root_path.joinpath("mupl", "utils", "defaults").with_suffix(".json")
+    defaults_path = root_path.joinpath("src", "utils", "defaults").with_suffix(".json")
     defaults_file = open_defaults_file(defaults_path)
 
     if config_file_path.exists():
@@ -78,7 +78,7 @@ def load_localisation(lang: Optional["str"]):
         lang = "en"
 
     lang = lang.lower()
-    language_loc_dir = root_path.joinpath("mupl", "loc")
+    language_loc_dir = root_path.joinpath("src", "loc")
     language_json_path = language_loc_dir.joinpath(lang).with_suffix(".json")
     en_lang_json_path = language_loc_dir.joinpath("en").with_suffix(".json")
 

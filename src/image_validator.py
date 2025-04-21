@@ -13,8 +13,8 @@ from typing import Tuple
 import natsort
 from PIL import Image, ImageSequence
 
-from mupl.file_validator import FileProcesser
-from mupl.utils.config import NUMBER_OF_IMAGES_UPLOAD, TRANSLATION, root_path
+from src.file_validator import FileProcesser
+from src.utils.config import NUMBER_OF_IMAGES_UPLOAD, TRANSLATION, root_path
 
 
 logger = logging.getLogger("mupl")

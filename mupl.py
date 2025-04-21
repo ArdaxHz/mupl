@@ -10,17 +10,17 @@ from datetime import datetime
 
 import natsort
 
-from mupl.file_validator import FileProcesser
-from mupl.http.client import HTTPClient
-from mupl.uploader.uploader import ChapterUploader
-from mupl.updater import check_for_update
-from mupl.utils.config import (
+from src.file_validator import FileProcesser
+from src.http.client import HTTPClient
+from src.uploader.uploader import ChapterUploader
+from src.updater import check_for_update
+from src.utils.config import (
     config,
     RATELIMIT_TIME,
     root_path,
     TRANSLATION,
 )
-import mupl.utils.config as configM
+import src.utils.config as configM
 
 logger = logging.getLogger("mupl")
 

@@ -5,8 +5,8 @@ from typing import Optional
 
 import requests
 
-from mupl.http import http_error_codes
-from mupl.utils.config import TRANSLATION
+from src.http import http_error_codes
+from src.utils.config import TRANSLATION
 
 logger = logging.getLogger("mupl")
 

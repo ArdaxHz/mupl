@@ -7,10 +7,10 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from mupl.file_validator import FileProcesser
-from mupl.http.client import HTTPClient
-from mupl.uploader.handler import ChapterUploaderHandler
-from mupl.utils.config import (
+from src.file_validator import FileProcesser
+from src.http.client import HTTPClient
+from src.uploader.handler import ChapterUploaderHandler
+from src.utils.config import (
     NUMBER_THREADS,
     VERBOSE,
     config,

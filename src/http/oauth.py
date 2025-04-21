@@ -5,13 +5,13 @@ import time
 from configparser import SectionProxy
 from typing import Optional, TYPE_CHECKING
 
-from mupl.utils.config import mangadex_auth_url
-from mupl.exceptions import MuplOAuthError
+from src.utils.config import mangadex_auth_url
+from src.exceptions import MuplOAuthError
 
 logger = logging.getLogger("mupl")
 
 if TYPE_CHECKING:
-    from mupl.http.client import HTTPClient
+    from src.http.client import HTTPClient
 
 
 class OAuth2:

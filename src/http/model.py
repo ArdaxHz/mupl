@@ -5,12 +5,12 @@ from datetime import datetime
 
 import requests
 
-from mupl import __version__
-from mupl.exceptions import MuplLoginError
-from mupl.http import RequestError, http_error_codes
-from mupl.http.response import HTTPResponse
-from mupl.http.oauth import OAuth2
-from mupl.utils.config import (
+from src import __version__
+from src.exceptions import MuplLoginError
+from src.http import RequestError, http_error_codes
+from src.http.response import HTTPResponse
+from src.http.oauth import OAuth2
+from src.utils.config import (
     UPLOAD_RETRY,
     config,
     mangadex_api_url,

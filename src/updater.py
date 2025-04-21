@@ -8,8 +8,8 @@ from zipfile import ZipFile
 import requests
 from packaging import version
 
-from mupl import __version__
-from mupl.utils.config import root_path, config, TRANSLATION
+from src import __version__
+from src.utils.config import root_path, config, TRANSLATION
 
 logger = logging.getLogger("mupl")
 
