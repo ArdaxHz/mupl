@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 
 setup(
-    name="mupl",
+    name="muplr",
     version="2.1.0",
     description="mupl: Bulk MangaDex Upload Tool",
     long_description=long_description,
@@ -21,10 +21,5 @@ setup(
         "packaging",
         "Pillow",
         "tqdm",
-    ],
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
     ],
 )

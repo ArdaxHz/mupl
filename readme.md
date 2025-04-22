@@ -12,6 +12,7 @@ Read this in other languages:
 
 ## Table of Contents
 - [How to use](#usage)
+  - [As a dependency](#dependency)
   - [Downloading](#downloading)
   - [Installing](#installing)
   - [Running](#running)
@@ -38,9 +39,61 @@ Read this in other languages:
 ## Usage
 ### This uploader is tested for Python 3.10+.
 
+#### This uploader can be run from the command line directly, or used as a dependency in other scripts.
+
+### Dependency
+To use this uploader in other scripts, install the latest version through pypi `pip install muplr`
+
+```python
+from muplr import Mupl
+
+mupl = Mupl(
+    mangadex_username=mangadex_username,
+    mangadex_password=mangadex_password,
+    client_id=client_id,
+    client_secret=client_secret,
+    number_of_images_upload=number_of_images_upload,
+    upload_retry=upload_retry,
+    ratelimit_time=ratelimit_time,
+    max_log_days=max_log_days,
+    group_fallback_id=group_fallback_id,
+    number_threads=number_threads,
+    language=language,
+    name_id_map_file=name_id_map_file,
+    uploads_folder=uploads_folder,
+    uploaded_files=uploaded_files,
+    mangadex_api_url=mangadex_api_url,
+    mangadex_auth_url=mangadex_auth_url,
+    mdauth_path=mdauth_path,
+    root_path=root_path, # the root path where you want mupl files to be stored
+    move_files=True, # move files from to_upload to uploaded after upload
+    verbose_level=verbose_level, # 0 = INFO, 1 = DEBUG
+)
+
+failed_uploads_list = mupl.upload_directory(
+  path_to_upload_folder,
+  widestrip=False,
+  combine=True
+)
+
+failed_upload = mupl.upload_chapter(
+  path_to_file,
+  manga_id,
+  group_ids,
+  language="en",
+  oneshot=False,
+  chapter_number="10",
+  volume_number="2",
+  chapter_title="Uploading this using mupl!!!",
+  publish_date=None, # or datetime in the next 2 weeks
+  widestrip=False,
+  combine=False
+)
+```
+
 
 ### Downloading
-Download the [latest version](https://github.com/ArdaxHz/mupl/releases/latest) from the releases page.
+Download the [latest version](https://github.com/ArdaxHz/src/releases/latest) from the releases page.
 
 Extract the archive to a folder, and open a new terminal window. On the terminal, navigate to the folder created using `cd "<path_to_folder>"`.
 
@@ -186,9 +239,9 @@ If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [es] - 000 (Momi-sa
 - Pull requests are free to be opened if you think it is needed, but please format any code with Python Black (default settings) before doing so.
 
 ### Translation
-There are two files to translate, this readme and the [mupl/loc/en.json](mupl/loc/en.json) file.
+There are two files to translate, this readme and the [src/loc/en.json](src/loc/en.json) file.
 
 - The translated README should be placed in [doc/](doc/) with the name `readme.<>.md` with the ISO language code between the periods, for example: `readme.pt-br.md`. Update your readme to link back to this readme under the "Read this in other languages" list.
-- The translated json file should be named `<>.json` with the ISO language code being used and placed inside the directory [mupl/loc/](mupl/loc/), for example: `pt-br.json`. 
+- The translated json file should be named `<>.json` with the ISO language code being used and placed inside the directory [src/loc/](src/loc/), for example: `pt-br.json`. 
 
 After you have translated these files, update this readme with the link to your translated readme. Please submit a PR with these changes.
