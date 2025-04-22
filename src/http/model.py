@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 from datetime import datetime
@@ -31,6 +32,8 @@ class HTTPModel:
         mdauth_path: str,
         root_path: Path,
         translation: Dict,
+        cli: bool,
+        **kwargs,
     ) -> None:
         self.session = requests.Session()
         self.session.headers.update({"User-Agent": f"mupl/{__version__}"})
@@ -41,6 +44,7 @@ class HTTPModel:
         self.mdauth_path = mdauth_path
         self.root_path = root_path
         self.translation = translation
+        self.cli = cli
 
         self.max_requests = 5
         self.number_of_requests = 0
@@ -65,14 +69,9 @@ class HTTPModel:
         refresh_token = None
 
         if self._token_file.exists():
-            try:
-                config = ConfigParser()
-                config.read(self._token_file)
-                if "tokens" in config:
-                    access_token = config["tokens"].get("access_token")
-                    refresh_token = config["tokens"].get("refresh_token")
-            except Exception as e:
-                logger.warning(f"Failed to read auth tokens: {e}")
+            self._file_token = self._open_auth_file()
+            access_token = self._file_token.get("access_token")
+            refresh_token = self._file_token.get("refresh_token")
 
         self.oauth = OAuth2(
             credential_config,
@@ -199,7 +198,7 @@ class HTTPModel:
             successful_codes=successful_codes,
         )
 
-        logger.info(formatted_request_string)
+        logger.debug(formatted_request_string)
 
         while retry > 0:
             try:
@@ -300,46 +299,54 @@ class HTTPModel:
     def _login(self, recursed=False) -> "bool":
         """Attempt to ensure the client is logged in."""
         if self._first_login:
-            logger.debug("First login check.")
+            logger.debug("Trying to login through the mdauth file.")
 
-        if self.access_token:
+        if self.access_token is not None:
             self._update_headers(self.access_token)
-            if self._check_login_status():
-                logger.debug("Already logged in and token is valid.")
-                self._successful_login = True
-                if self._first_login:
+            logged_in = self._check_login()
+        else:
+            logged_in = self._refresh_token_md()
 
-                    print(self.translation.get("logged_in", "Logged into MangaDex."))
-                    self._first_login = False
-                return True
-
-        logger.debug("Access token invalid or missing, attempting refresh.")
-        if self._refresh_token_md():
-            logger.info("Successfully refreshed token.")
+        if logged_in:
             self._successful_login = True
-            self._update_headers(self.access_token)
-            if self._first_login:
 
-                print(self.translation.get("logged_in", "Logged into MangaDex."))
+            self._update_headers(self.access_token)
+            self._save_tokens(self.access_token, self.refresh_token)
+
+            if self._first_login:
+                logger.info(f"Logged into mangadex.")
+                print(self.translation["logged_in"])
                 self._first_login = False
             return True
-
-        logger.warning(
-            "Refresh token failed or missing, attempting login with credentials."
-        )
-        if self._login_using_details():
-            logger.info("Successfully logged in using credentials.")
-            self._successful_login = True
-            self._update_headers(self.access_token)
-            if self._first_login:
-
-                print(self.translation.get("logged_in", "Logged into MangaDex."))
-                self._first_login = False
-            return True
+        else:
+            if not recursed:
+                if self._token_file.exists():
+                    logger.warning(f"Deleting mdauth file and trying again.")
+                    self._token_file.unlink()
+                    self._login(recursed=True)
 
         logger.critical("All login attempts failed.")
-
         raise MuplLoginError("Couldn't login, check logs for error.")
+
+    def _open_auth_file(self) -> "dict":
+        """Open auth file and read saved tokens."""
+        try:
+            with open(self._token_file, "r") as login_file:
+                token = json.load(login_file)
+            return token
+        except (FileNotFoundError, json.JSONDecodeError):
+            logger.error(
+                "Couldn't find the file, trying to login using your account details."
+            )
+            return {}
+
+    def _save_tokens(self, access_token: "str", refresh_token: "str") -> None:
+        """Save the access and refresh tokens."""
+        with open(self._token_file, "w") as login_file:
+            login_file.write(
+                json.dumps({"access": access_token, "refresh": refresh_token}, indent=4)
+            )
+        logger.debug("Saved mdauth file.")
 
     def _update_headers(self, access_token: "str") -> None:
         """Update the session headers to include the auth token."""
@@ -353,47 +360,40 @@ class HTTPModel:
 
     def _refresh_token_md(self) -> "bool":
         """Use the refresh token to get a new access token via OAuth client."""
-        logger.debug("Attempting token refresh via OAuth client.")
-        refreshed = self.oauth.regenerate_access_token()
-        if refreshed:
-            self._update_headers(self.oauth.access_token)
-        return refreshed
+        if self.refresh_token is None:
+            logger.error(
+                f"Refresh token doesn't exist, logging in through account details."
+            )
+            return self._login_using_details()
 
-    def _check_login_status(self) -> "bool":
+        logger.debug(f"Regenerating refresh token.")
+        return self.oauth.regenerate_access_token()
+
+    def _check_login(self) -> "bool":
         """Check if the current access token is valid using the /auth/check endpoint."""
-        if not self.oauth.access_token:
-            logger.debug("No access token found for status check.")
-            return False
-
-        self._update_headers(self.oauth.access_token)
-
         try:
-
             auth_check_response = self._request(
                 "GET",
                 f"{self._md_auth_api_url}/check",
                 successful_codes=[401, 403, 404],
                 tries=1,
-                sleep=False,
             )
-
-            if auth_check_response.ok and auth_check_response.data:
-                is_authenticated = auth_check_response.data.get(
-                    "isAuthenticated", False
-                )
-                logger.debug(f"/auth/check result: isAuthenticated={is_authenticated}")
-                return is_authenticated
-            else:
-                logger.warning(
-                    f"/auth/check request failed or returned unexpected data. Status: {auth_check_response.status_code}"
-                )
-                return False
         except RequestError as e:
-            logger.error(f"Error during /auth/check request: {e}")
-            return False
-        except Exception as e:
-            logger.error(f"Unexpected error during login status check: {e}")
-            return False
+            logger.error(e)
+        else:
+            if (
+                auth_check_response.status_code == 200
+                and auth_check_response.data is not None
+            ):
+                if auth_check_response.data["isAuthenticated"]:
+                    logger.debug(
+                        f"Already logged in: {auth_check_response.data['isAuthenticated']=}"
+                    )
+                    return True
+
+        if self.refresh_token is None:
+            return self._login_using_details()
+        return self._refresh_token_md()
 
     def _login_using_details(self) -> "bool":
         """Login using account details via OAuth client."""

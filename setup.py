@@ -1,11 +1,18 @@
 from setuptools import setup, find_packages
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+
 setup(
     name="mupl",
     version="2.1.0",
     description="mupl: Bulk MangaDex Upload Tool",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="ArdaxHz",
     author_email="70710586+ArdaxHz@users.noreply.github.com",
+    url="https://github.com/ArdaxHz/mupl",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     install_requires=[
@@ -14,5 +21,10 @@ setup(
         "packaging",
         "Pillow",
         "tqdm",
+    ],
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
     ],
 )

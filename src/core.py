@@ -117,17 +117,18 @@ class Mupl:
         self.translation = translation or load_localisation(language)
 
         self.http_client = HTTPClient(
-            mangadex_username=mangadex_username,
-            mangadex_password=mangadex_password,
-            client_id=client_id,
-            client_secret=client_secret,
-            mangadex_api_url=mangadex_api_url,
-            mangadex_auth_url=mangadex_auth_url,
-            mdauth_path=mdauth_path,
-            ratelimit_time=ratelimit_time,
-            root_path=root_path,
-            translation=translation,
-            upload_retry=upload_retry,
+            mangadex_username=self.mangadex_username,
+            mangadex_password=self.mangadex_password,
+            client_id=self.client_id,
+            client_secret=self.client_secret,
+            mangadex_api_url=self.mangadex_api_url,
+            mangadex_auth_url=self.mangadex_auth_url,
+            mdauth_path=self.mdauth_path,
+            ratelimit_time=self.ratelimit_time,
+            root_path=self.root_path,
+            translation=self.translation,
+            upload_retry=self.upload_retry,
+            cli=self.cli,
         )
 
         if not self.http_client.login():
@@ -300,6 +301,7 @@ class Mupl:
                     number_of_images_upload=self.number_of_images_upload,
                     widestrip=widestrip,
                     combine=combine,
+                    cli=self.cli,
                     **kwargs,
                 )
 
@@ -341,13 +343,14 @@ class Mupl:
                         ):
                             uploader_process.myzip.close()
                     except Exception as e:
-                        logger.error(
-                            f"Error during cleanup after KeyboardInterrupt: {e}"
-                        )
+                        if self.cli:
+                            raise e
                     finally:
-                        failed_uploads.append(file_name_obj.to_upload)
+                        if uploader_process:
+                            failed_uploads.append(file_name_obj.to_upload)
                 else:
-                    failed_uploads.append(file_name_obj.to_upload)
+                    if uploader_process:
+                        failed_uploads.append(file_name_obj.to_upload)
 
             except Exception as e:
                 logger.exception(
@@ -363,10 +366,11 @@ class Mupl:
                         ):
                             uploader_process.myzip.close()
                     except Exception as cleanup_e:
-                        logger.error(
-                            f"Error during cleanup after unexpected error: {cleanup_e}"
-                        )
-                continue
+                        if self.cli:
+                            raise cleanup_e
+                    finally:
+                        if uploader_process:
+                            continue
             finally:
                 if "uploader_process" in locals() and uploader_process is not None:
                     del uploader_process
@@ -452,13 +456,13 @@ class Mupl:
         file_path: Path,
         manga_id: str,
         group_ids: List[str],
+        *,
         language: str = "en",
         oneshot: Optional[bool] = False,
         chapter_number: Optional[str] = None,
         volume_number: Optional[str] = None,
         chapter_title: Optional[str] = None,
         publish_date: Optional[datetime] = None,
-        *,
         widestrip: bool = False,
         combine: bool = False,
         **kwargs,
@@ -494,8 +498,6 @@ class Mupl:
                 )
             return False
 
-        # Create FileProcesser instance and manually set attributes
-        # Pass an empty dict for names_to_ids as it's not needed here
         file_name_obj = FileProcesser(
             file_path,
             names_to_ids={},
@@ -507,14 +509,12 @@ class Mupl:
         )
         file_name_obj.manga_series = manga_id
         file_name_obj.language = language.lower() if language else "en"
-        # Handle oneshot logic correctly
         file_name_obj.oneshot = bool(oneshot)
         file_name_obj.chapter_number = None if file_name_obj.oneshot else chapter_number
         file_name_obj.volume_number = None if file_name_obj.oneshot else volume_number
         file_name_obj.groups = group_ids if group_ids else []
         file_name_obj.chapter_title = chapter_title
         file_name_obj.publish_date = publish_date
-        # These are set internally by FileProcesser but good to be explicit for this manual case
         file_name_obj.to_upload = file_path
         file_name_obj.zip_name = file_path.name
         file_name_obj.zip_extension = file_path.suffix if file_path.is_file() else None

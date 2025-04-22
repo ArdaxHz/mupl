@@ -22,6 +22,8 @@ class HTTPClient(HTTPModel):
         upload_retry: int = 3,
         translation: Optional[Dict] = None,
         root_path: Path = Path("."),
+        cli: bool = False,
+        **kwargs,
     ):
         """Initialize the HTTP client with credentials and configuration."""
         super().__init__(
@@ -36,6 +38,8 @@ class HTTPClient(HTTPModel):
             mdauth_path=mdauth_path,
             root_path=root_path,
             translation=translation,
+            cli=cli,
+            **kwargs,
         )
 
     def request(

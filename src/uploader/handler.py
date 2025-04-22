@@ -25,6 +25,7 @@ class ChapterUploaderHandler:
         number_of_images_upload: int,
         widestrip: bool,
         combine: bool,
+        cli: bool,
         **kwargs,
     ):
         self.http_client = http_client
@@ -42,6 +43,7 @@ class ChapterUploaderHandler:
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
         self.folder_upload = False
+        self.cli = cli
 
         if self.to_upload.is_dir():
             self.folder_upload = True
@@ -229,7 +231,6 @@ class ChapterUploaderHandler:
         except Exception as e:
             logger.error(e)
         else:
-
             try:
                 upload_session_response = self._begin_upload_session(payload)
             except (RequestError,) as e:

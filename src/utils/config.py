@@ -1,10 +1,11 @@
 import json
 import logging
+import sys
 from copy import copy
 from pathlib import Path
 from typing import Optional, Dict
 
-from src.exceptions import MuplConfigNotFoundError, MuplLocalizationNotFoundError
+from src.exceptions import MuplLocalizationNotFoundError
 
 logger = logging.getLogger("mupl")
 
@@ -70,20 +71,29 @@ def load_localisation(lang: Optional["str"]) -> Dict:
     return localisation_merged
 
 
-def load_config(config_path):
+def load_config(config_path, cli=False):
     """Load configuration from file."""
     try:
         with open(config_path, "r", encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         logger.error(f"Configuration file not found: {config_path}")
-        print(f"Error: Configuration file not found at {config_path}")
-        sys.exit(1)
+        if cli:
+            print(f"Error: Configuration file not found at {config_path}")
+            sys.exit(1)
+        else:
+            raise
     except json.JSONDecodeError as e:
         logger.error(f"Invalid JSON in configuration file: {config_path}: {e}")
-        print(f"Error: Invalid JSON in configuration file: {config_path}: {e}")
-        sys.exit(1)
+        if cli:
+            print(f"Error: Invalid JSON in configuration file: {config_path}: {e}")
+            sys.exit(1)
+        else:
+            raise
     except Exception as e:
         logger.error(f"Error loading configuration: {e}")
-        print(f"Error loading configuration: {e}")
-        sys.exit(1)
+        if cli:
+            print(f"Error loading configuration: {e}")
+            sys.exit(1)
+        else:
+            raise

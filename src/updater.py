@@ -36,14 +36,6 @@ def remove_other_langs(current_downloaded_langs, zip_files):
 
 def check_for_update(root_path=Path("."), translation=None, mdauth_path=".mdauth"):
     """Check For any program updates."""
-    translation = translation or {
-        "new_update_found": "New update found: {} => {}: {}",
-        "new_update_warning": "Warning: This is a major version update and may have breaking changes.",
-        "not_updating": "Not updating.",
-        "input_want_update": "Do you want to update? (y/n): ",
-        "successfully_updated": "Successfully updated.",
-    }
-
     logger.debug("Looking for program update.")
 
     update = False

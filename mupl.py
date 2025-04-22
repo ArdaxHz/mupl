@@ -74,7 +74,7 @@ def main():
     )
 
     config_path = vargs.get("config")
-    config_data = load_config(config_path)
+    config_data = load_config(config_path, cli=True)
 
     language = config_data.get("options", {}).get("language", "en")
     translation = load_localisation(language)
