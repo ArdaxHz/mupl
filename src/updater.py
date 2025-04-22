@@ -9,7 +9,6 @@ import requests
 from packaging import version
 
 from src import __version__
-from src.utils.config import root_path, config, TRANSLATION
 
 logger = logging.getLogger("mupl")
 
@@ -35,8 +34,16 @@ def remove_other_langs(current_downloaded_langs, zip_files):
     return zip_files
 
 
-def check_for_update():
+def check_for_update(root_path=Path("."), translation=None, mdauth_path=".mdauth"):
     """Check For any program updates."""
+    translation = translation or {
+        "new_update_found": "New update found: {} => {}: {}",
+        "new_update_warning": "Warning: This is a major version update and may have breaking changes.",
+        "not_updating": "Not updating.",
+        "input_want_update": "Do you want to update? (y/n): ",
+        "successfully_updated": "Successfully updated.",
+    }
+
     logger.debug("Looking for program update.")
 
     update = False
@@ -49,24 +56,37 @@ def check_for_update():
         remote_version = version.parse(remote_release_json["tag_name"])
 
         if remote_version > local_version:
+
             print(
-                TRANSLATION["new_update_found"].format(
-                    local_version, remote_version, remote_release_json["name"]
-                )
+                translation.get(
+                    "new_update_found", "New update found: {} => {}: {}"
+                ).format(local_version, remote_version, remote_release_json["name"])
             )
             logger.info(
                 f"Update found: {local_version} => {remote_version}: {remote_release_json['name']}."
             )
             if remote_version.major != local_version.major:
+
                 print(
-                    TRANSLATION["new_update_warning"]
+                    translation.get(
+                        "new_update_warning",
+                        "Warning: This is a major version update and may have breaking changes.",
+                    )
                     + "\nhttps://github.com/ArdaxHz/mupl/releases/latest"
                 )
 
             timeout = 10
-            t = Timer(timeout, raise_error, [ValueError(TRANSLATION["not_updating"])])
+
+            t = Timer(
+                timeout,
+                raise_error,
+                [ValueError(translation.get("not_updating", "Not updating."))],
+            )
             t.start()
-            answer = input(TRANSLATION["input_want_update"])
+
+            answer = input(
+                translation.get("input_want_update", "Do you want to update? (y/n): ")
+            )
             t.cancel()
 
             if answer.lower() in ["true", "1", "t", "y", "yes"]:
@@ -75,7 +95,8 @@ def check_for_update():
                 update = False
 
             if not update:
-                print(TRANSLATION["not_updating"])
+
+                print(translation.get("not_updating", "Not updating."))
                 logger.info(f"Skipping update {remote_version}")
                 return False
 
@@ -108,14 +129,19 @@ def check_for_update():
                     with open(filename, "wb") as fopen:
                         fopen.write(file_data)
 
-                Path(config["paths"]["mdauth_path"]).unlink(missing_ok=True)
-                print(TRANSLATION["successfully_updated"])
+                Path(mdauth_path).unlink(missing_ok=True)
+
+                print(translation.get("successfully_updated", "Successfully updated."))
                 logger.info(
                     f"Updated to version {remote_version}: {remote_release_json['name']}."
                 )
-                sys.exit()
+                sys.exit(0)
+            else:
+                logger.error(f"Failed to download update: {zip_resp.status_code}")
+                return False
         else:
+            logger.info(f"No update found. Current version: {local_version}")
             return False
-
-    logger.info("Updating error.")
-    print(TRANSLATION["update_error"])
+    else:
+        logger.error(f"Failed to check for updates: {remote_release.status_code}")
+        return False

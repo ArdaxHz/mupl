@@ -6,12 +6,7 @@ from src.exceptions import MuplUploadSessionError
 from src.http import RequestError
 from src.http.client import HTTPClient
 from src.image_validator import ImageProcessor
-from src.utils.config import (
-    VERBOSE,
-    mangadex_api_url,
-    UPLOAD_RETRY,
-    TRANSLATION,
-)
+
 
 logger = logging.getLogger("mupl")
 
@@ -22,31 +17,50 @@ class ChapterUploaderHandler:
         http_client: "HTTPClient",
         file_name_obj: "FileProcesser",
         failed_uploads: "list",
+        verbose: bool,
+        mangadex_api_url: str,
+        upload_retry: int,
+        translation: dict,
+        move_files: bool,
+        number_of_images_upload: int,
+        widestrip: bool,
+        combine: bool,
         **kwargs,
     ):
         self.http_client = http_client
         self.file_name_obj = file_name_obj
         self.to_upload = self.file_name_obj.to_upload
         self.failed_uploads = failed_uploads
-        self.combine = kwargs.get("combine", False)
+        self.move_files_after_upload = move_files
+        self.verbose = verbose
+        self.mangadex_api_url = mangadex_api_url
+        self.number_upload_retry = upload_retry
+        self.translation = translation
+        self.combine = combine
+        self.widestrip = widestrip
+        self.number_of_images_upload = number_of_images_upload
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
         self.folder_upload = False
-        # Check if the upload file path is a folder
+
         if self.to_upload.is_dir():
             self.folder_upload = True
             self.zip_extension = None
 
-        self.number_upload_retry = UPLOAD_RETRY
-        self.md_upload_api_url = f"{mangadex_api_url}/upload"
+        self.md_upload_api_url = f"{self.mangadex_api_url}/upload"
 
-        # Images to include with chapter commit
         self.images_to_upload_ids: "List[str]" = []
         self.upload_session_id: "Optional[str]" = None
         self.failed_image_upload = False
 
         self.image_uploader_process = ImageProcessor(
-            self.file_name_obj, self.folder_upload, **kwargs
+            self.to_upload,
+            self.folder_upload,
+            translation=self.translation,
+            number_of_images_upload=self.number_of_images_upload,
+            widestrip=self.widestrip,
+            combine=self.combine,
+            **kwargs,
         )
 
     def _images_upload(self, image_batch: "Dict[str, bytes]"):
@@ -60,7 +74,6 @@ class ChapterUploaderHandler:
             logger.error(e)
             return
 
-        # Some images returned errors
         uploaded_image_data = image_upload_response.data
         successful_upload_data = uploaded_image_data["data"]
         if uploaded_image_data["errors"] or uploaded_image_data["result"] == "error":
@@ -89,26 +102,27 @@ class ChapterUploaderHandler:
         batch_start = int(image_batch_list[0]) + 1
         batch_end = int(image_batch_list[-1]) + 1
         logger.debug(f"Uploading images {batch_start} to {batch_end}.")
-        if VERBOSE:
-            print(TRANSLATION["uploading_images"].format(batch_start, batch_end))
+
+        if self.verbose:
+            print(self.translation["uploading_images"].format(batch_start, batch_end))
 
         for retry in range(self.number_upload_retry):
             successful_upload_data = self._images_upload(image_batch)
 
             if successful_upload_data is None:
-                print(
-                    TRANSLATION["uploading_images_error"].format(
-                        batch_start,
-                        batch_end,
-                        retry + 1,
-                        self.number_upload_retry,
+                if self.verbose:
+                    print(
+                        self.translation["uploading_images_error"].format(
+                            batch_start,
+                            batch_end,
+                            retry + 1,
+                            self.number_upload_retry,
+                        )
                     )
-                )
                 if retry == self.number_upload_retry - 1:
                     return True
                 continue
 
-            # Add successful image uploads to the image ids array
             for uploaded_image in successful_upload_data:
                 if successful_upload_data.index(uploaded_image) == 0:
                     logger.debug(f"Success: Uploaded images {successful_upload_data}")
@@ -130,15 +144,14 @@ class ChapterUploaderHandler:
                 if converted_format is not None:
                     formatted_name_message += f" (converted to {converted_format})"
 
-                if VERBOSE:
+                if self.verbose:
                     print(
-                        TRANSLATION["successful_upload_message"].format(
+                        self.translation["successful_upload_message"].format(
                             formatted_name_message,
                             round(file_size * 0.00000095367432, 2),
                         )
                     )
 
-            # Length of images array returned from the api is the same as the array sent to the api
             if len(successful_upload_data) == len(image_batch):
                 logger.info(
                     f"Uploaded images {int(image_batch_list[0]) + 1} to {int(image_batch_list[-1]) + 1}."
@@ -146,7 +159,7 @@ class ChapterUploaderHandler:
                 self.tqdm.update(len(image_batch_list))
                 return False
             else:
-                # Update the images to upload dictionary with the images that failed
+
                 image_batch = {
                     k: v
                     for (k, v) in image_batch.items()
@@ -185,8 +198,9 @@ class ChapterUploaderHandler:
     def _delete_exising_upload_session(self):
         """Remove any exising upload sessions to not error out as mangadex only allows one upload session at a time."""
         try:
+
             existing_session = self.http_client.get(
-                f"{mangadex_api_url}/upload", successful_codes=[404]
+                f"{self.mangadex_api_url}/upload", successful_codes=[404]
             )
         except (RequestError,) as e:
             logger.error(e)
@@ -215,7 +229,7 @@ class ChapterUploaderHandler:
         except Exception as e:
             logger.error(e)
         else:
-            # Start the upload session
+
             try:
                 upload_session_response = self._begin_upload_session(payload)
             except (RequestError,) as e:
@@ -224,9 +238,8 @@ class ChapterUploaderHandler:
                 if upload_session_response.ok:
                     return upload_session_response.data
 
-        # Couldn't create an upload session, skip the chapter
         logger.error("Couldn't create an upload session for {}.".format(self.zip_name))
-        print(TRANSLATION["error_create_draft_session"].format(self.zip_name))
+        print(self.translation["error_create_draft_session"].format(self.zip_name))
         self.failed_uploads.append(self.to_upload)
         return
 
@@ -255,18 +268,20 @@ class ChapterUploaderHandler:
             if chapter_commit_response.ok:
                 successful_upload_id = chapter_commit_response.data["data"]["id"]
                 print(
-                    TRANSLATION["uploading_successfully"].format(
+                    self.translation["uploading_successfully"].format(
                         successful_upload_id, self.zip_name
                     )
                 )
                 logger.info(
                     f"Successful commit: {successful_upload_id}, {self.zip_name}."
                 )
-                self.move_files()
+
+                if self.move_files_after_upload:
+                    self.move_files()
                 return True
 
         logger.error(f"Failed to commit {self.zip_name}, removing upload draft.")
-        print(TRANSLATION["uploading_failed"].format(self.zip_name))
+        print(self.translation["uploading_failed"].format(self.zip_name))
         self.remove_upload_session()
         self.failed_uploads.append(self.to_upload)
         return False

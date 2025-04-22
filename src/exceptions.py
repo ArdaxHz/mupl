@@ -1,6 +1,3 @@
-"""Custom exceptions for the mupl project."""
-
-
 class MuplException(Exception):
     """Base class for all mupl exceptions."""
 
@@ -33,5 +30,11 @@ class MuplLocalizationNotFoundError(MuplException, FileNotFoundError):
 
 class MuplUploadSessionError(MuplException):
     """Raised when there's an error managing an upload session."""
+
+    pass
+
+
+class MuplValidationError(MuplException):
+    """Raised when a file fails validation."""
 
     pass
