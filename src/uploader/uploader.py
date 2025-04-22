@@ -31,6 +31,7 @@ class ChapterUploader(ChapterUploaderHandler):
         number_of_images_upload: int,
         widestrip: bool,
         combine: bool,
+        root_path: Path,
         **kwargs,
     ):
         super().__init__(
@@ -45,6 +46,7 @@ class ChapterUploader(ChapterUploaderHandler):
             number_of_images_upload,
             widestrip,
             combine,
+            root_path,
             **kwargs,
         )
         self.names_to_ids = names_to_ids
@@ -55,7 +57,10 @@ class ChapterUploader(ChapterUploaderHandler):
         if self.number_threads <= 1:
             self.threaded = False
 
-        self.uploaded_files_path = Path(self.uploaded_files)
+        if os.path.isabs(self.uploaded_files):
+            self.uploaded_files_path = Path(self.uploaded_files)
+        else:
+            self.uploaded_files_path = self.root_path.joinpath(self.uploaded_files)
         self.ratelimit_time = self.ratelimit_time
         self.myzip = self.image_uploader_process.myzip
 

@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import time
 from datetime import datetime
 from pathlib import Path
@@ -51,7 +52,11 @@ class HTTPModel:
         self.total_requests = 0
         self.total_not_login_row = 0
 
-        self._token_file = self.root_path.joinpath(self.mdauth_path)
+        if os.path.isabs(self.mdauth_path):
+            self._token_file = Path(self.mdauth_path)
+        else:
+            self._token_file = self.root_path.joinpath(self.mdauth_path)
+
         credential_config = type(
             "SectionProxy",
             (),

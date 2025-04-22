@@ -36,13 +36,12 @@ def read_localisation_file(path: "Path") -> "dict":
         return {}
 
 
-def load_localisation(lang: Optional["str"]) -> Dict:
+def load_localisation(root_path: Path, lang: Optional["str"] = None) -> Dict:
     """Load localization data for the specified language."""
     if not lang:
         lang = "en"
 
     lang = lang.lower()
-    root_path = Path(".")
     language_loc_dir = root_path.joinpath("src", "loc")
     language_json_path = language_loc_dir.joinpath(lang).with_suffix(".json")
     en_lang_json_path = language_loc_dir.joinpath("en").with_suffix(".json")

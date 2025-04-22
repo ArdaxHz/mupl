@@ -25,7 +25,7 @@ class ChapterUploaderHandler:
         number_of_images_upload: int,
         widestrip: bool,
         combine: bool,
-        cli: bool,
+        root_path: str,
         **kwargs,
     ):
         self.http_client = http_client
@@ -43,7 +43,7 @@ class ChapterUploaderHandler:
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
         self.folder_upload = False
-        self.cli = cli
+        self.root_path = root_path
 
         if self.to_upload.is_dir():
             self.folder_upload = True

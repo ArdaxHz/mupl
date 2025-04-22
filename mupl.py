@@ -77,7 +77,7 @@ def main():
     config_data = load_config(config_path, cli=True)
 
     language = config_data.get("options", {}).get("language", "en")
-    translation = load_localisation(language)
+    translation = load_localisation(root_path, language)
 
     if vargs.get("update", True):
         try:
@@ -115,7 +115,6 @@ def main():
             number_threads=number_threads,
             language=config_data["options"]["language"],
             name_id_map_file=config_data["paths"]["name_id_map_file"],
-            uploads_folder=config_data["paths"]["uploads_folder"],
             uploaded_files=uploaded_files,
             mangadex_api_url=config_data["paths"]["mangadex_api_url"],
             mangadex_auth_url=config_data["paths"]["mangadex_auth_url"],
@@ -130,7 +129,9 @@ def main():
 
         upload_dir = vargs.get("dir")
         upload_directory_path = (
-            Path(upload_dir) if upload_dir else Path(mupl.uploads_folder)
+            Path(upload_dir)
+            if upload_dir
+            else Path(config_data["paths"]["uploads_folder"])
         )
         upload_directory_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"Using specified upload directory: {upload_directory_path}")

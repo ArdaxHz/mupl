@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from io import BytesIO
 from pathlib import Path
@@ -121,7 +122,10 @@ def check_for_update(root_path=Path("."), translation=None, mdauth_path=".mdauth
                     with open(filename, "wb") as fopen:
                         fopen.write(file_data)
 
-                Path(mdauth_path).unlink(missing_ok=True)
+                if os.path.isabs(mdauth_path):
+                    Path(mdauth_path).unlink(missing_ok=True)
+                else:
+                    root_path.joinpath(mdauth_path).unlink(missing_ok=True)
 
                 print(translation.get("successfully_updated", "Successfully updated."))
                 logger.info(

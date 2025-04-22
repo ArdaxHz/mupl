@@ -46,7 +46,6 @@ class Mupl:
         number_threads: int = 3,
         language: str = "en",
         name_id_map_file: str = "name_id_map.json",
-        uploads_folder: Path = Path("to_upload"),
         uploaded_files: str = "uploaded",
         mangadex_api_url: str = "https://api.mangadex.org",
         mangadex_auth_url: str = "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
@@ -57,6 +56,10 @@ class Mupl:
         Initializes the Mupl class with explicit parameters.
 
         Args:
+            mangadex_username (str): MangaDex username.
+            mangadex_password (str): MangaDex password.
+            client_id (str): OAuth client ID.
+            client_secret (str): OAuth client secret.
             move_files (bool, optional): Whether to move files after upload. Defaults to True.
             verbose (bool, optional): Whether to print console messages. Defaults to True.
             number_of_images_upload (int): Number of images to upload at once.
@@ -65,19 +68,13 @@ class Mupl:
             max_log_days (int): Maximum number of days to keep logs.
             group_fallback_id (str, optional): Fallback group ID.
             number_threads (int): Number of threads for concurrent uploads.
-            language (str): Default language for uploads.
-            mangadex_username (str, optional): MangaDex username.
-            mangadex_password (str, optional): MangaDex password.
-            client_id (str, optional): OAuth client ID.
-            client_secret (str, optional): OAuth client secret.
+            language (str): Language for translation file.
             name_id_map_file (str): Path to name-ID mapping file.
-            uploads_folder (str): Path to folder containing files to upload.
             uploaded_files (str): Path to folder for uploaded files.
             mangadex_api_url (str): MangaDex API URL.
             mangadex_auth_url (str): MangaDex auth URL.
             mdauth_path (str): Path to auth token file.
-            translation (Dict): Translation dictionary.
-            root_path (Path): Root path of the application.
+            root_path (Path): Root path of the uploader.
         """
         self.mangadex_username = mangadex_username
         self.mangadex_password = mangadex_password
@@ -88,7 +85,6 @@ class Mupl:
         self.cli = cli
         self.verbose = show_console_message
         self.move_files = move_files
-        self.uploads_folder = uploads_folder
         self.ratelimit_time = ratelimit_time
         self.number_threads = number_threads
         self.number_of_images_upload = number_of_images_upload
@@ -114,7 +110,7 @@ class Mupl:
 
             clear_old_logs(log_folder_path, max_log_days)
 
-        self.translation = translation or load_localisation(language)
+        self.translation = translation or load_localisation(self.root_path, language)
 
         self.http_client = HTTPClient(
             mangadex_username=self.mangadex_username,
@@ -302,6 +298,7 @@ class Mupl:
                     widestrip=widestrip,
                     combine=combine,
                     cli=self.cli,
+                    root_path=self.root_path,
                     **kwargs,
                 )
 
