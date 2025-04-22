@@ -246,8 +246,8 @@ class ChapterUploader(ChapterUploaderHandler):
                 if self.failed_image_upload:
                     break
         else:
-            if self.verbose:
-                print(self.translation["non_threaded_upload_running"])
+            # if self.verbose:
+            #     print(self.translation["non_threaded_upload_running"])
             self.run_image_uploader(self.image_uploader_process.valid_images_to_upload)
 
         self.tqdm.close()

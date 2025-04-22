@@ -349,7 +349,7 @@ class Mupl:
                 else:
                     failed_uploads.append(file_name_obj.to_upload)
 
-            except ZeroDivisionError as e:
+            except Exception as e:
                 logger.exception(
                     f"An unexpected error occurred while processing {str(file_name_obj)}: {e}"
                 )

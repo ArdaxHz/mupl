@@ -13,7 +13,7 @@ from src.utils.logs import setup_logs, clear_old_logs, format_log_dir_path
 logger = logging.getLogger("mupl")
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="MangaDex Upload Tool")
 
     parser.add_argument(
@@ -99,7 +99,6 @@ if __name__ == "__main__":
         number_threads = config_data["options"]["number_threads"]
         uploaded_files = config_data["paths"]["uploaded_files"]
         ratelimit_time = config_data["options"]["ratelimit_time"]
-        verbose = verbose_level > 0
         widestrip = vargs.get("widestrip", False)
         combine = vargs.get("combine", False)
 
@@ -124,7 +123,7 @@ if __name__ == "__main__":
             translation=translation,
             root_path=root_path,
             cli=True,
-            move_files=False,
+            move_files=True,
             verbose_level=verbose_level,
             show_console_message=True,
         )
@@ -142,7 +141,11 @@ if __name__ == "__main__":
             combine=combine,
         )
         sys.exit(1 if failed_list else 0)
-    except ZeroDivisionError as e:
+    except (Exception, MuplException) as e:
         logger.exception(f"An unexpected error occurred: {e}")
         print(f"Error: An unexpected error occurred: {e}")
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
