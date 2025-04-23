@@ -63,7 +63,6 @@ mupl = Mupl(
     uploaded_files=uploaded_files, # absolute path of a folder, otherwise home/mupl/uploaded will be used
     mangadex_api_url=mangadex_api_url,
     mangadex_auth_url=mangadex_auth_url,
-    mdauth_path=mdauth_path,
     move_files=True, # move files from to_upload to uploaded after upload
     verbose_level=verbose_level, # 0 = INFO, 1 = DEBUG
 )
