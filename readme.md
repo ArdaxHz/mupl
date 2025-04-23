@@ -45,7 +45,7 @@ Read this in other languages:
 To use this uploader in other scripts, install the latest version through pypi `pip install muplr`
 
 ```python
-from muplr import Mupl
+from mupl import Mupl
 
 mupl = Mupl(
     mangadex_username=mangadex_username,
@@ -58,9 +58,8 @@ mupl = Mupl(
     max_log_days=max_log_days,
     group_fallback_id=group_fallback_id,
     number_threads=number_threads,
-    language=language,
+    language=language, # language of translation to use
     name_id_map_file=name_id_map_file,
-    uploads_folder=uploads_folder,
     uploaded_files=uploaded_files,
     mangadex_api_url=mangadex_api_url,
     mangadex_auth_url=mangadex_auth_url,
@@ -72,6 +71,8 @@ mupl = Mupl(
 
 failed_uploads_list = mupl.upload_directory(
   path_to_upload_folder,
+
+  # Keyword Arguments
   widestrip=False,
   combine=True
 )
@@ -80,6 +81,8 @@ failed_upload = mupl.upload_chapter(
   path_to_file,
   manga_id,
   group_ids,
+
+  # Keyword Arguments
   language="en",
   oneshot=False,
   chapter_number="10",

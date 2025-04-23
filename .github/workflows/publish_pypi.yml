@@ -20,7 +20,10 @@ jobs:
           pip install build twine 
       - name: Build package
         run: python -m build
+      - name: Verify package
+        run: twine check dist/*
       - name: Publish package to PyPI
+        if: startsWith(github.ref, 'refs/tags/')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__ 

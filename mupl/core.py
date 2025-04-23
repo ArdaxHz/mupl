@@ -342,16 +342,19 @@ class Mupl:
         self,
         upload_dir_path: Path,
         *,
-        widestrip: bool,
-        combine: bool,
+        widestrip: bool = False,
+        combine: bool = False,
         **kwargs,
     ) -> List[Path]:
         """
         Uploads all valid chapter files/folders found in the specified directory.
 
-        Args:
+        Positional Args:
             upload_dir_path: The Path object pointing to the directory containing chapters.
-            **kwargs: Additional arguments like 'threaded', 'combine', 'widestrip'.
+
+        Keyword Args:
+            widestrip: If the chapter is a widestrip. Defaults to False.
+            combine: If small images should be combined with other images (either before or after). Defaults to False.
 
         Returns:
             A list of Path objects for chapters that failed to upload.
@@ -402,17 +405,20 @@ class Mupl:
         """
         Uploads a single chapter using provided metadata.
 
-        Args:
+        Positional Args:
             file_path: Path to the chapter file (zip/cbz) or folder.
             manga_id: The UUID of the manga series on MangaDex.
             group_ids: A list of UUIDs for the scanlation group(s).
+
+        Keyword Args:
             language: The language code (e.g., 'en', 'es-la'). Defaults to 'en'.
             oneshot: If the chapter is a oneshot (no chapter/volume number). Defaults to False.
             chapter_number: The chapter number (e.g., '10', '10.5'). Ignored if oneshot is True.
             volume_number: The volume number. Optional.
             chapter_title: The title of the chapter. Optional.
             publish_date: A datetime object for scheduled publishing. Optional.
-            **kwargs: Additional arguments like 'threaded', 'combine', 'widestrip'.
+            widestrip: If the chapter is a widestrip. Defaults to False.
+            combine: If small images should be combined with other images (either before or after). Defaults to False.
 
         Returns:
             True if the upload was successful, False otherwise.
