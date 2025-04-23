@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import time
 import logging
 from pathlib import Path
@@ -12,7 +13,7 @@ from mupl.file_validator import FileProcesser
 from mupl.http.client import HTTPClient
 from mupl.uploader.uploader import ChapterUploader
 from mupl.exceptions import MuplException
-from mupl.utils.config import load_localisation
+from mupl.loc.load import download_localisation
 from mupl.utils.logs import (
     format_log_dir_path,
     setup_logs,
@@ -32,7 +33,6 @@ class Mupl:
         client_id: str = None,
         client_secret: str = None,
         cli: bool = False,
-        root_path: Path = Path("."),
         translation: Dict = None,
         move_files: bool = True,
         verbose_level: int = 0,
@@ -48,7 +48,8 @@ class Mupl:
         mangadex_api_url: str = "https://api.mangadex.org",
         mangadex_auth_url: str = "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
         mdauth_path: str = ".mdauth",
-        show_console_message: bool = True,
+        verbose: bool = False,
+        **kwargs,
     ):
         """
         Initializes the Mupl class with explicit parameters.
@@ -59,7 +60,7 @@ class Mupl:
             client_id (str): OAuth client ID.
             client_secret (str): OAuth client secret.
             move_files (bool, optional): Whether to move files after upload. Defaults to True.
-            verbose (bool, optional): Whether to print console messages. Defaults to True.
+            verbose (bool, optional): Whether to print console messages. Defaults to False.
             number_of_images_upload (int): Number of images to upload at once.
             upload_retry (int): Number of retries for failed uploads.
             ratelimit_time (int): Time to wait between API calls.
@@ -72,16 +73,16 @@ class Mupl:
             mangadex_api_url (str): MangaDex API URL.
             mangadex_auth_url (str): MangaDex auth URL.
             mdauth_path (str): Path to auth token file.
-            root_path (Path): Root path of the uploader.
         """
         self.mangadex_username = mangadex_username
         self.mangadex_password = mangadex_password
         self.client_id = client_id
         self.client_secret = client_secret
 
-        self.root_path = root_path
+        self.home_path = Path.home().joinpath("mupl")
+        self.mupl_path = Path(__file__).parent
         self.cli = cli
-        self.verbose = show_console_message
+        self.verbose = verbose
         self.move_files = move_files
         self.ratelimit_time = ratelimit_time
         self.number_threads = number_threads
@@ -90,14 +91,21 @@ class Mupl:
         self.group_fallback_id = group_fallback_id
         self.language = language
         self.name_id_map_file = name_id_map_file
-        self.uploaded_files = uploaded_files
+        self.uploaded_files = (
+            uploaded_files if isinstance(uploaded_files, Path) else Path(uploaded_files)
+        )
         self.mangadex_api_url = mangadex_api_url
         self.mangadex_auth_url = mangadex_auth_url
         self.mdauth_path = mdauth_path
         self.upload_retry = upload_retry
 
+        if self.cli:
+            self.mupl_path = Path.cwd()
+            self.home_path = self.mupl_path
+
         if not self.cli:
-            log_folder_path = format_log_dir_path(self.root_path)
+            self.home_path.mkdir(parents=True, exist_ok=True)
+            log_folder_path = format_log_dir_path(self.home_path)
 
             setup_logs(
                 logger_name="mupl",
@@ -108,8 +116,21 @@ class Mupl:
 
             clear_old_logs(log_folder_path, max_log_days)
 
-        self.translation = translation or load_localisation(self.root_path, language)
+        if os.path.isabs(self.name_id_map_file):
+            self.name_id_map_path = (
+                self.name_id_map_file
+                if isinstance(self.name_id_map_file, Path)
+                else Path(self.name_id_map_file)
+            )
+        else:
+            self.name_id_map_path = self.home_path.joinpath(self.name_id_map_file)
 
+        logger.info(f"Log path: {self.logs_path}")
+        logger.info(f"Mupl path: {self.root_path}")
+        logger.info(f"User path: {self.user_path}")
+        logger.info(f"Uploaded files folder path: {self.uploaded_files_path}")
+
+        self.translation = translation or download_localisation(language)
         self.http_client = HTTPClient(
             mangadex_username=self.mangadex_username,
             mangadex_password=self.mangadex_password,
@@ -119,7 +140,7 @@ class Mupl:
             mangadex_auth_url=self.mangadex_auth_url,
             mdauth_path=self.mdauth_path,
             ratelimit_time=self.ratelimit_time,
-            root_path=self.root_path,
+            mupl_path=self.mupl_path,
             translation=self.translation,
             upload_retry=self.upload_retry,
             cli=self.cli,
@@ -127,6 +148,26 @@ class Mupl:
 
         # if not self.http_client.login():
         #     raise MuplException("Initial login failed.")
+
+    @property
+    def logs_path(self) -> Path:
+        """Get the path to the logs directory."""
+        return format_log_dir_path(self.mupl_path).absolute()
+
+    @property
+    def root_path(self) -> Path:
+        """Get the path to the uploaded files directory."""
+        return self.mupl_path.absolute()
+
+    @property
+    def uploaded_files_path(self) -> Path:
+        """Get the path to the uploaded files directory."""
+        return self.uploaded_files.absolute()
+
+    @property
+    def user_path(self) -> Path:
+        """Get the path to the uploaded files directory."""
+        return self.home_path.absolute()
 
     def _get_zips_to_upload(
         self,
@@ -212,13 +253,11 @@ class Mupl:
         )
         return (zips_to_upload, zips_invalid_file_name + zips_no_manga_id)
 
-    def _open_manga_series_map(self, files_path: "Path") -> "dict":
+    def _open_manga_series_map(self) -> "dict":
         """Get the manga-name-to-id map."""
-
-        map_file = files_path.joinpath(self.name_id_map_file)
         try:
             with open(
-                map_file,
+                self.name_id_map_path,
                 "r",
                 encoding="utf-8",
             ) as json_file:
@@ -230,7 +269,7 @@ class Mupl:
                 return names_to_ids
         except (FileNotFoundError, json.JSONDecodeError):
             logger.warning(
-                f"Manga/Group Name-ID map file not found at {map_file}. Only UUIDs in filenames will work."
+                f"Manga/Group Name-ID map file not found at {self.name_id_map_path}. "
             )
 
             print(
@@ -275,7 +314,7 @@ class Mupl:
                     widestrip=widestrip,
                     combine=combine,
                     cli=self.cli,
-                    root_path=self.root_path,
+                    home_path=self.home_path,
                     **kwargs,
                 )
 
@@ -359,10 +398,14 @@ class Mupl:
         Returns:
             A list of Path objects for chapters that failed to upload.
         """
+        upload_dir_path = (
+            upload_dir_path
+            if isinstance(upload_dir_path, Path)
+            else Path(upload_dir_path)
+        )
         logger.info(f"Starting batch upload from directory: {upload_dir_path}")
 
-        names_to_ids = self._open_manga_series_map(self.root_path)
-
+        names_to_ids = self._open_manga_series_map()
         zips_to_upload, invalid_zips = self._get_zips_to_upload(
             upload_dir_path,
             names_to_ids,
@@ -423,8 +466,9 @@ class Mupl:
         Returns:
             True if the upload was successful, False otherwise.
         """
-        logger.info(f"Starting single chapter upload for: {file_path.name}")
+        file_path = file_path if isinstance(file_path, Path) else Path(file_path)
 
+        logger.info(f"Starting single chapter upload for: {file_path.name}")
         if not file_path.exists():
             logger.error(f"File or folder not found: {file_path}")
             print(

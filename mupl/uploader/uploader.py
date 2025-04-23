@@ -31,7 +31,7 @@ class ChapterUploader(ChapterUploaderHandler):
         number_of_images_upload: int,
         widestrip: bool,
         combine: bool,
-        root_path: Path,
+        home_path: Path,
         **kwargs,
     ):
         super().__init__(
@@ -46,7 +46,7 @@ class ChapterUploader(ChapterUploaderHandler):
             number_of_images_upload,
             widestrip,
             combine,
-            root_path,
+            home_path,
             **kwargs,
         )
         self.names_to_ids = names_to_ids
@@ -58,9 +58,13 @@ class ChapterUploader(ChapterUploaderHandler):
             self.threaded = False
 
         if os.path.isabs(self.uploaded_files):
-            self.uploaded_files_path = Path(self.uploaded_files)
+            self.uploaded_files_path = (
+                self.uploaded_files
+                if isinstance(self.uploaded_files, Path)
+                else Path(self.uploaded_files)
+            )
         else:
-            self.uploaded_files_path = self.root_path.joinpath(self.uploaded_files)
+            self.uploaded_files_path = self.home_path.joinpath(self.uploaded_files)
         self.ratelimit_time = self.ratelimit_time
         self.myzip = self.image_uploader_process.myzip
 
@@ -108,7 +112,7 @@ class ChapterUploader(ChapterUploaderHandler):
         new_uploaded_zip_path = self.to_upload.rename(
             os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}")
         )
-        logger.debug(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
+        logger.debug(f"Moved '{self.to_upload}' to '{new_uploaded_zip_path}'")
 
     async def process_images_upload(self, images_array):
         """Start uploading the images, threaded."""

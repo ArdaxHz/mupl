@@ -59,12 +59,11 @@ mupl = Mupl(
     group_fallback_id=group_fallback_id,
     number_threads=number_threads,
     language=language, # language of translation to use
-    name_id_map_file=name_id_map_file,
-    uploaded_files=uploaded_files,
+    name_id_map_file=name_id_map_file, # absolute path of the file, otherwise home/mupl/ will be used
+    uploaded_files=uploaded_files, # absolute path of a folder, otherwise home/mupl/uploaded will be used
     mangadex_api_url=mangadex_api_url,
     mangadex_auth_url=mangadex_auth_url,
     mdauth_path=mdauth_path,
-    root_path=root_path, # the root path where you want mupl files to be stored
     move_files=True, # move files from to_upload to uploaded after upload
     verbose_level=verbose_level, # 0 = INFO, 1 = DEBUG
 )

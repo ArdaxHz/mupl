@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 77.0.3"]
+requires = ["setuptools >= 77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -33,13 +33,17 @@ dependencies = [
     "Pillow",
     "tqdm",
 ]
+
 [project.urls]
 "Homepage" = "https://github.com/ArdaxHz/mupl"
 "Repository" = "https://github.com/ArdaxHz/mupl"
 "Bug Tracker" = "https://github.com/ArdaxHz/mupl/issues"
 
 [tool.setuptools]
-package-dir = {"" = "mupl"}
+package-dir = {"mupl" = "mupl"}
 
-[tool.setuptools.packages.find]
-where = ["mupl"]
+[tool.setuptools.exclude-package-data]
+"*" = ["doc/*"]
+
+[tool.setuptools_scm]
+version_file = "mupl/__version__.py"

@@ -3,9 +3,9 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 
-def format_log_dir_path(root_path=Path(".")):
+def format_log_dir_path(mupl_path=Path(".")):
     """Create and return the path to the logs directory."""
-    log_folder_path = root_path.joinpath("logs")
+    log_folder_path = mupl_path.joinpath("logs")
     log_folder_path.mkdir(parents=True, exist_ok=True)
     return log_folder_path
 

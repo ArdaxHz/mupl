@@ -35,7 +35,7 @@ def remove_other_langs(current_downloaded_langs, zip_files):
     return zip_files
 
 
-def check_for_update(root_path=Path("."), translation=None, mdauth_path=".mdauth"):
+def check_for_update(mupl_path=Path("."), translation=None, mdauth_path=".mdauth"):
     """Check For any program updates."""
     logger.debug("Looking for program update.")
 
@@ -91,7 +91,7 @@ def check_for_update(root_path=Path("."), translation=None, mdauth_path=".mdauth
                 return False
 
             current_downloaded_langs = [
-                lang.name for lang in root_path.rglob("loc/*.json")
+                lang.name for lang in mupl_path.rglob("loc/*.json")
             ]
             if "en.json" not in current_downloaded_langs:
                 current_downloaded_langs.append("en.json")
@@ -106,7 +106,7 @@ def check_for_update(root_path=Path("."), translation=None, mdauth_path=".mdauth
                 zip_files = remove_other_langs(current_downloaded_langs, zip_files)
 
                 for fileinfo in zip_files:
-                    filename = root_path.joinpath(
+                    filename = mupl_path.joinpath(
                         fileinfo.filename.replace(zip_root, "")
                     )
                     if filename.name in skip_update_files:
@@ -122,7 +122,7 @@ def check_for_update(root_path=Path("."), translation=None, mdauth_path=".mdauth
                 if os.path.isabs(mdauth_path):
                     Path(mdauth_path).unlink(missing_ok=True)
                 else:
-                    root_path.joinpath(mdauth_path).unlink(missing_ok=True)
+                    mupl_path.joinpath(mdauth_path).unlink(missing_ok=True)
 
                 print(translation.get("successfully_updated", "Successfully updated."))
                 logger.info(

@@ -1,11 +1,9 @@
 import json
 import logging
 import sys
-from copy import copy
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional
 
-from mupl.exceptions import MuplLocalizationNotFoundError
 
 logger = logging.getLogger("mupl")
 
@@ -21,53 +19,6 @@ def open_defaults_file(defaults_path: "Path") -> "dict":
             return json.load(json_file)
     except (FileNotFoundError, json.JSONDecodeError):
         return {}
-
-
-def read_localisation_file(path: "Path") -> "dict":
-    """Read a localization file and return its contents as a dictionary."""
-    try:
-        with open(
-            path,
-            "r",
-            encoding="utf-8",
-        ) as json_file:
-            return json.load(json_file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        return {}
-
-
-def load_localisation(root_path: Path, lang: Optional["str"] = None) -> Dict:
-    """Load localization data for the specified language."""
-    if not lang:
-        lang = "en"
-
-    lang = lang.lower()
-    language_loc_dir = root_path.joinpath("mupl", "loc")
-    language_json_path = language_loc_dir.joinpath(lang).with_suffix(".json")
-    en_lang_json_path = language_loc_dir.joinpath("en").with_suffix(".json")
-
-    en_localisation = read_localisation_file(en_lang_json_path)
-    if not en_localisation:
-        logger.exception(
-            f"No localisation file found for {lang}, not running uploader."
-        )
-        raise MuplLocalizationNotFoundError(f"No localisation file found for {lang}.")
-
-    if lang == "en":
-        return en_localisation
-
-    lang_localisation = read_localisation_file(language_json_path)
-    if not lang_localisation:
-        logger.error(f"No localisation file found for {lang}, using English.")
-
-    localisation_merged = copy(lang_localisation)
-
-    for option in en_localisation:
-        if option not in lang_localisation or not lang_localisation.get(option):
-            logger.debug(f"Using default value for localisation {option}")
-            localisation_merged[option] = en_localisation[option]
-
-    return localisation_merged
 
 
 def load_config(config_path, cli=False):

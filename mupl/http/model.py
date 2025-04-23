@@ -31,7 +31,7 @@ class HTTPModel:
         ratelimit_time: int,
         mangadex_api_url: str,
         mdauth_path: str,
-        root_path: Path,
+        mupl_path: Path,
         translation: Dict,
         cli: bool,
         **kwargs,
@@ -43,7 +43,7 @@ class HTTPModel:
         self.ratelimit_time = ratelimit_time
         self.mangadex_api_url = mangadex_api_url
         self.mdauth_path = mdauth_path
-        self.root_path = root_path
+        self.mupl_path = mupl_path
         self.translation = translation
         self.cli = cli
 
@@ -55,7 +55,7 @@ class HTTPModel:
         if os.path.isabs(self.mdauth_path):
             self._token_file = Path(self.mdauth_path)
         else:
-            self._token_file = self.root_path.joinpath(self.mdauth_path)
+            self._token_file = self.mupl_path.joinpath(self.mdauth_path)
 
         credential_config = type(
             "SectionProxy",

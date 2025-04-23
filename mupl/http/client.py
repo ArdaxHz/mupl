@@ -21,7 +21,7 @@ class HTTPClient(HTTPModel):
         ratelimit_time: int = 2,
         upload_retry: int = 3,
         translation: Optional[Dict] = None,
-        root_path: Path = Path("."),
+        mupl_path: Path = Path("."),
         cli: bool = False,
         **kwargs,
     ):
@@ -36,7 +36,7 @@ class HTTPClient(HTTPModel):
             ratelimit_time=ratelimit_time,
             mangadex_api_url=mangadex_api_url,
             mdauth_path=mdauth_path,
-            root_path=root_path,
+            mupl_path=mupl_path,
             translation=translation,
             cli=cli,
             **kwargs,

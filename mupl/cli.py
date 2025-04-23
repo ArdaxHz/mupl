@@ -4,9 +4,10 @@ import argparse
 from pathlib import Path
 
 from mupl import Mupl
+from mupl.loc.load import load_localisation
 from mupl.updater import check_for_update
 from mupl.exceptions import MuplException
-from mupl.utils.config import load_localisation, load_config
+from mupl.utils.config import load_config
 from mupl.utils.logs import setup_logs, clear_old_logs, format_log_dir_path
 
 logger = logging.getLogger("mupl")
@@ -62,8 +63,8 @@ def main():
 
     vargs = vars(parser.parse_args())
 
-    root_path = Path(".")
-    log_folder_path = format_log_dir_path(root_path)
+    mupl_path = Path(".")
+    log_folder_path = format_log_dir_path(mupl_path)
     verbose_level = vargs.get("verbose", 0)
     setup_logs(
         logger_name="mupl",
@@ -76,13 +77,13 @@ def main():
     config_data = load_config(config_path, cli=True)
 
     language = config_data.get("options", {}).get("language", "en")
-    translation = load_localisation(root_path, language)
+    translation = load_localisation(language)
 
     if vargs.get("update", True):
         try:
             mdauth_path = config_data.get("paths", {}).get("mdauth_path", ".mdauth")
             updated = check_for_update(
-                root_path=root_path,
+                mupl_path=mupl_path,
                 translation=translation,
                 mdauth_path=mdauth_path,
             )
@@ -92,7 +93,7 @@ def main():
 
     try:
         max_log_days = config_data.get("options", {}).get("max_log_days", 30)
-        log_folder_path = format_log_dir_path(root_path)
+        log_folder_path = format_log_dir_path(mupl_path)
         clear_old_logs(log_folder_path, max_log_days)
 
         number_threads = config_data["options"]["number_threads"]
@@ -119,11 +120,11 @@ def main():
             mangadex_auth_url=config_data["paths"]["mangadex_auth_url"],
             mdauth_path=config_data["paths"]["mdauth_path"],
             translation=translation,
-            root_path=root_path,
+            mupl_path=mupl_path,
             cli=True,
             move_files=True,
             verbose_level=verbose_level,
-            show_console_message=False,
+            verbose=False,
         )
 
         upload_dir = vargs.get("dir")
