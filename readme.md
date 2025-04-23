@@ -94,7 +94,7 @@ failed_upload = mupl.upload_chapter(
 
 
 ### Downloading
-Download the [latest version](https://github.com/ArdaxHz/src/releases/latest) from the releases page.
+Download the [latest version](https://github.com/ArdaxHz/mupl/releases/latest) from the releases page.
 
 Extract the archive to a folder, and open a new terminal window. On the terminal, navigate to the folder created using `cd "<path_to_folder>"`.
 
