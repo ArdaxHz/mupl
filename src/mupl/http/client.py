@@ -2,8 +2,8 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict
 
-from src.http.model import HTTPModel
-from src.http.response import HTTPResponse
+from src.mupl.http.model import HTTPModel
+from src.mupl.http.response import HTTPResponse
 
 logger = logging.getLogger("mupl")
 

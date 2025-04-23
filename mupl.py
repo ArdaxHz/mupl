@@ -4,11 +4,11 @@ import logging
 import argparse
 from pathlib import Path
 
-from src.core import Mupl
-from src.updater import check_for_update
-from src.exceptions import MuplException
-from src.utils.config import load_localisation, load_config
-from src.utils.logs import setup_logs, clear_old_logs, format_log_dir_path
+from src.mupl import Mupl
+from src.mupl.updater import check_for_update
+from src.mupl.exceptions import MuplException
+from src.mupl.utils.config import load_localisation, load_config
+from src.mupl.utils.logs import setup_logs, clear_old_logs, format_log_dir_path
 
 logger = logging.getLogger("mupl")
 

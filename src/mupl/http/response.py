@@ -5,7 +5,7 @@ from typing import Optional
 
 import requests
 
-from src.http import http_error_codes
+from src.mupl.http import http_error_codes
 
 
 logger = logging.getLogger("mupl")

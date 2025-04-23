@@ -9,11 +9,11 @@ from configparser import ConfigParser
 
 import requests
 
-from src import __version__
-from src.exceptions import MuplLoginError
-from src.http import RequestError, http_error_codes
-from src.http.response import HTTPResponse
-from src.http.oauth import OAuth2
+from src.mupl import __version__
+from src.mupl.exceptions import MuplLoginError
+from src.mupl.http import RequestError, http_error_codes
+from src.mupl.http.response import HTTPResponse
+from src.mupl.http.oauth import OAuth2
 
 
 logger = logging.getLogger("mupl")

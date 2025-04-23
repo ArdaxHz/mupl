@@ -1,11 +1,11 @@
 import logging
 from typing import List, Optional, Dict
 
-from src.file_validator import FileProcesser
-from src.exceptions import MuplUploadSessionError
-from src.http import RequestError
-from src.http.client import HTTPClient
-from src.image_validator import ImageProcessor
+from src.mupl.file_validator import FileProcesser
+from src.mupl.exceptions import MuplUploadSessionError
+from src.mupl.http import RequestError
+from src.mupl.http.client import HTTPClient
+from src.mupl.image_validator import ImageProcessor
 
 
 logger = logging.getLogger("mupl")

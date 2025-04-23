@@ -9,7 +9,7 @@ from zipfile import ZipFile
 import requests
 from packaging import version
 
-from src import __version__
+from src.mupl import __version__
 
 logger = logging.getLogger("mupl")
 

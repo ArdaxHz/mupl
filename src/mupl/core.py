@@ -1,21 +1,18 @@
-import sys
 import json
 import time
-import asyncio
 import logging
-import argparse
 from pathlib import Path
 from typing import Optional, List, Dict
 from datetime import datetime
 
 import natsort
 
-from src.file_validator import FileProcesser
-from src.http.client import HTTPClient
-from src.uploader.uploader import ChapterUploader
-from src.exceptions import MuplException
-from src.utils.config import load_localisation
-from src.utils.logs import (
+from src.mupl.file_validator import FileProcesser
+from src.mupl.http.client import HTTPClient
+from src.mupl.uploader.uploader import ChapterUploader
+from src.mupl.exceptions import MuplException
+from src.mupl.utils.config import load_localisation
+from src.mupl.utils.logs import (
     format_log_dir_path,
     setup_logs,
     clear_old_logs,
