@@ -93,7 +93,9 @@ class FileProcesser:
             manga_series = manga_series.strip()
             if not self._uuid_regex.match(manga_series):
                 try:
-                    manga_series = self._names_to_ids["manga"].get(manga_series, None)
+                    manga_series = self._names_to_ids.get("manga", {}).get(
+                        manga_series, None
+                    )
                 except KeyError:
                     manga_series = None
 
@@ -233,7 +235,7 @@ class FileProcesser:
             for group in groups_array:
                 if not self._uuid_regex.match(group):
                     try:
-                        group_id = self._names_to_ids["group"].get(group, None)
+                        group_id = self._names_to_ids.get("group", {}).get(group, None)
                     except KeyError:
                         logger.warning(
                             f"No group id found for {group}, not tagging the upload with this group."

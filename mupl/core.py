@@ -4,8 +4,10 @@ import os
 import time
 import logging
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict, Tuple, Union
 from datetime import datetime
+import re
+import uuid
 
 import natsort
 
@@ -74,30 +76,80 @@ class Mupl:
             mangadex_auth_url (str): MangaDex auth URL.
             mdauth_path (str): Path to auth token file.
         """
-        self.mangadex_username = mangadex_username
-        self.mangadex_password = mangadex_password
-        self.client_id = client_id
-        self.client_secret = client_secret
+        self.cli = bool(cli)
+        self.verbose = bool(verbose)
+        self.move_files = bool(move_files)
+
+        self.number_of_images_upload = max(
+            1,
+            int(number_of_images_upload) if number_of_images_upload is not None else 10,
+        )
+        self.upload_retry = max(1, int(upload_retry) if upload_retry is not None else 3)
+        self.ratelimit_time = max(
+            1, int(ratelimit_time) if ratelimit_time is not None else 2
+        )
+        self.max_log_days = max(
+            1, int(max_log_days) if max_log_days is not None else 30
+        )
+        self.number_threads = max(
+            1, int(number_threads) if number_threads is not None else 3
+        )
+        verbose_level = max(0, int(verbose_level) if verbose_level is not None else 0)
+
+        self.mangadex_username = (
+            str(mangadex_username) if mangadex_username is not None else None
+        )
+        self.mangadex_password = (
+            str(mangadex_password) if mangadex_password is not None else None
+        )
+        self.client_id = str(client_id) if client_id is not None else None
+        self.client_secret = str(client_secret) if client_secret is not None else None
+
+        if group_fallback_id is not None:
+            try:
+                uuid_obj = uuid.UUID(group_fallback_id)
+                self.group_fallback_id = str(uuid_obj)
+            except ValueError:
+                logger.warning(
+                    f"Invalid UUID format for group_fallback_id: {group_fallback_id}. Setting to None."
+                )
+                self.group_fallback_id = None
+        else:
+            self.group_fallback_id = None
+
+        self.language = str(language).lower() if language is not None else "en"
+        self.name_id_map_file = (
+            str(name_id_map_file)
+            if name_id_map_file is not None
+            else "name_id_map.json"
+        )
+        self.mdauth_path = str(mdauth_path) if mdauth_path is not None else ".mdauth"
+
+        self.mangadex_api_url = (
+            str(mangadex_api_url)
+            if mangadex_api_url is not None
+            else "https://api.mangadex.org"
+        )
+        if not self.mangadex_api_url.startswith(("http://", "https://")):
+            self.mangadex_api_url = "https://" + self.mangadex_api_url
+
+        self.mangadex_auth_url = (
+            str(mangadex_auth_url)
+            if mangadex_auth_url is not None
+            else "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect"
+        )
+        if not self.mangadex_auth_url.startswith(("http://", "https://")):
+            self.mangadex_auth_url = "https://" + self.mangadex_auth_url
 
         self.home_path = Path.home().joinpath("mupl")
         self.mupl_path = Path(__file__).parent
-        self.cli = cli
-        self.verbose = verbose
-        self.move_files = move_files
-        self.ratelimit_time = ratelimit_time
-        self.number_threads = number_threads
-        self.number_of_images_upload = number_of_images_upload
-        self.max_log_days = max_log_days
-        self.group_fallback_id = group_fallback_id
-        self.language = language
-        self.name_id_map_file = name_id_map_file
-        self.uploaded_files = (
-            uploaded_files if isinstance(uploaded_files, Path) else Path(uploaded_files)
-        )
-        self.mangadex_api_url = mangadex_api_url
-        self.mangadex_auth_url = mangadex_auth_url
-        self.mdauth_path = mdauth_path
-        self.upload_retry = upload_retry
+
+        if isinstance(uploaded_files, Path):
+            self.uploaded_files = uploaded_files
+        elif uploaded_files is not None:
+            self.uploaded_files = Path(str(uploaded_files))
+        else:
+            self.uploaded_files = Path("uploaded")
 
         if self.cli:
             self.mupl_path = Path.cwd()
@@ -130,7 +182,7 @@ class Mupl:
         logger.info(f"User path: {self.user_path}")
         logger.info(f"Uploaded files folder path: {self.uploaded_files_path}")
 
-        self.translation = translation or download_localisation(language)
+        self.translation = translation or download_localisation(self.language)
         self.http_client = HTTPClient(
             mangadex_username=self.mangadex_username,
             mangadex_password=self.mangadex_password,
@@ -172,13 +224,22 @@ class Mupl:
     def _get_zips_to_upload(
         self,
         upload_dir_path: Path,
-        names_to_ids: "dict",
+        names_to_ids: Dict,
         widestrip: bool,
         combine: bool,
         **kwargs,
-    ) -> "Tuple[Optional[List[FileProcesser]], List[Path]]":
+    ) -> Tuple[Optional[List[FileProcesser]], List[Path]]:
         """Get a list of files that end with a zip/cbz extension or are folders for uploading."""
-        zips_to_upload: "List[FileProcesser]" = []
+        if not isinstance(upload_dir_path, Path):
+            upload_dir_path = Path(str(upload_dir_path))
+
+        if not isinstance(names_to_ids, dict):
+            names_to_ids = {}
+
+        widestrip = bool(widestrip)
+        combine = bool(combine)
+
+        zips_to_upload: List[FileProcesser] = []
         zips_invalid_file_name = []
         zips_no_manga_id = []
 
@@ -189,7 +250,7 @@ class Mupl:
                     "invalid_folder_to_upload", "Invalid upload folder"
                 )
             )
-            return None
+            return None, []
 
         for archive in upload_dir_path.iterdir():
             if archive.name.startswith("."):
@@ -246,14 +307,14 @@ class Mupl:
             logger.error(
                 f"Exited due to no valid files being found in {upload_dir_path}."
             )
-            return (None, zips_invalid_file_name + zips_no_manga_id)
+            return None, zips_invalid_file_name + zips_no_manga_id
 
         logger.debug(
             f"Found valid files/folders to upload: {[str(z) for z in zips_to_upload]}"
         )
-        return (zips_to_upload, zips_invalid_file_name + zips_no_manga_id)
+        return zips_to_upload, zips_invalid_file_name + zips_no_manga_id
 
-    def _open_manga_series_map(self) -> "dict":
+    def _open_manga_series_map(self) -> Dict:
         """Get the manga-name-to-id map."""
         try:
             with open(
@@ -262,6 +323,11 @@ class Mupl:
                 encoding="utf-8",
             ) as json_file:
                 names_to_ids = json.load(json_file)
+                if not isinstance(names_to_ids, dict):
+                    logger.warning(
+                        "Name-ID map is not a valid dictionary. Creating a new one."
+                    )
+                    names_to_ids = {"manga": {}, "group": {}}
                 if "manga" not in names_to_ids:
                     names_to_ids["manga"] = {}
                 if "group" not in names_to_ids:
@@ -289,8 +355,28 @@ class Mupl:
         **kwargs,
     ) -> List[Path]:
         """Internal loop for processing and uploading a list of FileProcesser objects."""
-        failed_uploads: "List[Path]" = []
+        if not isinstance(zips_to_upload, list):
+            logger.error("zips_to_upload must be a list")
+            return []
+
+        if not zips_to_upload:
+            logger.warning("No files to upload")
+            return []
+
+        if not isinstance(names_to_ids, dict):
+            names_to_ids = {}
+
+        widestrip = bool(widestrip)
+        combine = bool(combine)
+
+        failed_uploads: List[Path] = []
         for index, file_name_obj in enumerate(zips_to_upload, start=1):
+            if not isinstance(file_name_obj, FileProcesser):
+                logger.warning(
+                    f"Skipping invalid file processor object: {file_name_obj}"
+                )
+                continue
+
             uploader_process = None
             try:
                 print(
@@ -379,7 +465,7 @@ class Mupl:
 
     def upload_directory(
         self,
-        upload_dir_path: Path,
+        upload_dir_path: Union[Path, str],
         *,
         widestrip: bool = False,
         combine: bool = False,
@@ -398,11 +484,19 @@ class Mupl:
         Returns:
             A list of Path objects for chapters that failed to upload.
         """
+        if not upload_dir_path:
+            logger.error("upload_dir_path cannot be empty")
+            return []
+
         upload_dir_path = (
             upload_dir_path
             if isinstance(upload_dir_path, Path)
-            else Path(upload_dir_path)
+            else Path(str(upload_dir_path))
         )
+
+        widestrip = bool(widestrip)
+        combine = bool(combine)
+
         logger.info(f"Starting batch upload from directory: {upload_dir_path}")
 
         names_to_ids = self._open_manga_series_map()
@@ -431,7 +525,7 @@ class Mupl:
 
     def upload_chapter(
         self,
-        file_path: Path,
+        file_path: Union[Path, str],
         manga_id: str,
         group_ids: List[str],
         *,
@@ -466,7 +560,75 @@ class Mupl:
         Returns:
             True if the upload was successful, False otherwise.
         """
-        file_path = file_path if isinstance(file_path, Path) else Path(file_path)
+        if not file_path:
+            logger.error("file_path cannot be empty")
+            return False
+
+        file_path = file_path if isinstance(file_path, Path) else Path(str(file_path))
+
+        if not manga_id:
+            logger.error("manga_id cannot be empty")
+            return False
+
+        try:
+            uuid_obj = uuid.UUID(manga_id)
+            manga_id = str(uuid_obj)
+        except ValueError:
+            logger.error(f"Invalid UUID format for manga_id: {manga_id}")
+            print(f"Invalid manga ID format: {manga_id}. Must be a valid UUID.")
+            return False
+
+        if not group_ids is None:
+            group_ids = []
+        elif not isinstance(group_ids, list):
+            if isinstance(group_ids, str):
+                group_ids = [group_ids]
+            else:
+                logger.error(
+                    f"Invalid group_ids format: {group_ids}. Must be a list of UUIDs."
+                )
+                group_ids = []
+
+        validated_group_ids = []
+        for group_id in group_ids:
+            try:
+                uuid_obj = uuid.UUID(group_id)
+                validated_group_ids.append(str(uuid_obj))
+            except (ValueError, TypeError):
+                logger.warning(f"Skipping invalid group ID: {group_id}")
+
+        group_ids = validated_group_ids
+        language = str(language).lower() if language else "en"
+        oneshot = bool(oneshot)
+        widestrip = bool(widestrip)
+        combine = bool(combine)
+
+        if chapter_number is not None and not oneshot:
+            try:
+                float(chapter_number)
+                chapter_number = str(chapter_number)
+            except (ValueError, TypeError):
+                logger.warning(
+                    f"Invalid chapter number: {chapter_number}. Setting to None."
+                )
+                chapter_number = None
+
+        if volume_number is not None:
+            try:
+                float(volume_number)
+                volume_number = str(volume_number)
+            except (ValueError, TypeError):
+                logger.warning(
+                    f"Invalid volume number: {volume_number}. Setting to None."
+                )
+                volume_number = None
+
+        if chapter_title is not None:
+            chapter_title = str(chapter_title)
+
+        if publish_date is not None and not isinstance(publish_date, datetime):
+            logger.warning(f"Invalid publish_date: {publish_date}. Setting to None.")
+            publish_date = None
 
         logger.info(f"Starting single chapter upload for: {file_path.name}")
         if not file_path.exists():
@@ -489,11 +651,11 @@ class Mupl:
             **kwargs,
         )
         file_name_obj.manga_series = manga_id
-        file_name_obj.language = language.lower() if language else "en"
-        file_name_obj.oneshot = bool(oneshot)
+        file_name_obj.language = language
+        file_name_obj.oneshot = oneshot
         file_name_obj.chapter_number = None if file_name_obj.oneshot else chapter_number
-        file_name_obj.volume_number = None if file_name_obj.oneshot else volume_number
-        file_name_obj.groups = group_ids if group_ids else []
+        file_name_obj.volume_number = volume_number
+        file_name_obj.groups = group_ids
         file_name_obj.chapter_title = chapter_title
         file_name_obj.publish_date = publish_date
         file_name_obj.to_upload = file_path
