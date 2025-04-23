@@ -6,9 +6,9 @@ from pathlib import Path
 
 from tqdm import tqdm
 
-from src.mupl.file_validator import FileProcesser
-from src.mupl.http.client import HTTPClient
-from src.mupl.uploader.handler import ChapterUploaderHandler
+from mupl.file_validator import FileProcesser
+from mupl.http.client import HTTPClient
+from mupl.uploader.handler import ChapterUploaderHandler
 
 logger = logging.getLogger("mupl")
 

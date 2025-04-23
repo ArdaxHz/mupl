@@ -8,7 +8,7 @@ from typing import Optional, TYPE_CHECKING
 logger = logging.getLogger("mupl")
 
 if TYPE_CHECKING:
-    from src.mupl.http.client import HTTPClient
+    from mupl.http.client import HTTPClient
 
 
 class OAuth2:

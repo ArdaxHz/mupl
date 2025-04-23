@@ -36,7 +36,7 @@ dependencies = [
 "Bug Tracker" = "https://github.com/ArdaxHz/mupl/issues"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = {"" = "mupl"}
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["mupl"]

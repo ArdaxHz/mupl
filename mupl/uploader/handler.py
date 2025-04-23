@@ -1,11 +1,11 @@
 import logging
 from typing import List, Optional, Dict
 
-from src.mupl.file_validator import FileProcesser
-from src.mupl.exceptions import MuplUploadSessionError
-from src.mupl.http import RequestError
-from src.mupl.http.client import HTTPClient
-from src.mupl.image_validator import ImageProcessor
+from mupl.file_validator import FileProcesser
+from mupl.exceptions import MuplUploadSessionError
+from mupl.http import RequestError
+from mupl.http.client import HTTPClient
+from mupl.image_validator import ImageProcessor
 
 
 logger = logging.getLogger("mupl")
@@ -161,7 +161,6 @@ class ChapterUploaderHandler:
                 self.tqdm.update(len(image_batch_list))
                 return False
             else:
-
                 image_batch = {
                     k: v
                     for (k, v) in image_batch.items()
@@ -200,7 +199,6 @@ class ChapterUploaderHandler:
     def _delete_exising_upload_session(self):
         """Remove any exising upload sessions to not error out as mangadex only allows one upload session at a time."""
         try:
-
             existing_session = self.http_client.get(
                 f"{self.mangadex_api_url}/upload", successful_codes=[404]
             )

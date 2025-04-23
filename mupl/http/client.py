@@ -2,8 +2,8 @@ import logging
 from pathlib import Path
 from typing import Optional, Dict
 
-from src.mupl.http.model import HTTPModel
-from src.mupl.http.response import HTTPResponse
+from mupl.http.model import HTTPModel
+from mupl.http.response import HTTPResponse
 
 logger = logging.getLogger("mupl")
 
@@ -53,7 +53,6 @@ class HTTPClient(HTTPModel):
         successful_codes: "list" = None,
         **kwargs,
     ) -> "HTTPResponse":
-
         if not route.startswith(("http://", "https://", "/")):
             route = f"/{route}"
         return self._request(
@@ -76,7 +75,6 @@ class HTTPClient(HTTPModel):
         successful_codes: "list" = None,
         **kwargs,
     ) -> "HTTPResponse":
-
         if not route.startswith(("http://", "https://", "/")):
             route = f"/{route}"
         return self._request(
@@ -96,7 +94,6 @@ class HTTPClient(HTTPModel):
         successful_codes: "list" = None,
         **kwargs,
     ) -> "HTTPResponse":
-
         if not route.startswith(("http://", "https://", "/")):
             route = f"/{route}"
         return self._request(
@@ -116,7 +113,6 @@ class HTTPClient(HTTPModel):
         successful_codes: "list" = None,
         **kwargs,
     ) -> "HTTPResponse":
-
         if not route.startswith(("http://", "https://", "/")):
             route = f"/{route}"
         return self._request(
@@ -138,7 +134,6 @@ class HTTPClient(HTTPModel):
         successful_codes: "list" = None,
         **kwargs,
     ) -> "HTTPResponse":
-
         if not route.startswith(("http://", "https://", "/")):
             route = f"/{route}"
 

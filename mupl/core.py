@@ -7,12 +7,12 @@ from datetime import datetime
 
 import natsort
 
-from src.mupl.file_validator import FileProcesser
-from src.mupl.http.client import HTTPClient
-from src.mupl.uploader.uploader import ChapterUploader
-from src.mupl.exceptions import MuplException
-from src.mupl.utils.config import load_localisation
-from src.mupl.utils.logs import (
+from mupl.file_validator import FileProcesser
+from mupl.http.client import HTTPClient
+from mupl.uploader.uploader import ChapterUploader
+from mupl.exceptions import MuplException
+from mupl.utils.config import load_localisation
+from mupl.utils.logs import (
     format_log_dir_path,
     setup_logs,
     clear_old_logs,
@@ -183,7 +183,6 @@ class Mupl:
             )
 
         if zips_no_manga_id:
-
             zips_no_manga_id_skip_message = self.translation.get(
                 "zips_no_manga_id_skip_message", "Skipping {0} files with no manga ID"
             ).format(len(zips_no_manga_id))
@@ -192,7 +191,6 @@ class Mupl:
                 f"{zips_no_manga_id_skip_message}: {[f for f in zips_no_manga_id]}"
             )
             if self.verbose:
-
                 print(
                     self.translation.get(
                         "zips_no_manga_id_skip_message_logs", "Check logs: {0}"
@@ -200,7 +198,6 @@ class Mupl:
                 )
 
         if not zips_to_upload:
-
             if self.verbose:
                 print(
                     self.translation.get(
@@ -272,7 +269,6 @@ class Mupl:
         for index, file_name_obj in enumerate(zips_to_upload, start=1):
             uploader_process = None
             try:
-
                 if self.verbose:
                     print(
                         f"\n\n{self.translation.get('uploading_draft', 'Uploading draft')} {str(file_name_obj)}\n{'-' * 40}"
@@ -378,7 +374,6 @@ class Mupl:
             if self.verbose:
                 print(self.translation.get("failed_uploads", "Failed uploads"))
             for fail in failed_uploads:
-
                 prefix = (
                     self.translation.get("upload_method_folder", "Folder")
                     if fail.is_dir()

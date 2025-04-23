@@ -5,7 +5,7 @@ from copy import copy
 from pathlib import Path
 from typing import Optional, Dict
 
-from src.mupl.exceptions import MuplLocalizationNotFoundError
+from mupl.exceptions import MuplLocalizationNotFoundError
 
 logger = logging.getLogger("mupl")
 

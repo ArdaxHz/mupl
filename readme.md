@@ -239,9 +239,9 @@ If I have a file named `efb4278c-a761-406b-9d69-19603c5e4c8b [es] - 000 (Momi-sa
 - Pull requests are free to be opened if you think it is needed, but please format any code with Python Black (default settings) before doing so.
 
 ### Translation
-There are two files to translate, this readme and the [mupl/loc/en.json](src/mupl/loc/en.json) file.
+There are two files to translate, this readme and the [mupl/loc/en.json](mupl/loc/en.json) file.
 
 - The translated README should be placed in [doc/](doc/) with the name `readme.<>.md` with the ISO language code between the periods, for example: `readme.pt-br.md`. Update your readme to link back to this readme under the "Read this in other languages" list.
-- The translated json file should be named `<>.json` with the ISO language code being used and placed inside the directory [mupl/loc/](src/mupl/loc/), for example: `pt-br.json`. 
+- The translated json file should be named `<>.json` with the ISO language code being used and placed inside the directory [mupl/loc/](mupl/loc/), for example: `pt-br.json`. 
 
 After you have translated these files, update this readme with the link to your translated readme. Please submit a PR with these changes.

@@ -5,7 +5,7 @@ from typing import Optional
 
 import requests
 
-from src.mupl.http import http_error_codes
+from mupl.http import http_error_codes
 
 
 logger = logging.getLogger("mupl")
@@ -92,7 +92,6 @@ class HTTPResponse:
         error_json = self.json()
 
         if error_json is not None:
-
             try:
                 errors = [
                     f'{e["status"]}: {e["title"]}: {e["detail"] if e["detail"] is not None else ""}'

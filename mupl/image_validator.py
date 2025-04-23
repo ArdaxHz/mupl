@@ -58,7 +58,6 @@ class ImageProcessorBase:
     @staticmethod
     def get_new_format_for_webp(image_bytes: "bytes") -> "str":
         with Image.open(io.BytesIO(image_bytes)) as image:
-
             try:
                 _ = ImageSequence.Iterator(image)[1]
                 return "GIF"

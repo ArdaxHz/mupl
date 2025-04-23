@@ -9,7 +9,7 @@ from zipfile import ZipFile
 import requests
 from packaging import version
 
-from src.mupl import __version__
+from mupl import __version__
 
 logger = logging.getLogger("mupl")
 
@@ -49,7 +49,6 @@ def check_for_update(root_path=Path("."), translation=None, mdauth_path=".mdauth
         remote_version = version.parse(remote_release_json["tag_name"])
 
         if remote_version > local_version:
-
             print(
                 translation.get(
                     "new_update_found", "New update found: {} => {}: {}"
@@ -59,7 +58,6 @@ def check_for_update(root_path=Path("."), translation=None, mdauth_path=".mdauth
                 f"Update found: {local_version} => {remote_version}: {remote_release_json['name']}."
             )
             if remote_version.major != local_version.major:
-
                 print(
                     translation.get(
                         "new_update_warning",
@@ -88,7 +86,6 @@ def check_for_update(root_path=Path("."), translation=None, mdauth_path=".mdauth
                 update = False
 
             if not update:
-
                 print(translation.get("not_updating", "Not updating."))
                 logger.info(f"Skipping update {remote_version}")
                 return False

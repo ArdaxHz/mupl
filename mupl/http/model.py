@@ -9,11 +9,11 @@ from configparser import ConfigParser
 
 import requests
 
-from src.mupl import __version__
-from src.mupl.exceptions import MuplLoginError
-from src.mupl.http import RequestError, http_error_codes
-from src.mupl.http.response import HTTPResponse
-from src.mupl.http.oauth import OAuth2
+from mupl import __version__
+from mupl.exceptions import MuplLoginError
+from mupl.http import RequestError, http_error_codes
+from mupl.http.response import HTTPResponse
+from mupl.http.oauth import OAuth2
 
 
 logger = logging.getLogger("mupl")
@@ -221,11 +221,9 @@ class HTTPModel:
                 )
 
                 if response.status_code == 401:
-
                     print(self.translation.get("not_logged_in", "Not logged in."))
                     self.total_not_login_row += 1
                     if self.total_not_login_row >= self.upload_retry_total:
-
                         return response_obj
                 else:
                     self.total_not_login_row = 0
@@ -264,9 +262,7 @@ class HTTPModel:
             if response.status_code == 401:
                 response_obj.print_error()
                 try:
-
                     if not self._login():
-
                         logger.error("Re-login attempt failed.")
 
                         pass
@@ -358,7 +354,6 @@ class HTTPModel:
         if access_token:
             self.session.headers.update({"Authorization": f"Bearer {access_token}"})
         else:
-
             if "Authorization" in self.session.headers:
                 del self.session.headers["Authorization"]
         logger.debug("Updated session headers.")
