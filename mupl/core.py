@@ -1,8 +1,9 @@
+import asyncio
 import json
 import time
 import logging
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 from datetime import datetime
 
 import natsort
@@ -26,10 +27,10 @@ __all__ = ["Mupl"]
 class Mupl:
     def __init__(
         self,
-        mangadex_username: str,
-        mangadex_password: str,
-        client_id: str,
-        client_secret: str,
+        mangadex_username: str = None,
+        mangadex_password: str = None,
+        client_id: str = None,
+        client_secret: str = None,
         cli: bool = False,
         root_path: Path = Path("."),
         translation: Dict = None,
@@ -124,8 +125,8 @@ class Mupl:
             cli=self.cli,
         )
 
-        if not self.http_client.login():
-            raise MuplException("Initial login failed.")
+        # if not self.http_client.login():
+        #     raise MuplException("Initial login failed.")
 
     def _get_zips_to_upload(
         self,
@@ -134,7 +135,7 @@ class Mupl:
         widestrip: bool,
         combine: bool,
         **kwargs,
-    ) -> "Optional[List[FileProcesser]]":
+    ) -> "Tuple[Optional[List[FileProcesser]], List[Path]]":
         """Get a list of files that end with a zip/cbz extension or are folders for uploading."""
         zips_to_upload: "List[FileProcesser]" = []
         zips_invalid_file_name = []
@@ -142,12 +143,11 @@ class Mupl:
 
         if not upload_dir_path.is_dir():
             logger.error(f"Upload path is not a valid directory: {upload_dir_path}")
-            if self.verbose:
-                print(
-                    self.translation.get(
-                        "invalid_folder_to_upload", "Invalid upload folder"
-                    )
+            print(
+                self.translation.get(
+                    "invalid_folder_to_upload", "Invalid upload folder"
                 )
+            )
             return None
 
         for archive in upload_dir_path.iterdir():
@@ -184,35 +184,33 @@ class Mupl:
 
         if zips_no_manga_id:
             zips_no_manga_id_skip_message = self.translation.get(
-                "zips_no_manga_id_skip_message", "Skipping {0} files with no manga ID"
+                "zips_no_manga_id_skip_message", "Skipping {} files with no manga ID"
             ).format(len(zips_no_manga_id))
 
             logger.warning(
                 f"{zips_no_manga_id_skip_message}: {[f for f in zips_no_manga_id]}"
             )
-            if self.verbose:
-                print(
-                    self.translation.get(
-                        "zips_no_manga_id_skip_message_logs", "Check logs: {0}"
-                    ).format(zips_no_manga_id_skip_message)
-                )
+            print(
+                self.translation.get(
+                    "zips_no_manga_id_skip_message_logs", "Check logs: {}"
+                ).format(zips_no_manga_id_skip_message)
+            )
 
         if not zips_to_upload:
-            if self.verbose:
-                print(
-                    self.translation.get(
-                        "invalid_folder_to_upload", "Invalid upload folder"
-                    )
+            print(
+                self.translation.get(
+                    "invalid_folder_to_upload", "Invalid upload folder"
                 )
+            )
             logger.error(
                 f"Exited due to no valid files being found in {upload_dir_path}."
             )
-            return None
+            return (None, zips_invalid_file_name + zips_no_manga_id)
 
         logger.debug(
             f"Found valid files/folders to upload: {[str(z) for z in zips_to_upload]}"
         )
-        return zips_to_upload
+        return (zips_to_upload, zips_invalid_file_name + zips_no_manga_id)
 
     def _open_manga_series_map(self, files_path: "Path") -> "dict":
         """Get the manga-name-to-id map."""
@@ -230,29 +228,16 @@ class Mupl:
                 if "group" not in names_to_ids:
                     names_to_ids["group"] = {}
                 return names_to_ids
-        except FileNotFoundError:
+        except (FileNotFoundError, json.JSONDecodeError):
             logger.warning(
                 f"Manga/Group Name-ID map file not found at {map_file}. Only UUIDs in filenames will work."
             )
 
-            if self.verbose:
-                print(
-                    self.translation.get(
-                        "check_file_name_to_id", "Check name-to-ID mapping file"
-                    )
+            print(
+                self.translation.get(
+                    "check_file_name_to_id", "Check name-to-ID mapping file"
                 )
-            return {"manga": {}, "group": {}}
-        except json.JSONDecodeError:
-            logger.exception(
-                f"Error decoding JSON from {map_file}. Please check its format."
             )
-
-            if self.verbose:
-                print(
-                    self.translation.get(
-                        "check_file_name_to_id", "Check name-to-ID mapping file"
-                    )
-                )
             return {"manga": {}, "group": {}}
 
     def _upload_loop(
@@ -269,10 +254,9 @@ class Mupl:
         for index, file_name_obj in enumerate(zips_to_upload, start=1):
             uploader_process = None
             try:
-                if self.verbose:
-                    print(
-                        f"\n\n{self.translation.get('uploading_draft', 'Uploading draft')} {str(file_name_obj)}\n{'-' * 40}"
-                    )
+                print(
+                    f"\n\n{self.translation.get('uploading_draft', 'Uploading draft')} {str(file_name_obj)}\n{'-' * 40}"
+                )
 
                 uploader_process = ChapterUploader(
                     self.http_client,
@@ -302,65 +286,36 @@ class Mupl:
                         f"Token refresh/check failed after uploading {file_name_obj}. Continuing..."
                     )
 
-                if self.verbose:
-                    print(
-                        f"{'-'*10}\n{self.translation.get('finish_upload', 'Finished upload')} {str(file_name_obj)}\n{'-' * 10}"
-                    )
+                del uploader_process
 
-                if index < len(zips_to_upload):
-                    logger.debug("Sleeping between zip upload.")
-
-                    time.sleep(self.ratelimit_time * 2)
-
-            except KeyboardInterrupt:
+                print(
+                    f"{'-'*10}\n{self.translation.get('finish_upload', 'Finished upload')} {str(file_name_obj)}\n{'-' * 10}"
+                )
+                logger.debug("Sleeping between zip upload.")
+                time.sleep(self.ratelimit_time * 2)
+            except KeyboardInterrupt as e:
                 logger.warning(
                     f"Keyboard Interrupt detected during upload of {str(file_name_obj)}"
                 )
 
-                if self.verbose:
-                    print(
-                        self.translation.get(
-                            "keyboard_interrupt_exit",
-                            "Keyboard interrupt detected, exiting",
-                        )
+                print(
+                    self.translation.get(
+                        "keyboard_interrupt_exit",
+                        "Keyboard interrupt detected, exiting",
                     )
-                if uploader_process:
-                    try:
-                        uploader_process.remove_upload_session()
-                        if (
-                            not uploader_process.folder_upload
-                            and uploader_process.myzip
-                        ):
-                            uploader_process.myzip.close()
-                    except Exception as e:
-                        if self.cli:
-                            raise e
-                    finally:
-                        if uploader_process:
-                            failed_uploads.append(file_name_obj.to_upload)
-                else:
-                    if uploader_process:
-                        failed_uploads.append(file_name_obj.to_upload)
-
-            except Exception as e:
-                logger.exception(
-                    f"An unexpected error occurred while processing {str(file_name_obj)}: {e}"
                 )
-                failed_uploads.append(file_name_obj.to_upload)
-                if uploader_process:
-                    try:
-                        uploader_process.remove_upload_session()
-                        if (
-                            not uploader_process.folder_upload
-                            and uploader_process.myzip
-                        ):
-                            uploader_process.myzip.close()
-                    except Exception as cleanup_e:
-                        if self.cli:
-                            raise cleanup_e
-                    finally:
-                        if uploader_process:
-                            continue
+                try:
+                    asyncio.get_event_loop().stop()
+                    asyncio.get_event_loop().close()
+                    uploader_process.remove_upload_session()
+                    if not uploader_process.folder_upload and uploader_process.myzip:
+                        uploader_process.myzip.close()
+                    del uploader_process
+                except UnboundLocalError:
+                    pass
+                finally:
+                    failed_uploads.append(file_name_obj.to_upload)
+                    raise MuplException(e)
             finally:
                 if "uploader_process" in locals() and uploader_process is not None:
                     del uploader_process
@@ -371,8 +326,7 @@ class Mupl:
         if failed_uploads:
             logger.info(f"Failed uploads: {[f.name for f in failed_uploads]}")
 
-            if self.verbose:
-                print(self.translation.get("failed_uploads", "Failed uploads"))
+            print(self.translation.get("failed_uploads", "Failed uploads"))
             for fail in failed_uploads:
                 prefix = (
                     self.translation.get("upload_method_folder", "Folder")
@@ -380,8 +334,7 @@ class Mupl:
                     else self.translation.get("upload_method_archive", "Archive")
                 )
 
-                if self.verbose:
-                    print("{}: {}".format(prefix, fail.name))
+                print("{}: {}".format(prefix, fail.name))
 
         return failed_uploads
 
@@ -407,7 +360,7 @@ class Mupl:
 
         names_to_ids = self._open_manga_series_map(self.root_path)
 
-        zips_to_upload = self._get_zips_to_upload(
+        zips_to_upload, invalid_zips = self._get_zips_to_upload(
             upload_dir_path,
             names_to_ids,
             widestrip,
@@ -416,17 +369,7 @@ class Mupl:
         )
 
         if not zips_to_upload:
-            logger.warning(
-                "No valid chapters found to upload in the specified directory."
-            )
-            if self.verbose:
-                print(
-                    self.translation.get(
-                        "no_valid_chapters_found",
-                        "No valid chapters found to upload in the specified directory.",
-                    )
-                )
-            return []
+            return invalid_zips
 
         failed_uploads = self._upload_loop(
             zips_to_upload,
@@ -438,7 +381,7 @@ class Mupl:
         logger.info(
             f"Finished batch upload from directory: {upload_dir_path}. Failed count: {len(failed_uploads)}"
         )
-        return failed_uploads
+        return list(set(failed_uploads + invalid_zips))
 
     def upload_chapter(
         self,
@@ -478,13 +421,12 @@ class Mupl:
 
         if not file_path.exists():
             logger.error(f"File or folder not found: {file_path}")
-            if self.verbose:
-                print(
-                    self.translation.get(
-                        "file_or_folder_not_found",
-                        "File or folder not found at {0}",
-                    ).format(file_path)
-                )
+            print(
+                self.translation.get(
+                    "file_not_found",
+                    "File not found: {}",
+                ).format(file_path)
+            )
             return False
 
         file_name_obj = FileProcesser(

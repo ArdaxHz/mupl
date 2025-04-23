@@ -351,12 +351,7 @@ class HTTPModel:
 
     def _update_headers(self, access_token: "str") -> None:
         """Update the session headers to include the auth token."""
-        if access_token:
-            self.session.headers.update({"Authorization": f"Bearer {access_token}"})
-        else:
-            if "Authorization" in self.session.headers:
-                del self.session.headers["Authorization"]
-        logger.debug("Updated session headers.")
+        self.session.headers.update({"Authorization": f"Bearer {access_token}"})
 
     def _refresh_token_md(self) -> "bool":
         """Use the refresh token to get a new access token via OAuth client."""
@@ -397,8 +392,5 @@ class HTTPModel:
 
     def _login_using_details(self) -> "bool":
         """Login using account details via OAuth client."""
-        logger.debug("Attempting login with credentials via OAuth client.")
-        logged_in = self.oauth.login()
-        if logged_in:
-            self._update_headers(self.oauth.access_token)
-        return logged_in
+        logger.debug(f"Logging in through account details.")
+        return self.oauth.login()

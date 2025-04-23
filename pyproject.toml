@@ -8,11 +8,9 @@ version = "2.1.1"
 description = "mupl: Bulk MangaDex Upload Tool"
 readme = "README.md"
 
-authors = [
-    { name = "ArdaxHz", email = "70710586+ArdaxHz@users.noreply.github.com" }
-]
+authors = [{ name = "ArdaxHz"}]
 
-license = { text = "GPL-3.0-only" }
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 5 - Production/Stable",

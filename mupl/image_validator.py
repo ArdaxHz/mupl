@@ -25,6 +25,8 @@ class Format(enum.Enum):
 
 
 class ImageProcessorBase:
+    translation = {}
+
     @staticmethod
     def key(x: "tuple") -> "Union[Literal[0], str]":
         """Give a higher priority in sorting for images with their first character a punctuation."""
@@ -107,9 +109,10 @@ class ImageProcessorBase:
                         f"Combining {img_name} to {current_name} as {img_name} is smaller than {min_size}."
                     )
                     print(
-                        "Combining {0} to {1} as {0} is smaller than {2}.".format(
-                            img_name, current_name, min_size
-                        )
+                        ImageProcessorBase.translation.get(
+                            "image_combine",
+                            "Combining {} to {} as {} is smaller than {}.",
+                        ).format(img_name, current_name, img_name, min_size)
                     )
 
                     if is_widestrip:
@@ -188,9 +191,9 @@ class ImageProcessorBase:
                 f"Split {'tall' if is_tall else 'wide'} image {image_name} into {num_chunks} chunks."
             )
             print(
-                "Splitting {0} into a {1} image with {2} chunks.".format(
-                    image_name, "tall" if is_tall else "wide", num_chunks
-                )
+                ImageProcessorBase.translation.get(
+                    "image_split", "Splitting {} into a {} image with {} chunks."
+                ).format(image_name, "tall" if is_tall else "wide", num_chunks)
             )
 
             for i in range(num_chunks):
@@ -225,7 +228,9 @@ class ImageProcessor:
         number_of_images_upload: int,
         widestrip: bool,
         combine: bool = False,
+        **kwargs,
     ) -> None:
+        ImageProcessorBase.translation = translation
         self.to_upload = to_upload
         self.folder_upload = folder_upload
         self.combine = combine

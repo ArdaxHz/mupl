@@ -105,22 +105,21 @@ class ChapterUploaderHandler:
         batch_end = int(image_batch_list[-1]) + 1
         logger.debug(f"Uploading images {batch_start} to {batch_end}.")
 
-        # if self.verbose:
-        #     print(self.translation["uploading_images"].format(batch_start, batch_end))
+        if self.verbose:
+            print(self.translation["uploading_images"].format(batch_start, batch_end))
 
         for retry in range(self.number_upload_retry):
             successful_upload_data = self._images_upload(image_batch)
 
             if successful_upload_data is None:
-                if self.verbose:
-                    print(
-                        self.translation["uploading_images_error"].format(
-                            batch_start,
-                            batch_end,
-                            retry + 1,
-                            self.number_upload_retry,
-                        )
+                print(
+                    self.translation["uploading_images_error"].format(
+                        batch_start,
+                        batch_end,
+                        retry + 1,
+                        self.number_upload_retry,
                     )
+                )
                 if retry == self.number_upload_retry - 1:
                     return True
                 continue

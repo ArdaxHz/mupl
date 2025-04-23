@@ -42,7 +42,7 @@ def load_localisation(root_path: Path, lang: Optional["str"] = None) -> Dict:
         lang = "en"
 
     lang = lang.lower()
-    language_loc_dir = root_path.joinpath("src", "mupl", "loc")
+    language_loc_dir = root_path.joinpath("mupl", "loc")
     language_json_path = language_loc_dir.joinpath(lang).with_suffix(".json")
     en_lang_json_path = language_loc_dir.joinpath("en").with_suffix(".json")
 
