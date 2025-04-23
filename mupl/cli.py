@@ -120,7 +120,6 @@ def main():
             mangadex_auth_url=config_data["paths"]["mangadex_auth_url"],
             mdauth_path=config_data["paths"]["mdauth_path"],
             translation=translation,
-            mupl_path=mupl_path,
             cli=True,
             move_files=True,
             verbose_level=verbose_level,
