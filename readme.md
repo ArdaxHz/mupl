@@ -46,50 +46,77 @@ To use this uploader in other scripts, install the latest version through pypi `
 
 ```python
 from mupl import Mupl
+from datetime import datetime
+from pathlib import Path
+
+# Initialize Mupl
+# Most parameters have sensible defaults, provide credentials as needed.
+# Home path on Unix/Mac is /Users/<>/mupl, on Windows it's C:\Users\<>\mupl.
 
 mupl = Mupl(
-    mangadex_username=mangadex_username,
-    mangadex_password=mangadex_password,
-    client_id=client_id,
-    client_secret=client_secret,
-    number_of_images_upload=number_of_images_upload,
-    upload_retry=upload_retry,
-    ratelimit_time=ratelimit_time,
-    max_log_days=max_log_days,
-    group_fallback_id=group_fallback_id,
-    number_threads=number_threads,
-    language=language, # language of translation to use
-    name_id_map_file=name_id_map_file, # absolute path of the file, otherwise home/mupl/ will be used
-    uploaded_files=uploaded_files, # absolute path of a folder, otherwise home/mupl/uploaded will be used
-    mangadex_api_url=mangadex_api_url,
-    mangadex_auth_url=mangadex_auth_url,
-    move_files=True, # move files from to_upload to uploaded after upload
-    verbose_level=verbose_level, # 0 = INFO, 1 = DEBUG
+    mangadex_username="your_username",             # Your MangaDex username
+    mangadex_password="your_password",             # Your MangaDex password
+    client_id="your_client_id",                    # Your MangaDex API client ID (optional if using username/password)
+    client_secret="your_client_secret",            # Your MangaDex API client secret (optional if using username/password)
+    # --- Optional Parameters ---       
+    # move_files=True,                             # Move files from upload dir to 'uploaded_files' dir after success
+    # verbose_level=0,                             # Logging level (0=INFO, 1=DEBUG)
+    # number_of_images_upload=10,                  # Number of images per upload session commit request
+    # upload_retry=3,                              # Number of retries for failed image uploads
+    # ratelimit_time=2,                            # Seconds to wait between API calls
+    # max_log_days=30,                             # Days to keep log files
+    # group_fallback_id=None,                      # Default group UUID if not found in filename/map
+    # number_threads=3,                            # Number of threads for concurrent image uploads
+    # language="en",                               # Language code for mupl localisation
+    # name_id_map_filename="name_id_map.json",     # Filename for manga/group name-to-ID mapping (relative to home_path or absolute path), not required for single_chapter uploads
+    # uploaded_dir_path="uploaded",                # Directory name/path for successfully uploaded files (relative to home_path or absolute path to folder)
+    # mangadex_api_url="https://api.mangadex.org", # Base URL for MangaDex API
+    # mangadex_auth_url="https://auth.mangadex.org/realms/mangadex/protocol/openid-connect", # Base URL for MangaDex Auth
+    # mdauth_filename=".mdauth",                   # Filename for storing authentication tokens (relative to home_path), by default in same location as mupl
 )
+
+# --- Uploading a Directory ---
+# Directory path containing chapter archives (zip/cbz) or folders named according to convention.
+# See File Naming Convention section below.
+upload_directory_path = Path("path/to/your/chapters_folder") # or "path/to/your/chapters_folder"
 
 failed_uploads_list = mupl.upload_directory(
-  path_to_upload_folder,
-
-  # Keyword Arguments
-  widestrip=False,
-  combine=True
+    upload_dir_path=upload_directory_path,
+    # --- Optional Keyword Arguments for upload_directory ---
+    # widestrip=False, # Mark chapters as widestrip format
+    # combine=False    # Combine small images vertically
 )
 
-failed_upload = mupl.upload_chapter(
-  path_to_file,
-  manga_id,
-  group_ids,
+# Returns:
+# 'None' if no valid files are found, otherwise a pathlib objects list of failed uploads is returned.
+# If the returned list is empty, there were no failed uploads.
 
-  # Keyword Arguments
-  language="en",
-  oneshot=False,
-  chapter_number="10",
-  volume_number="2",
-  chapter_title="Uploading this using mupl!!!",
-  publish_date=None, # or datetime in the next 2 weeks
-  widestrip=False,
-  combine=False
+# --- Uploading a Single Chapter ---
+# Provide metadata explicitly for a single chapter file or folder.
+chapter_file_or_folder_path = Path("path/to/your/chapter.zip") # Or Path("path/to/your/chapter_folder") or a string value "path/to/your/chapter.zip"
+manga_uuid = "manga-uuid-here"
+group_uuids = ["group-uuid-1", "group-uuid-2"] # List of group UUIDs
+
+upload_successful = mupl.upload_chapter(
+    file_path=chapter_file_or_folder_path,
+    manga_id=manga_uuid,
+    group_ids=group_uuids,
+    # --- Optional Keyword Arguments for upload_chapter ---
+    # language="en",                        # Chapter language code
+    # oneshot=False,                        # Mark as oneshot (True) or regular chapter (False)
+    # chapter_number="10",                  # Chapter number (e.g., "10", "10.5"). Ignored if oneshot=True.
+    # volume_number="2",                    # Volume number (optional)
+    # chapter_title="Chapter Title Here",   # Chapter title (optional)
+    # publish_date=None,                    # datetime object for scheduled publishing (optional)
+    # widestrip=False,                      # Mark chapter as widestrip format
+    # combine=False                         # Combine small images vertically
 )
+
+# Returns:
+# 'True' if upload was successful, otherwise 'False'.
+
+print(f"Failed directory uploads: {failed_uploads_list}")
+print(f"Single chapter upload successful: {upload_successful}")
 ```
 
 

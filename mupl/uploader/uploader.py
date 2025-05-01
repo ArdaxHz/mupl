@@ -23,7 +23,7 @@ class ChapterUploader(ChapterUploaderHandler):
         mangadex_api_url: str,
         upload_retry: int,
         number_threads: int,
-        uploaded_files: str,
+        uploaded_files: Path,
         ratelimit_time: int,
         translation: dict,
         verbose: bool,

@@ -6,7 +6,6 @@ import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple, Union
 from datetime import datetime
-import re
 import uuid
 
 import natsort
@@ -45,16 +44,18 @@ class Mupl:
         group_fallback_id: Optional[str] = None,
         number_threads: int = 3,
         language: str = "en",
-        name_id_map_file: str = "name_id_map.json",
-        uploaded_files: str = "uploaded",
+        name_id_map_filename: str = "name_id_map.json",
+        uploaded_dir_path: str = "uploaded",
         mangadex_api_url: str = "https://api.mangadex.org",
         mangadex_auth_url: str = "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
-        mdauth_path: str = ".mdauth",
+        mdauth_filename: str = ".mdauth",
         verbose: bool = False,
         **kwargs,
     ):
-        """
+        r"""
         Initializes the Mupl class with explicit parameters.
+
+        Home path on Unix/Mac is /Users/<>/mupl, on Windows it's C:\Users\<>\mupl.
 
         Args:
             mangadex_username (str): MangaDex username.
@@ -62,20 +63,21 @@ class Mupl:
             client_id (str): OAuth client ID.
             client_secret (str): OAuth client secret.
             move_files (bool, optional): Whether to move files after upload. Defaults to True.
-            verbose (bool, optional): Whether to print console messages. Defaults to False.
-            number_of_images_upload (int): Number of images to upload at once.
-            upload_retry (int): Number of retries for failed uploads.
-            ratelimit_time (int): Time to wait between API calls.
-            max_log_days (int): Maximum number of days to keep logs.
-            group_fallback_id (str, optional): Fallback group ID.
-            number_threads (int): Number of threads for concurrent uploads.
-            language (str): Language for translation file.
-            name_id_map_file (str): Path to name-ID mapping file.
-            uploaded_files (str): Path to folder for uploaded files.
-            mangadex_api_url (str): MangaDex API URL.
-            mangadex_auth_url (str): MangaDex auth URL.
-            mdauth_path (str): Path to auth token file.
+            verbose (bool, optional): Whether to print extra console messages. Defaults to False.
+            number_of_images_upload (int): Number of images to upload at once. Defaults to 10.
+            upload_retry (int): Number of retries for failed uploads. Defaults to 3.
+            ratelimit_time (int): Time to wait between API calls. Defaults to 2.
+            max_log_days (int): Maximum number of days to keep logs. Defaults to 30.
+            group_fallback_id (str, optional): Fallback group ID. Defaults to None.
+            number_threads (int): Number of threads for concurrent uploads. Defaults to 3.
+            language (str): Language for mupl localisation. Defaults to "en".
+            name_id_map_filename (str): Path to name-ID mapping file. Will check your home directory for this file, if running as a dependency, otherwise will look in the current working directory. Defaults to "name_id_map.json"..
+            uploaded_dir_path (str): Path to folder for uploaded files. Will check your home directory for this folder, if running as a dependency, otherwise will look in the current working directory. Defaults to "uploaded".
+            mangadex_api_url (str): MangaDex API URL. Defaults to "https://api.mangadex.org".
+            mangadex_auth_url (str): MangaDex auth URL. Defaults to "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect".
+            mdauth_filename (str): Path to auth token file. Defaults to ".mdauth".
         """
+
         self.cli = bool(cli)
         self.verbose = bool(verbose)
         self.move_files = bool(move_files)
@@ -119,11 +121,13 @@ class Mupl:
 
         self.language = str(language).lower() if language is not None else "en"
         self.name_id_map_file = (
-            str(name_id_map_file)
-            if name_id_map_file is not None
+            str(name_id_map_filename)
+            if name_id_map_filename is not None
             else "name_id_map.json"
         )
-        self.mdauth_path = str(mdauth_path) if mdauth_path is not None else ".mdauth"
+        self.mdauth_path = (
+            str(mdauth_filename) if mdauth_filename is not None else ".mdauth"
+        )
 
         self.mangadex_api_url = (
             str(mangadex_api_url)
@@ -144,16 +148,18 @@ class Mupl:
         self.home_path = Path.home().joinpath("mupl")
         self.mupl_path = Path(__file__).parent
 
-        if isinstance(uploaded_files, Path):
-            self.uploaded_files = uploaded_files
-        elif uploaded_files is not None:
-            self.uploaded_files = Path(str(uploaded_files))
-        else:
-            self.uploaded_files = Path("uploaded")
-
         if self.cli:
             self.mupl_path = Path.cwd()
             self.home_path = self.mupl_path
+
+        if os.path.isabs(uploaded_dir_path):
+            self.uploaded_files = (
+                uploaded_dir_path
+                if isinstance(uploaded_dir_path, Path)
+                else Path(uploaded_dir_path)
+            )
+        else:
+            self.uploaded_files = self.home_path.joinpath(uploaded_dir_path)
 
         if not self.cli:
             self.home_path.mkdir(parents=True, exist_ok=True)
@@ -470,7 +476,7 @@ class Mupl:
         widestrip: bool = False,
         combine: bool = False,
         **kwargs,
-    ) -> List[Path]:
+    ) -> Optional[List[Path]]:
         """
         Uploads all valid chapter files/folders found in the specified directory.
 
@@ -482,11 +488,11 @@ class Mupl:
             combine: If small images should be combined with other images (either before or after). Defaults to False.
 
         Returns:
-            A list of Path objects for chapters that failed to upload.
+            '*None*' if no valid chapters were found. Otherwise, a list of Path objects for chapters that failed to upload.
         """
         if not upload_dir_path:
             logger.error("upload_dir_path cannot be empty")
-            return []
+            return None
 
         upload_dir_path = (
             upload_dir_path
@@ -509,7 +515,7 @@ class Mupl:
         )
 
         if not zips_to_upload:
-            return invalid_zips
+            return None if not invalid_zips else invalid_zips
 
         failed_uploads = self._upload_loop(
             zips_to_upload,

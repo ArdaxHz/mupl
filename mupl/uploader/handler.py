@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import List, Optional, Dict
 
 from mupl.file_validator import FileProcesser
@@ -25,7 +26,7 @@ class ChapterUploaderHandler:
         number_of_images_upload: int,
         widestrip: bool,
         combine: bool,
-        home_path: str,
+        home_path: Path,
         **kwargs,
     ):
         self.http_client = http_client
