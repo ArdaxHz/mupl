@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "muplr"
-version = "2.1.1"
 description = "mupl: Bulk MangaDex Upload Tool"
 readme = "README.md"
 
+dynamic = ["version"]
 authors = [{ name = "ArdaxHz"}]
 
 license = "GPL-3.0-or-later"
@@ -45,5 +45,5 @@ package-dir = {"mupl" = "mupl"}
 [tool.setuptools.exclude-package-data]
 "*" = ["doc/*"]
 
-[tool.setuptools_scm]
-version_file = "mupl/__version__.py"
+[tool.setuptools.dynamic]
+version = {attr = "mupl.__version__.__version__"}
