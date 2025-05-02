@@ -51,11 +51,7 @@ class HTTPModel:
         self.number_of_requests = 0
         self.total_requests = 0
         self.total_not_login_row = 0
-
-        if os.path.isabs(self.mdauth_path):
-            self._token_file = Path(self.mdauth_path)
-        else:
-            self._token_file = self.mupl_path.joinpath(self.mdauth_path)
+        self._token_file = self.mdauth_path
 
         credential_config = type(
             "SectionProxy",

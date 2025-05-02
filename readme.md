@@ -72,7 +72,6 @@ mupl = Mupl(
     # uploaded_dir_path="uploaded",                # Directory name/path for successfully uploaded files (relative to home_path or absolute path to folder)
     # mangadex_api_url="https://api.mangadex.org", # Base URL for MangaDex API
     # mangadex_auth_url="https://auth.mangadex.org/realms/mangadex/protocol/openid-connect", # Base URL for MangaDex Auth
-    # mdauth_filename=".mdauth",                   # Filename for storing authentication tokens (relative to home_path), by default in same location as mupl
 )
 
 # --- Uploading a Directory ---

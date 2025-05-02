@@ -1,7 +1,9 @@
 import json
 import logging
+import os
 import sys
 from pathlib import Path
+import tempfile
 from typing import Optional
 
 
@@ -47,3 +49,12 @@ def load_config(config_path, cli=False):
             sys.exit(1)
         else:
             raise
+
+
+def validate_path(path):
+    try:
+        os.makedirs(path, exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=path):
+            return True
+    except OSError:
+        return False

@@ -15,6 +15,7 @@ from mupl.http.client import HTTPClient
 from mupl.uploader.uploader import ChapterUploader
 from mupl.exceptions import MuplException
 from mupl.loc.load import download_localisation
+from mupl.utils.config import validate_path
 from mupl.utils.logs import (
     format_log_dir_path,
     setup_logs,
@@ -75,12 +76,20 @@ class Mupl:
             uploaded_dir_path (str): Path to folder for uploaded files. Will check your home directory for this folder, if running as a dependency, otherwise will look in the current working directory. Defaults to "uploaded".
             mangadex_api_url (str): MangaDex API URL. Defaults to "https://api.mangadex.org".
             mangadex_auth_url (str): MangaDex auth URL. Defaults to "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect".
-            mdauth_filename (str): Path to auth token file. Defaults to ".mdauth".
         """
 
         self.cli = bool(cli)
         self.verbose = bool(verbose)
         self.move_files = bool(move_files)
+
+        self.mupl_path = Path(__file__).parent
+        self.home_path = Path.home().joinpath("mupl")
+        if not validate_path(Path.home()):
+            self.home_path = self.mupl_path
+
+        if self.cli:
+            self.mupl_path = Path.cwd()
+            self.home_path = self.mupl_path
 
         self.number_of_images_upload = max(
             1,
@@ -125,7 +134,7 @@ class Mupl:
             if name_id_map_filename is not None
             else "name_id_map.json"
         )
-        self.mdauth_path = (
+        self.mdauth_filename = (
             str(mdauth_filename) if mdauth_filename is not None else ".mdauth"
         )
 
@@ -145,13 +154,6 @@ class Mupl:
         if not self.mangadex_auth_url.startswith(("http://", "https://")):
             self.mangadex_auth_url = "https://" + self.mangadex_auth_url
 
-        self.home_path = Path.home().joinpath("mupl")
-        self.mupl_path = Path(__file__).parent
-
-        if self.cli:
-            self.mupl_path = Path.cwd()
-            self.home_path = self.mupl_path
-
         if os.path.isabs(uploaded_dir_path):
             self.uploaded_files = (
                 uploaded_dir_path
@@ -160,6 +162,15 @@ class Mupl:
             )
         else:
             self.uploaded_files = self.home_path.joinpath(uploaded_dir_path)
+
+        if os.path.isabs(self.mdauth_filename):
+            self.mdauth_path = (
+                self.mdauth_filename
+                if isinstance(self.mdauth_filename, Path)
+                else Path(self.mdauth_filename)
+            )
+        else:
+            self.mdauth_path = self.mupl_path.joinpath(self.mdauth_filename)
 
         if not self.cli:
             self.home_path.mkdir(parents=True, exist_ok=True)
@@ -533,7 +544,7 @@ class Mupl:
         self,
         file_path: Union[Path, str],
         manga_id: str,
-        group_ids: List[str],
+        group_ids: Optional[List[str]] = None,
         *,
         language: str = "en",
         oneshot: Optional[bool] = False,
@@ -584,11 +595,11 @@ class Mupl:
             print(f"Invalid manga ID format: {manga_id}. Must be a valid UUID.")
             return False
 
-        if not group_ids is None:
+        if not group_ids:
             group_ids = []
         elif not isinstance(group_ids, list):
-            if isinstance(group_ids, str):
-                group_ids = [group_ids]
+            if isinstance(group_ids, (str, uuid.UUID)):
+                group_ids = [str(group_ids)]
             else:
                 logger.error(
                     f"Invalid group_ids format: {group_ids}. Must be a list of UUIDs."
