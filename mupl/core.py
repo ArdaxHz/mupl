@@ -41,6 +41,7 @@ class Mupl:
         number_of_images_upload: int = 10,
         upload_retry: int = 3,
         ratelimit_time: int = 2,
+        logs_dir_path: str = None,
         max_log_days: int = 30,
         group_fallback_id: Optional[str] = None,
         number_threads: int = 3,
@@ -58,20 +59,23 @@ class Mupl:
 
         Home path on Unix/Mac is /Users/<>/mupl, on Windows it's C:\Users\<>\mupl.
 
-        Args:
+        Positional, Required Args:
             mangadex_username (str): MangaDex username.
             mangadex_password (str): MangaDex password.
             client_id (str): OAuth client ID.
             client_secret (str): OAuth client secret.
+
+        Keyword, Optional Args:
             move_files (bool, optional): Whether to move files after upload. Defaults to True.
-            verbose (bool, optional): Whether to print extra console messages. Defaults to False.
-            number_of_images_upload (int): Number of images to upload at once. Defaults to 10.
-            upload_retry (int): Number of retries for failed uploads. Defaults to 3.
-            ratelimit_time (int): Time to wait between API calls. Defaults to 2.
-            max_log_days (int): Maximum number of days to keep logs. Defaults to 30.
+            verbose_level (int, optional): Logs verbosity, 0=INFO, 1=DEBUG.
+            number_of_images_upload (int, optional): Number of images to upload at once. Defaults to 10.
+            upload_retry (int, optional): Number of retries for failed uploads. Defaults to 3.
+            ratelimit_time (int, optional): Time to wait between API calls. Defaults to 2.
+            logs_dir_path (str, optional): Directory where to store logs. Defaults to home path. Will create 'logs' folder in this directory.
+            max_log_days (int, optional): Maximum number of days to keep logs. Defaults to 30.
             group_fallback_id (str, optional): Fallback group ID. Defaults to None.
-            number_threads (int): Number of threads for concurrent uploads. Defaults to 3.
-            language (str): Language for mupl localisation. Defaults to "en".
+            number_threads (int, optional): Number of threads for concurrent uploads. Defaults to 3.
+            language (str, optional): Language for mupl localisation. Defaults to "en".
             name_id_map_filename (str): Path to name-ID mapping file. Will check your home directory for this file, if running as a dependency, otherwise will look in the current working directory. Defaults to "name_id_map.json"..
             uploaded_dir_path (str): Path to folder for uploaded files. Will check your home directory for this folder, if running as a dependency, otherwise will look in the current working directory. Defaults to "uploaded".
             mangadex_api_url (str): MangaDex API URL. Defaults to "https://api.mangadex.org".
@@ -172,18 +176,31 @@ class Mupl:
         else:
             self.mdauth_path = self.mupl_path.joinpath(self.mdauth_filename)
 
+        if logs_dir_path:
+            if os.path.isabs(logs_dir_path):
+                logs_dir_path = (
+                    logs_dir_path
+                    if isinstance(logs_dir_path, Path)
+                    else Path(logs_dir_path)
+                )
+            else:
+                logs_dir_path = self.home_path.joinpath(logs_dir_path)
+        else:
+            logs_dir_path = self.home_path
+
         if not self.cli:
-            self.home_path.mkdir(parents=True, exist_ok=True)
-            log_folder_path = format_log_dir_path(self.home_path)
+            self.log_folder_path = format_log_dir_path(logs_dir_path)
 
             setup_logs(
                 logger_name="mupl",
-                path=log_folder_path,
+                path=self.log_folder_path,
                 logger_filename="mupl",
                 level=verbose_level,
             )
 
-            clear_old_logs(log_folder_path, max_log_days)
+            clear_old_logs(self.log_folder_path, max_log_days)
+        else:
+            self.log_folder_path = format_log_dir_path(self.mupl_path)
 
         if os.path.isabs(self.name_id_map_file):
             self.name_id_map_path = (
@@ -196,8 +213,11 @@ class Mupl:
 
         logger.info(f"Log path: {self.logs_path}")
         logger.info(f"Mupl path: {self.root_path}")
-        logger.info(f"User path: {self.user_path}")
+        logger.info(f"Home path: {self.user_path}")
         logger.info(f"Uploaded files folder path: {self.uploaded_files_path}")
+
+        if not self.cli:
+            logger.info(f"Script path: {Path.cwd().absolute()}")
 
         self.translation = translation or download_localisation(self.language)
         self.http_client = HTTPClient(
@@ -221,7 +241,7 @@ class Mupl:
     @property
     def logs_path(self) -> Path:
         """Get the path to the logs directory."""
-        return format_log_dir_path(self.mupl_path).absolute()
+        return self.log_folder_path.absolute()
 
     @property
     def root_path(self) -> Path:

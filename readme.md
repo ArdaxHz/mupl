@@ -64,6 +64,7 @@ mupl = Mupl(
     # number_of_images_upload=10,                  # Number of images per upload session commit request
     # upload_retry=3,                              # Number of retries for failed image uploads
     # ratelimit_time=2,                            # Seconds to wait between API calls
+    # logs_dir_path=None,                          # Directory where to store logs. Defaults to home path. Will create 'logs' folder in this directory.
     # max_log_days=30,                             # Days to keep log files
     # group_fallback_id=None,                      # Default group UUID if not found in filename/map
     # number_threads=3,                            # Number of threads for concurrent image uploads
