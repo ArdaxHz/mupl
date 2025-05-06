@@ -176,6 +176,16 @@ class Mupl:
         else:
             self.mdauth_path = self.mupl_path.joinpath(self.mdauth_filename)
 
+        if self.mdauth_path.is_dir():
+            self.mdauth_path = self.mdauth_path.joinpath(".mdauth")
+
+        self.mdauth_path.parent.mkdir(parents=True, exist_ok=True)
+        if not self.mdauth_path.exists():
+            try:
+                self.mdauth_path.touch()
+            except OSError as e:
+                logger.error(f"Failed to create {self.mdauth_path}: {e}")
+
         if logs_dir_path:
             if os.path.isabs(logs_dir_path):
                 logs_dir_path = (
@@ -354,6 +364,9 @@ class Mupl:
     def _open_manga_series_map(self) -> Dict:
         """Get the manga-name-to-id map."""
         try:
+            if self.name_id_map_path.is_dir():
+                raise FileNotFoundError
+
             with open(
                 self.name_id_map_path,
                 "r",

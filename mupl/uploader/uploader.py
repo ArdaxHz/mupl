@@ -109,8 +109,9 @@ class ChapterUploader(ChapterUploaderHandler):
             else:
                 break
 
-        new_uploaded_zip_path = self.to_upload.rename(
-            os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}")
+        new_uploaded_zip_path = shutil.move(
+            self.to_upload,
+            os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}"),
         )
         logger.debug(f"Moved '{self.to_upload}' to '{new_uploaded_zip_path}'")
 
