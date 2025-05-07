@@ -3,19 +3,13 @@ import io
 import logging
 import math
 import string
-import sys
 import zipfile
-import shutil
 from pathlib import Path
 from typing import List, Dict, Union, Literal, Optional
 from typing import Tuple
 
 import natsort
 from PIL import Image, ImageSequence
-
-from mupl.file_validator import FileProcesser
-from mupl.utils.config import NUMBER_OF_IMAGES_UPLOAD, TRANSLATION, root_path
-
 
 logger = logging.getLogger("mupl")
 
@@ -27,11 +21,12 @@ class Format(enum.Enum):
     JPEG = 1
     GIF = 2
 
-    # Converted to one of the md supported format
     WEBP = 4
 
 
 class ImageProcessorBase:
+    translation = {}
+
     @staticmethod
     def key(x: "tuple") -> "Union[Literal[0], str]":
         """Give a higher priority in sorting for images with their first character a punctuation."""
@@ -43,7 +38,7 @@ class ImageProcessorBase:
     @staticmethod
     def get_image_format(image_bytes: "bytes") -> "Optional[Format]":
         """Returns the image type from the first few bytes."""
-        if image_bytes.startswith(b"\x89\x50\x4E\x47\x0D\x0A\x1A\x0A"):
+        if image_bytes.startswith(b"\x89\x50\x4e\x47\x0d\x0a\x1a\x0a"):
             return Format.PNG
 
         if image_bytes[0:3] == b"\xff\xd8\xff" or image_bytes[6:10] in (
@@ -65,18 +60,15 @@ class ImageProcessorBase:
     @staticmethod
     def get_new_format_for_webp(image_bytes: "bytes") -> "str":
         with Image.open(io.BytesIO(image_bytes)) as image:
-            # If it has more then 1 frame it's animated so convert to GIF
             try:
                 _ = ImageSequence.Iterator(image)[1]
                 return "GIF"
             except IndexError:
                 pass
 
-            # Lossless WebP and lossy (with alpha) WebP
             if image.mode == "RGBA":
                 return "PNG"
 
-            # Otherwise, convert to JPEG
             return "JPEG"
 
     @staticmethod
@@ -117,9 +109,10 @@ class ImageProcessorBase:
                         f"Combining {img_name} to {current_name} as {img_name} is smaller than {min_size}."
                     )
                     print(
-                        TRANSLATION["image_combine"].format(
-                            img_name, current_name, img_name, min_size
-                        )
+                        ImageProcessorBase.translation.get(
+                            "image_combine",
+                            "Combining {} to {} as {} is smaller than {}.",
+                        ).format(img_name, current_name, img_name, min_size)
                     )
 
                     if is_widestrip:
@@ -198,9 +191,9 @@ class ImageProcessorBase:
                 f"Split {'tall' if is_tall else 'wide'} image {image_name} into {num_chunks} chunks."
             )
             print(
-                TRANSLATION["image_split"].format(
-                    image_name, "tall" if is_tall else "wide", num_chunks
-                )
+                ImageProcessorBase.translation.get(
+                    "image_split", "Splitting {} into a {} image with {} chunks."
+                ).format(image_name, "tall" if is_tall else "wide", num_chunks)
             )
 
             for i in range(num_chunks):
@@ -228,22 +221,30 @@ class ImageProcessorBase:
 
 class ImageProcessor:
     def __init__(
-        self, file_name_obj: "FileProcesser", folder_upload: "bool", **kwargs
+        self,
+        to_upload: Path,
+        folder_upload: bool,
+        translation: dict,
+        number_of_images_upload: int,
+        widestrip: bool,
+        combine: bool = False,
+        **kwargs,
     ) -> None:
-        self.file_name_obj = file_name_obj
-        self.to_upload = self.file_name_obj.to_upload
+        ImageProcessorBase.translation = translation
+        self.to_upload = to_upload
         self.folder_upload = folder_upload
-        self.combine = kwargs.get("combine", False)
+        self.combine = combine
+        self.translation = translation
+        self.widestrip = widestrip
         self.myzip = None
         if not self.folder_upload:
             self.myzip = self._read_zip()
 
-        # Spliced list of lists
         self.valid_images_to_upload: "List[List[str]]" = []
-        # Renamed file to original file name
+
         self.images_to_upload_names: "Dict[str, str]" = {}
         self.converted_images: "Dict[str, str]" = {}
-        self.images_upload_session = NUMBER_OF_IMAGES_UPLOAD
+        self.images_upload_session = number_of_images_upload
 
         self.info_list = self._get_valid_images()
 
@@ -294,7 +295,7 @@ class ImageProcessor:
                 processed_images.extend(image_valid)
 
         processed_images = ImageProcessorBase.combine_small_images(
-            processed_images, self.file_name_obj.widestrip, self.combine
+            processed_images, self.widestrip, self.combine
         )
 
         split_images: List[Tuple[str, bytes]] = []
@@ -302,7 +303,7 @@ class ImageProcessor:
             split = ImageProcessorBase.split_image(
                 image_name,
                 image_bytes,
-                self.file_name_obj.widestrip,
+                self.widestrip,
             )
             if split:
                 split_images.extend(
@@ -326,13 +327,13 @@ class ImageProcessor:
     ) -> "Dict[str, bytes]":
         """Read the image data from the zip as list."""
         logger.debug(f"Reading data for images: {[img[0] for img in images_to_read]}")
-        # Dictionary to store the image index to the image bytes
+
         files: "Dict[str, bytes]" = {}
         for array_index, image in enumerate(images_to_read, start=1):
             image_filename = str(Path(image[0]).name)
-            # Get index of the image in the images array
+
             renamed_file = str(self.info_list.index(image))
-            # Keeps track of which image index belongs to which image name
+
             self.images_to_upload_names.update({renamed_file: image_filename})
             files.update({renamed_file: image[1]})
         return files

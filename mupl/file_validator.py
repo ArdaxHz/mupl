@@ -2,9 +2,7 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, List
-
-from mupl.utils.config import config, TRANSLATION
+from typing import Optional, List, Dict
 
 logger = logging.getLogger("mupl")
 
@@ -42,8 +40,24 @@ WINDOWS_ILLEGAL_CHAR_MAP = {
 
 
 class FileProcesser:
-    def __init__(self, to_upload: "Path", names_to_ids: "dict", **kwargs) -> None:
+    def __init__(
+        self,
+        to_upload: "Path",
+        names_to_ids: "dict",
+        translation: Dict,
+        group_fallback_id: Optional[str] = None,
+        number_of_images_upload: int = 10,
+        widestrip: bool = False,
+        combine: bool = False,
+        **kwargs,
+    ) -> None:
         self.to_upload = to_upload
+        self.group_fallback_id = group_fallback_id
+        self.number_of_images_upload = number_of_images_upload
+        self.combine = combine
+        self.translation = translation
+        self.widestrip = widestrip
+
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
         self._names_to_ids = names_to_ids
@@ -67,7 +81,7 @@ class FileProcesser:
         zip_name_match = self._file_name_regex.match(self.zip_name)
         if not zip_name_match:
             logger.error(f"{self.zip_name} isn't in the correct naming format.")
-            print(TRANSLATION["naming_format_incorrect"].format(self.zip_name))
+            print(self.translation["naming_format_incorrect"].format(self.zip_name))
             return
         return zip_name_match
 
@@ -79,7 +93,9 @@ class FileProcesser:
             manga_series = manga_series.strip()
             if not self._uuid_regex.match(manga_series):
                 try:
-                    manga_series = self._names_to_ids["manga"].get(manga_series, None)
+                    manga_series = self._names_to_ids.get("manga", {}).get(
+                        manga_series, None
+                    )
                 except KeyError:
                     manga_series = None
 
@@ -219,7 +235,7 @@ class FileProcesser:
             for group in groups_array:
                 if not self._uuid_regex.match(group):
                     try:
-                        group_id = self._names_to_ids["group"].get(group, None)
+                        group_id = self._names_to_ids.get("group", {}).get(group, None)
                     except KeyError:
                         logger.warning(
                             f"No group id found for {group}, not tagging the upload with this group."
@@ -231,11 +247,7 @@ class FileProcesser:
                     groups.append(group)
 
         if not groups:
-            groups = (
-                []
-                if not config["options"]["group_fallback_id"]
-                else [config["options"]["group_fallback_id"]]
-            )
+            groups = [] if not self.group_fallback_id else [self.group_fallback_id]
         return groups
 
     def process_zip_name(self) -> "bool":
@@ -249,7 +261,7 @@ class FileProcesser:
 
         if self.manga_series is None:
             logger.error(f"Couldn't find a manga id for {self.zip_name}, skipping.")
-            print(TRANSLATION["skip_no_manga_id"].format(self.zip_name))
+            print(self.translation["skip_no_manga_id"].format(self.zip_name))
             return False
 
         self.language = self._get_language()

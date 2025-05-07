@@ -5,8 +5,6 @@ import time
 from configparser import SectionProxy
 from typing import Optional, TYPE_CHECKING
 
-from mupl.utils.config import mangadex_auth_url
-
 logger = logging.getLogger("mupl")
 
 if TYPE_CHECKING:
@@ -20,9 +18,11 @@ class OAuth2:
         client: "HTTPClient",
         access_token: "Optional[str]" = None,
         refresh_token: "Optional[str]" = None,
+        mangadex_auth_url: "str" = "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
     ):
         self.__client: "HTTPClient" = client
-        self.token_url = f"{mangadex_auth_url}/token"
+        self.__mangadex_auth_url = mangadex_auth_url
+        self.token_url = f"{self.__mangadex_auth_url}/token"
 
         self.__username: "str" = credential_config.get("mangadex_username")
         self.__password: "str" = credential_config.get("mangadex_password")

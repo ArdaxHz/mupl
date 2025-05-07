@@ -2,6 +2,7 @@
     "invalid_folder_to_upload": "No valid files found to upload, exiting.",
     "zips_no_manga_id_skip_message": "Skipping {} files as they have a missing manga id",
     "zips_no_manga_id_skip_message_logs": "{}, check the logs for the file names.",
+    "file_not_found": "File not found: {}",
     "check_file_name_to_id": "Please check your name-to-id file.",
     "uploading_draft": "Uploading",
     "finish_upload": "Finished Uploading",

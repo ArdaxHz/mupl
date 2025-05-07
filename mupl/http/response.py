@@ -6,14 +6,17 @@ from typing import Optional
 import requests
 
 from mupl.http import http_error_codes
-from mupl.utils.config import TRANSLATION
+
 
 logger = logging.getLogger("mupl")
 
 
 class HTTPResponse:
     def __init__(
-        self, response: "requests.Response", successful_codes: "list" = None
+        self,
+        response: "requests.Response",
+        translation: dict,
+        successful_codes: "list" = None,
     ) -> None:
         if isinstance(successful_codes, list):
             successful_codes = copy(successful_codes)
@@ -23,6 +26,7 @@ class HTTPResponse:
         successful_codes.extend(range(200, 300))
         self.successful_codes = successful_codes
         self.response = response
+        self.translation = translation
         self.data = self.json()
 
     @property
@@ -43,14 +47,16 @@ class HTTPResponse:
 
     def json(self) -> "Optional[dict]":
         """Convert the api response into a parsable json."""
-        critical_decode_error_message = TRANSLATION[
-            "unable_convert_api_response_to_json"
-        ].format(self.status_code)
+
+        critical_decode_error_message = self.translation.get(
+            "unable_convert_api_response_to_json",
+            "Unable to convert api response {0} to json.",
+        ).format(self.status_code)
 
         logger.info(f"Request id: {self.response.headers.get('x-request-id', None)}")
 
         if self.response.status_code == 204:
-            return
+            return None
 
         try:
             converted_response = self.response.json()
@@ -59,7 +65,7 @@ class HTTPResponse:
             logger.critical(critical_decode_error_message)
             logger.error(self.response.content)
             print(critical_decode_error_message)
-            return
+            return None
         except AttributeError:
             logger.critical(
                 f"Api response doesn't have load as json method, trying to load as json manually."
@@ -71,7 +77,7 @@ class HTTPResponse:
                 logger.critical(critical_decode_error_message)
                 logger.error(self.response.content)
                 print(critical_decode_error_message)
-                return
+                return None
 
     def print_error(
         self,
@@ -86,7 +92,6 @@ class HTTPResponse:
         error_json = self.json()
 
         if error_json is not None:
-            # Api response doesn't follow the normal api error format
             try:
                 errors = [
                     f'{e["status"]}: {e["title"]}: {e["detail"] if e["detail"] is not None else ""}'

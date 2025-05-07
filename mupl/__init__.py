@@ -1,1 +1,3 @@
-__version__ = "2.0.22"
+from .core import Mupl
+
+__all__ = ["Mupl"]
