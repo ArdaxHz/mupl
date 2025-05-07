@@ -1,8 +1,6 @@
 name: Publish muplr to PyPI
 
-on:
-  release:
-    types: [published] 
+on: push
 
 jobs:
   deploy:
@@ -14,7 +12,7 @@ jobs:
       id-token: write
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4     
+        uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -30,4 +28,5 @@ jobs:
       - name: Publish package to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          repository-url: https://test.pypi.org/legacy/
           verbose: true
