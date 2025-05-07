@@ -38,3 +38,9 @@ class MuplValidationError(MuplException):
     """Raised when a file fails validation."""
 
     pass
+
+
+class MuplNotAFileError(MuplException):
+    """Raised when a path is not a file."""
+
+    pass

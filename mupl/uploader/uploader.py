@@ -182,7 +182,7 @@ class ChapterUploader(ChapterUploaderHandler):
                     if self.file_name_obj.chapter_title is not None
                     else self.translation["not_defined_value"]
                 ),
-                language=self.file_name_obj.language.upper(),
+                language=self.file_name_obj.language.lower(),
                 groups=(
                     self.file_name_obj.groups
                     if self.file_name_obj.groups is not None

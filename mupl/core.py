@@ -13,7 +13,7 @@ import natsort
 from mupl.file_validator import FileProcesser
 from mupl.http.client import HTTPClient
 from mupl.uploader.uploader import ChapterUploader
-from mupl.exceptions import MuplException
+from mupl.exceptions import MuplException, MuplNotAFileError
 from mupl.loc.load import download_localisation
 from mupl.utils.config import validate_path
 from mupl.utils.logs import (
@@ -177,14 +177,17 @@ class Mupl:
             self.mdauth_path = self.mupl_path.joinpath(self.mdauth_filename)
 
         if self.mdauth_path.is_dir():
+            raise MuplNotAFileError(
+                f"mdauth_filename cannot be a directory: {self.mdauth_path.absolute()}"
+            )
             self.mdauth_path = self.mdauth_path.joinpath(".mdauth")
 
-        self.mdauth_path.parent.mkdir(parents=True, exist_ok=True)
-        if not self.mdauth_path.exists():
-            try:
-                self.mdauth_path.touch()
-            except OSError as e:
-                logger.error(f"Failed to create {self.mdauth_path}: {e}")
+        # self.mdauth_path.parent.mkdir(parents=True, exist_ok=True)
+        # if not self.mdauth_path.exists():
+        #     try:
+        #         self.mdauth_path.touch()
+        #     except OSError as e:
+        #         logger.error(f"Failed to create {self.mdauth_path}: {e}")
 
         if logs_dir_path:
             if os.path.isabs(logs_dir_path):
@@ -220,6 +223,11 @@ class Mupl:
             )
         else:
             self.name_id_map_path = self.home_path.joinpath(self.name_id_map_file)
+
+        if self.name_id_map_path.is_dir():
+            raise MuplNotAFileError(
+                f"name_id_map_filename cannot be a directory: {self.name_id_map_path.absolute()}"
+            )
 
         logger.info(f"Log path: {self.logs_path}")
         logger.info(f"Mupl path: {self.root_path}")
@@ -364,9 +372,6 @@ class Mupl:
     def _open_manga_series_map(self) -> Dict:
         """Get the manga-name-to-id map."""
         try:
-            if self.name_id_map_path.is_dir():
-                raise FileNotFoundError
-
             with open(
                 self.name_id_map_path,
                 "r",
@@ -455,12 +460,6 @@ class Mupl:
                 )
 
                 upload_success = uploader_process.upload()
-
-                if not self.http_client.login():
-                    logger.warning(
-                        f"Token refresh/check failed after uploading {file_name_obj}. Continuing..."
-                    )
-
                 del uploader_process
 
                 print(
