@@ -33,13 +33,11 @@ jobs:
     
     - name: Create Matrix of Languages
       id: ls_sed_jq
-      run: echo "version_matrix=$(ls mupl/loc | sed 's/.json//g' | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
-
+      run: echo "version_matrix=$(ls mupl/loc/*.json | sed 's/.*\///;s/\.json$//' | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
     - name: Output matrix value
       env:
           LANG_MATRIX: ${{ toJson(steps.ls_sed_jq.outputs.version_matrix) }}
       run: echo "$LANG_MATRIX"
-
     outputs:
       mupl-langs: ${{ steps.ls_sed_jq.outputs.version_matrix }}
 
@@ -62,7 +60,7 @@ jobs:
     - name: Create Separate Branch for ${{ github.ref_name }} ${{ matrix.lang }}
       run: |
         git rm -r doc -- ':!*${{ matrix.lang }}*'
-        git rm -r mupl/loc -- ':!*${{ matrix.lang }}*' ':!*en*'
+        git rm -r mupl/loc -- ':!*${{ matrix.lang }}*' ':!*en*' ':!*.py'
         git switch -c ${{ matrix.lang }}-release
         git commit -m '${{ github.ref_name }} ${{ matrix.lang }} release'
         git checkout ${{ github.ref }}
