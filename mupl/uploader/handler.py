@@ -250,6 +250,7 @@ class ChapterUploaderHandler:
                 "chapter": self.file_name_obj.chapter_number,
                 "title": self.file_name_obj.chapter_title,
                 "translatedLanguage": self.file_name_obj.language,
+                "termsAccepted": True
             },
             "pageOrder": self.images_to_upload_ids,
         }
