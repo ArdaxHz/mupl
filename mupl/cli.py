@@ -2,6 +2,7 @@ import sys
 import logging
 import argparse
 from pathlib import Path
+import time
 
 from mupl import Mupl
 from mupl.loc.load import load_localisation
@@ -101,6 +102,9 @@ def main():
         ratelimit_time = config_data["options"]["ratelimit_time"]
         widestrip = vargs.get("widestrip", False)
         combine = vargs.get("combine", False)
+
+        print(f"{'*'*3} {translation.get('accept_terms_conditions','')} {'*'*3}")
+        time.sleep(5)
 
         mupl = Mupl(
             mangadex_username=config_data["credentials"]["mangadex_username"],

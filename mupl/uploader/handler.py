@@ -249,9 +249,9 @@ class ChapterUploaderHandler:
                 "volume": self.file_name_obj.volume_number,
                 "chapter": self.file_name_obj.chapter_number,
                 "title": self.file_name_obj.chapter_title,
-                "translatedLanguage": self.file_name_obj.language
+                "translatedLanguage": self.file_name_obj.language,
             },
-            "termsAccepted": True,
+            "termsAccepted": self.http_client.upload_terms_accepted,
             "pageOrder": self.images_to_upload_ids,
         }
 

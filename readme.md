@@ -1,5 +1,7 @@
 # mupl - MangaDex Bulk Uploader
-Bulk uploads folders and archives (.zip/.cbz) to MangaDex in a quick and easy way. 
+Bulk uploads folders and archives (.zip/.cbz) to MangaDex in a quick and easy way.
+
+*You will need to accept MangaDex's [terms and conditions](https://mangadex.org/compliance) to use this tool. Mupl is not liable for uploads that are against the terms and conditions.*
 
 Read this in other languages:  
 [Português (Brasil)](doc/readme.pt-br.md)\

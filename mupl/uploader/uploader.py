@@ -210,6 +210,8 @@ class ChapterUploader(ChapterUploaderHandler):
             return False
 
         self.http_client.login()
+        if not self.http_client._check_terms_accepted():
+            return False
 
         upload_session_response_json = self._create_upload_session()
         if upload_session_response_json is None:

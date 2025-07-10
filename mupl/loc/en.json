@@ -11,6 +11,11 @@
     "upload_method_folder": "Folder",
     "upload_method_archive": "Archive",
 
+    "accept_terms_conditions": "By using this tool you agree to the MangaDex ToS and have accepted the upload terms and conditions. Terms available at: https://mangadex.org/compliance",
+    "agree_terms_conditions": "You agreed to the MangaDex ToS and have accepted the upload terms and conditions. Terms available at: https://mangadex.org/compliance",
+    "not_agree_terms_conditions": "You did not agree to the MangaDex ToS and upload terms and conditions. You need to agree to use this tool.",
+    "terms_need_accepting": "Do you accept the MangaDex terms of service? (y/n): ",
+
     "new_update_found": "Update found: {} => {}: {}.",
     "new_update_warning": "The new version may have breaking changes, please check the github releases page for a list of changes",
     "not_updating": "Not updating.",

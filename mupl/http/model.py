@@ -1,22 +1,25 @@
 import json
 import logging
-import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from threading import Timer
 from typing import Optional, Dict
-from configparser import ConfigParser
 
 import requests
 
 from mupl import __version__
-from mupl.exceptions import MuplLoginError
+from mupl.exceptions import MuplLoginError, MuplTermsNotAccepted
 from mupl.http import RequestError, http_error_codes
 from mupl.http.response import HTTPResponse
 from mupl.http.oauth import OAuth2
 
 
 logger = logging.getLogger("mupl")
+
+
+def raise_error(ex):
+    raise ex
 
 
 class HTTPModel:
@@ -68,11 +71,13 @@ class HTTPModel:
 
         access_token = None
         refresh_token = None
+        self.terms_accepted = None
 
         if self._token_file.exists():
             self._file_token = self._open_auth_file()
             access_token = self._file_token.get("access_token")
             refresh_token = self._file_token.get("refresh_token")
+            self.terms_accepted = self._file_token.get("terms", 1)
 
         self.oauth = OAuth2(
             credential_config,
@@ -85,6 +90,10 @@ class HTTPModel:
         self._md_auth_api_url = f"{self.mangadex_api_url}/auth"
         self._first_login = True
         self._successful_login = False
+
+    @property
+    def upload_terms_accepted(self) -> bool:
+        return self._check_terms_accepted()
 
     @property
     def access_token(self) -> Optional[str]:
@@ -293,10 +302,109 @@ class HTTPModel:
 
         raise RequestError(formatted_request_string)
 
+    def _check_terms_accepted(self) -> "bool":
+        """Check if the MangaDex terms of service have been accepted."""
+        try:
+            self.terms_accepted = int(self.terms_accepted)
+        except (ValueError, TypeError):
+            self.terms_accepted = 1
+
+        current_time = datetime.now(timezone.utc)
+        input_time = datetime.fromtimestamp(int(self.terms_accepted), timezone.utc)
+        if current_time - timedelta(days=7) <= input_time <= current_time:
+            return True
+        else:
+            return False
+
+    def _accept_terms(self) -> "bool":
+        """Accept the MangaDex terms of service."""
+        if not self._first_login:
+            return True
+
+        logger.debug("Prompting user to accept MangaDex terms of service.")
+
+        print(
+            self.translation.get(
+                "accept_terms_conditions",
+                "By using this tool you agree to the MangaDex ToS and have accepted the upload terms and conditions.",
+            )
+        )
+
+        timeout = 30
+
+        t = Timer(
+            timeout,
+            raise_error,
+            [
+                ValueError(
+                    self.translation.get(
+                        "not_agree_terms_conditions",
+                        "You did not agree to the MangaDex ToS and upload terms and conditions. You need to agree to use this tool.",
+                    )
+                )
+            ],
+        )
+        t.start()
+
+        answer = input(
+            self.translation.get(
+                "terms_need_accepting",
+                "Do you accept the MangaDex terms of service? (y/n): ",
+            )
+        )
+        t.cancel()
+
+        if answer.lower() in ["true", "1", "t", "y", "yes"]:
+            accepted_terms = True
+        else:
+            accepted_terms = False
+
+        if not accepted_terms:
+            print(
+                self.translation.get(
+                    "not_agree_terms_conditions",
+                    "You did not agree to the MangaDex ToS and upload terms and conditions. You need to agree to use this tool.",
+                )
+            )
+            logger.info(f"User did not agree to the MangaDex ToS.")
+            return False
+        else:
+            print(
+                self.translation.get(
+                    "agree_terms_conditions",
+                    "You agreed to the MangaDex ToS and upload terms and conditions.",
+                )
+            )
+            logger.info(f"User agreed to the MangaDex ToS.")
+            return True
+
     def _login(self, recursed=False) -> "bool":
         """Attempt to ensure the client is logged in."""
         if self._first_login:
             logger.debug("Trying to login through the mdauth file.")
+
+        terms_accepted = self._check_terms_accepted()
+
+        if terms_accepted:
+            self._save_tokens(
+                self.access_token, self.refresh_token, self.terms_accepted
+            )
+        else:
+            accepted_terms = self._accept_terms()
+            if accepted_terms:
+                self.terms_accepted = int(datetime.now(timezone.utc).timestamp())
+                self._save_tokens(
+                    self.access_token, self.refresh_token, self.terms_accepted
+                )
+            else:
+                self.terms_accepted = 1
+                logger.error("Terms of service not accepted, cannot login.")
+                raise MuplTermsNotAccepted(
+                    self.translation.get(
+                        "not_agree_terms_conditions",
+                        "You did not agree to the MangaDex ToS and upload terms and conditions. You need to agree to use this tool.",
+                    )
+                )
 
         if self.access_token is not None:
             self._update_headers(self.access_token)
@@ -308,7 +416,9 @@ class HTTPModel:
             self._successful_login = True
 
             self._update_headers(self.access_token)
-            self._save_tokens(self.access_token, self.refresh_token)
+            self._save_tokens(
+                self.access_token, self.refresh_token, self.terms_accepted
+            )
 
             if self._first_login:
                 logger.info(f"Logged into mangadex.")
@@ -337,11 +447,20 @@ class HTTPModel:
             )
             return {}
 
-    def _save_tokens(self, access_token: "str", refresh_token: "str") -> None:
+    def _save_tokens(
+        self, access_token: "str", refresh_token: "str", termsAccepted: "int"
+    ) -> None:
         """Save the access and refresh tokens."""
         with open(self._token_file, "w") as login_file:
             login_file.write(
-                json.dumps({"access": access_token, "refresh": refresh_token}, indent=4)
+                json.dumps(
+                    {
+                        "access": access_token,
+                        "refresh": refresh_token,
+                        "terms": termsAccepted,
+                    },
+                    indent=4,
+                )
             )
         logger.debug("Saved mdauth file.")
 

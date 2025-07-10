@@ -10,6 +10,12 @@ class MuplLoginError(MuplException):
     pass
 
 
+class MuplTermsNotAccepted(MuplException):
+    """Raised when terms of service not accepted."""
+
+    pass
+
+
 class MuplOAuthError(MuplException):
     """Raised when OAuth token retrieval fails."""
 
