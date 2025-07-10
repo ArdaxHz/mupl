@@ -1,18 +1,23 @@
 {
-    "invalid_folder_to_upload": "No se encontraron archivos válidos para subir, cerrando el programa...",
-    "check_file_name_to_id": "Por favor, verifica tu archivo de nombre a ID.",
-    "zips_no_manga_id_skip_message": "Omitiendo los archivos {} ya que les falta la ID del manga",
+    "invalid_folder_to_upload": "No se encontraron archivos válidos para subir, cerrando el programa.",
+    "zips_no_manga_id_skip_message": "Omitiendo {} archivo(s) ya que les falta la ID del manga",
     "zips_no_manga_id_skip_message_logs": "{}, revisa los registros del programa para los nombres de los archivos.",
+    "file_not_found": "Archivo no encontrado: {}",
     "check_file_name_to_id": "Por favor revisa tu archivo nombre-a-id.",
     "uploading_draft": "Subiendo",
     "finish_upload": "Subida finalizada",
-    "keyboard_interrupt_exit": "Interrupción de teclado detectada, cerrando el programa...",
+    "keyboard_interrupt_exit": "Interrupción de teclado detectada, cerrando el programa.",
     "failed_uploads": "Subidas fallidas:",
     "upload_method_folder": "Carpeta",
     "upload_method_archive": "Archivo",
 
+    "accept_terms_conditions": "Al utilizar esta herramienta, aceptas los términos y condiciones de MangaDex y las cláusulas de subida. TyC consultables en: https://mangadex.org/compliance",
+    "agree_terms_conditions": "Has aceptado los términos y condiciones de MangaDex y las cláusulas de subida. TyC consultables en: https://mangadex.org/compliance",
+    "not_agree_terms_conditions": "No has aceptado los términos y condiciones de MangaDex ni las cláusulas de subida. Debes aceptarlos para utilizar esta herramienta.",
+    "terms_need_accepting": "¿Aceptas los términos y condiciones de MangaDex? (y/n): ",
+
     "new_update_found": "Actualización encontrada: {} => {}: {}.",
-    "new_update_warning": "La nueva versión puede tener cambios críticos, por favor consulta la página de versiones de github para ver la lista de cambios.",
+    "new_update_warning": "La nueva versión puede incluir cambios importantes que afecten a tu configuración. Consulta la página de versiones de GitHub para ver la lista de cambios.",
     "not_updating": "No actualizando.",
     "input_want_update": "¿Quieres actualizar? [y/N] ",
     "successfully_updated": "Actualizado, reinicia el programa para ejecutar la nueva versión.",
@@ -34,8 +39,9 @@
     "not_defined_value": "Ninguno",
 
     "uploading_images": "Subiendo imagenes {} a {}.",
-    "uploading_images_error": "Error de subida para {} a {}, intento {}/{},.",
+    "uploading_images_error": "Error de subida de imagenes {} a {}, intento {}/{},.",
     "error_create_draft_session": "No se pudo crear sesión de subida para {}.",
+    "successful_upload_message": "Success: Uploaded page {}, size: {} mb.",
     "uploading_successfully": "Subido correctamente: {}, {}.",
     "uploading_failed": "No se pudo subir {}",
     "image_split": "{} sobrepasa los 10000px {}, separando en {} imagenes.",
@@ -49,5 +55,5 @@
     "not_logged_in": "401: No iniciado sesión.",
     "logged_in": "Sesión iniciada.",
 
-    "unable_convert_api_response_to_json": "{}: No se pudo convertir la respuesta de la API en un JSON."
+    "unable_convert_api_response_to_json": "{}: No se pudo convertir la respuesta de la API en JSON."
 }
