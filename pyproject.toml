@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools >= 77.0.3", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "muplr"
+description = "mupl: Bulk MangaDex Upload Tool"
+readme = "readme.md"
+
+dynamic = ["version"]
+authors = [{ name = "ArdaxHz"}]
+
+license = "GPL-3.0-or-later"
+keywords = ["manga", "upload", "bulk", "mangadex"]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",   
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Games/Entertainment",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Multimedia",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "requests",
+    "natsort",
+    "packaging",
+    "Pillow",
+    "tqdm",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/ArdaxHz/mupl"
+"Repository" = "https://github.com/ArdaxHz/mupl"
+"Bug Tracker" = "https://github.com/ArdaxHz/mupl/issues"
+
+[tool.setuptools]
+package-dir = {"mupl" = "mupl"}
+
+[tool.setuptools.exclude-package-data]
+"*" = ["doc/*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "mupl.__version__.__version__"}

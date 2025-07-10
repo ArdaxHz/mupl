@@ -1,5 +1,5 @@
 import os
-import sys
+import shutil
 import time
 import asyncio
 import logging
@@ -10,13 +10,6 @@ from tqdm import tqdm
 from mupl.file_validator import FileProcesser
 from mupl.http.client import HTTPClient
 from mupl.uploader.handler import ChapterUploaderHandler
-from mupl.utils.config import (
-    NUMBER_THREADS,
-    VERBOSE,
-    config,
-    RATELIMIT_TIME,
-    TRANSLATION,
-)
 
 logger = logging.getLogger("mupl")
 
@@ -28,17 +21,52 @@ class ChapterUploader(ChapterUploaderHandler):
         file_name_obj: "FileProcesser",
         names_to_ids: "dict",
         failed_uploads: "list",
-        threaded: "bool",
-        combine: "bool",
+        mangadex_api_url: str,
+        upload_retry: int,
+        number_threads: int,
+        uploaded_files: Path,
+        ratelimit_time: int,
+        translation: dict,
+        verbose: bool,
+        move_files: bool,
+        number_of_images_upload: int,
+        widestrip: bool,
+        combine: bool,
+        home_path: Path,
+        **kwargs,
     ):
-        super().__init__(http_client, file_name_obj, failed_uploads, combine)
+        super().__init__(
+            http_client,
+            file_name_obj,
+            failed_uploads,
+            verbose,
+            mangadex_api_url,
+            upload_retry,
+            translation,
+            move_files,
+            number_of_images_upload,
+            widestrip,
+            combine,
+            home_path,
+            **kwargs,
+        )
         self.names_to_ids = names_to_ids
-        self.threaded = threaded
-        if NUMBER_THREADS <= 1:
+        self.number_threads = number_threads
+        self.uploaded_files = uploaded_files
+        self.ratelimit_time = ratelimit_time
+        self.threaded = kwargs.get("threaded", False)
+        if self.number_threads <= 1:
             self.threaded = False
 
-        self.uploaded_files_path = Path(config["paths"]["uploaded_files"])
-        self.ratelimit_time = RATELIMIT_TIME
+        if os.path.isabs(self.uploaded_files):
+            self.uploaded_files_path = (
+                self.uploaded_files
+                if isinstance(self.uploaded_files, Path)
+                else Path(self.uploaded_files)
+            )
+        else:
+            self.uploaded_files_path = self.home_path.joinpath(self.uploaded_files)
+        self.ratelimit_time = self.ratelimit_time
         self.myzip = self.image_uploader_process.myzip
 
     @staticmethod
@@ -82,10 +110,11 @@ class ChapterUploader(ChapterUploaderHandler):
             else:
                 break
 
-        new_uploaded_zip_path = self.to_upload.rename(
-            os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}")
+        new_uploaded_zip_path = shutil.move(
+            self.to_upload,
+            os.path.join(self.uploaded_files_path, f"{zip_name}{zip_extension}"),
         )
-        logger.debug(f"Moved {self.to_upload} to {new_uploaded_zip_path}.")
+        logger.debug(f"Moved '{self.to_upload}' to '{new_uploaded_zip_path}'")
 
     async def process_images_upload(self, images_array):
         """Start uploading the images, threaded."""
@@ -111,7 +140,7 @@ class ChapterUploader(ChapterUploaderHandler):
         try:
             loop.run_until_complete(gathered)
         except KeyboardInterrupt as e:
-            print(TRANSLATION["keyboard_interrupt_cancel"])
+            print(self.translation["keyboard_interrupt_cancel"])
             gathered.cancel()
             self.failed_image_upload = True
 
@@ -147,55 +176,57 @@ class ChapterUploader(ChapterUploaderHandler):
                 volume_number=(
                     self.file_name_obj.volume_number
                     if self.file_name_obj.volume_number is not None
-                    else TRANSLATION["not_defined_value"]
+                    else self.translation["not_defined_value"]
                 ),
                 chapter_title=(
                     self.file_name_obj.chapter_title
                     if self.file_name_obj.chapter_title is not None
-                    else TRANSLATION["not_defined_value"]
+                    else self.translation["not_defined_value"]
                 ),
-                language=self.file_name_obj.language.upper(),
+                language=self.file_name_obj.language.lower(),
                 groups=(
                     self.file_name_obj.groups
                     if self.file_name_obj.groups is not None
-                    else TRANSLATION["not_defined_value"]
+                    else self.translation["not_defined_value"]
                 ),
                 publish_date=(
                     self.file_name_obj.publish_date
                     if self.file_name_obj.publish_date is not None
-                    else TRANSLATION["not_defined_value"]
+                    else self.translation["not_defined_value"]
                 ),
-                chapter_number_manga=TRANSLATION["chapter_number_manga"],
-                volume_number_manga=TRANSLATION["volume_number_manga"],
-                chapter_title_manga=TRANSLATION["chapter_title_manga"],
-                language_manga=TRANSLATION["language_manga"],
-                groups_manga=TRANSLATION["groups_manga"],
-                publish_date_manga=TRANSLATION["publish_date_manga"],
+                chapter_number_manga=self.translation["chapter_number_manga"],
+                volume_number_manga=self.translation["volume_number_manga"],
+                chapter_title_manga=self.translation["chapter_title_manga"],
+                language_manga=self.translation["language_manga"],
+                groups_manga=self.translation["groups_manga"],
+                publish_date_manga=self.translation["publish_date_manga"],
             )
         )
 
         if not self.image_uploader_process.valid_images_to_upload:
-            print(TRANSLATION["invalid_images_to_upload"])
+            print(self.translation["invalid_images_to_upload"])
             logger.error(f"No valid images found for {self.zip_name}")
             self.failed_uploads.append(self.to_upload)
-            return
+            return False
 
         self.http_client.login()
+        if not self.http_client._check_terms_accepted():
+            return False
 
         upload_session_response_json = self._create_upload_session()
         if upload_session_response_json is None:
             time.sleep(self.ratelimit_time)
-            return
+            return False
 
         self.upload_session_id = upload_session_response_json["data"]["id"]
 
         logger.info(
             f"Created upload session: {self.upload_session_id}, {self.zip_name}."
         )
-        print(TRANSLATION["draft_create_session"].format(self.upload_session_id))
-        if VERBOSE:
+        print(self.translation["draft_create_session"].format(self.upload_session_id))
+        if self.verbose:
             print(
-                TRANSLATION["images_to_upload"].format(
+                self.translation["images_to_upload"].format(
                     len(
                         [
                             item
@@ -209,17 +240,17 @@ class ChapterUploader(ChapterUploaderHandler):
         self.tqdm = tqdm(total=len(self.image_uploader_process.info_list))
 
         if self.threaded:
-            if VERBOSE:
-                print(TRANSLATION["threaded_upload_running"])
+            if self.verbose:
+                print(self.translation["threaded_upload_running"])
 
             spliced_images_list = [
                 self.image_uploader_process.valid_images_to_upload[
-                    elem : elem + NUMBER_THREADS
+                    elem : elem + self.number_threads
                 ]
                 for elem in range(
                     0,
                     len(self.image_uploader_process.valid_images_to_upload),
-                    NUMBER_THREADS,
+                    self.number_threads,
                 )
             ]
 
@@ -228,8 +259,8 @@ class ChapterUploader(ChapterUploaderHandler):
                 if self.failed_image_upload:
                     break
         else:
-            if VERBOSE:
-                print(TRANSLATION["non_threaded_upload_running"])
+            if self.verbose:
+                print(self.translation["non_threaded_upload_running"])
             self.run_image_uploader(self.image_uploader_process.valid_images_to_upload)
 
         self.tqdm.close()
@@ -238,13 +269,14 @@ class ChapterUploader(ChapterUploaderHandler):
 
         # Skip chapter upload and delete upload session
         if self.failed_image_upload:
-            print(TRANSLATION["draft_deleting_failed_upload"])
+            print(self.translation["draft_deleting_failed_upload"])
             logger.error(
                 f"Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}."
             )
             self.remove_upload_session()
             self.failed_uploads.append(self.to_upload)
-            return
+            return False
 
         logger.info("Uploaded all of the chapter's images.")
-        self._commit_chapter()
+        commit_chapter_resp = self._commit_chapter()
+        return commit_chapter_resp

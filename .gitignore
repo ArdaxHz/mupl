@@ -16,3 +16,8 @@ config.json
 mupl/loc/* export-ignore
 !mupl/loc/en.json
 temp/*
+*.egg-info
+build/*
+dist/*
+.pypirc
+.DS_Store

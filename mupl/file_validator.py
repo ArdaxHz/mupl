@@ -2,9 +2,7 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Optional, List
-
-from mupl.utils.config import config, TRANSLATION
+from typing import Optional, List, Dict
 
 logger = logging.getLogger("mupl")
 
@@ -15,8 +13,8 @@ FILE_NAME_REGEX = re.compile(
     r"(?:\s?\[(?P<language>[a-z]{2}(?:-[a-z]{2})?|[a-zA-Z]{3}|[a-zA-Z]+)?\])?\s-\s"  # Language
     r"(?P<prefix>(?:[c](?:h(?:a?p?(?:ter)?)?)?\.?\s?))?(?P<chapter>\d+(?:\.\d+)?)"  # Chapter number and prefix
     r"(?:\s?\((?:[v](?:ol(?:ume)?(?:s)?)?\.?\s?)?(?P<volume>\d+(?:\.\d+)?)?\))?"  # Volume number
-    r"(?:\s?\((?P<chapter_title>.+)\))?"  # Chapter title
-    r"(?:\s?\{(?P<publish_date>(?P<publish_year>\d{4})-(?P<publish_month>\d{2})-(?P<publish_day>\d{2})(?:[T\s](?P<publish_hour>\d{2})[\:\-](?P<publish_minute>\d{2})(?:[\:\-](?P<publish_microsecond>\d{2}))?(?:(?P<publish_offset>[+-])(?P<publish_timezone>\d{2}[\:\-]?\d{2}))?)?)\})?"  # Publish date
+    r"(?:\s?\((?P<chapter_title>.+)?\))?"  # Chapter title
+    r"(?:\s?\{(?P<publish_date>(?P<publish_year>\d{4})-(?P<publish_month>\d{2})-(?P<publish_day>\d{2})(?:[T\s](?P<publish_hour>\d{2})[\:\-](?P<publish_minute>\d{2})(?:[\:\-](?P<publish_microsecond>\d{2}))?(?:(?P<publish_offset>[+-])(?P<publish_timezone>\d{2}[\:\-]?\d{2}))?)?)?\})?"  # Publish date
     r"(?:\s?\[(?:(?P<group>.+))?\])?"  # Groups
     r"(?:\s?\{v?(?P<version>\d)?\})?"  # Chapter version
     r"(?:\.(?P<extension>zip|cbz))?$",  # File extension
@@ -28,10 +26,38 @@ UUID_REGEX = re.compile(
     re.IGNORECASE,
 )
 
+WINDOWS_ILLEGAL_CHAR_MAP = {
+    "{backslash}": "\\",
+    "{slash}": "/",
+    "{colon}": ":",
+    "{asterisk}": "*",
+    "{question_mark}": "?",
+    "{quote}": '"',
+    "{less_than}": "<",
+    "{greater_than}": ">",
+    "{pipe}": "|",
+}
+
 
 class FileProcesser:
-    def __init__(self, to_upload: "Path", names_to_ids: "dict") -> None:
+    def __init__(
+        self,
+        to_upload: "Path",
+        names_to_ids: "dict",
+        translation: Dict,
+        group_fallback_id: Optional[str] = None,
+        number_of_images_upload: int = 10,
+        widestrip: bool = False,
+        combine: bool = False,
+        **kwargs,
+    ) -> None:
         self.to_upload = to_upload
+        self.group_fallback_id = group_fallback_id
+        self.number_of_images_upload = number_of_images_upload
+        self.combine = combine
+        self.translation = translation
+        self.widestrip = widestrip
+
         self.zip_name = self.to_upload.name
         self.zip_extension = self.to_upload.suffix
         self._names_to_ids = names_to_ids
@@ -48,15 +74,14 @@ class FileProcesser:
         self.chapter_title = None
         self.publish_date = None
 
-        self.longstrip = False
-        self.widestrip = False
+        self.widestrip = kwargs.get("widestrip", False)
 
     def _match_file_name(self) -> "Optional[re.Match[str]]":
         """Check for a full regex match of the file."""
         zip_name_match = self._file_name_regex.match(self.zip_name)
         if not zip_name_match:
             logger.error(f"{self.zip_name} isn't in the correct naming format.")
-            print(TRANSLATION["naming_format_incorrect"].format(self.zip_name))
+            print(self.translation["naming_format_incorrect"].format(self.zip_name))
             return
         return zip_name_match
 
@@ -68,7 +93,9 @@ class FileProcesser:
             manga_series = manga_series.strip()
             if not self._uuid_regex.match(manga_series):
                 try:
-                    manga_series = self._names_to_ids["manga"].get(manga_series, None)
+                    manga_series = self._names_to_ids.get("manga", {}).get(
+                        manga_series, None
+                    )
                 except KeyError:
                     manga_series = None
 
@@ -120,8 +147,10 @@ class FileProcesser:
         """Get the chapter title from the file if it exists."""
         chapter_title = self._zip_name_match.group("chapter_title")
         if chapter_title is not None:
-            # Add the question mark back to the chapter title
-            chapter_title = chapter_title.strip().replace(r"{question_mark}", "?")
+            chapter_title = chapter_title.strip()
+            # Replace illegal characters in the chapter title
+            for placeholder, char in WINDOWS_ILLEGAL_CHAR_MAP.items():
+                chapter_title = chapter_title.replace(placeholder, char)
         return chapter_title
 
     def _get_publish_date(self) -> "Optional[str]":
@@ -206,7 +235,7 @@ class FileProcesser:
             for group in groups_array:
                 if not self._uuid_regex.match(group):
                     try:
-                        group_id = self._names_to_ids["group"].get(group, None)
+                        group_id = self._names_to_ids.get("group", {}).get(group, None)
                     except KeyError:
                         logger.warning(
                             f"No group id found for {group}, not tagging the upload with this group."
@@ -218,11 +247,7 @@ class FileProcesser:
                     groups.append(group)
 
         if not groups:
-            groups = (
-                []
-                if not config["options"]["group_fallback_id"]
-                else [config["options"]["group_fallback_id"]]
-            )
+            groups = [] if not self.group_fallback_id else [self.group_fallback_id]
         return groups
 
     def process_zip_name(self) -> "bool":
@@ -236,7 +261,7 @@ class FileProcesser:
 
         if self.manga_series is None:
             logger.error(f"Couldn't find a manga id for {self.zip_name}, skipping.")
-            print(TRANSLATION["skip_no_manga_id"].format(self.zip_name))
+            print(self.translation["skip_no_manga_id"].format(self.zip_name))
             return False
 
         self.language = self._get_language()
@@ -245,31 +270,7 @@ class FileProcesser:
         self.groups = self._get_groups()
         self.chapter_title = self._get_chapter_title()
         self.publish_date = self._get_publish_date()
-
-        self.longstrip = self._is_longstrip()
-        self.widestrip = self._is_widestrip()
-
         return True
-
-    def _is_longstrip(self) -> "bool":
-        """Check if the file is a longstrip."""
-        return (
-            self.manga_series
-            in self._names_to_ids.get("formats", {}).get("longstrip", [])
-            and self.manga_series
-            not in self._names_to_ids.get("formats", {}).get("widestrip", [])
-            is not None
-        )
-
-    def _is_widestrip(self) -> "bool":
-        """Check if the file is a widestrip."""
-        return (
-            self.manga_series
-            in self._names_to_ids.get("formats", {}).get("widestrip", [])
-            and self.manga_series
-            not in self._names_to_ids.get("formats", {}).get("longstrip", [])
-            is not None
-        )
 
     @property
     def zip_name_match(self):

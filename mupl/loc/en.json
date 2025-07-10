@@ -2,6 +2,7 @@
     "invalid_folder_to_upload": "No valid files found to upload, exiting.",
     "zips_no_manga_id_skip_message": "Skipping {} files as they have a missing manga id",
     "zips_no_manga_id_skip_message_logs": "{}, check the logs for the file names.",
+    "file_not_found": "File not found: {}",
     "check_file_name_to_id": "Please check your name-to-id file.",
     "uploading_draft": "Uploading",
     "finish_upload": "Finished Uploading",
@@ -9,6 +10,11 @@
     "failed_uploads": "Failed uploads:",
     "upload_method_folder": "Folder",
     "upload_method_archive": "Archive",
+
+    "accept_terms_conditions": "By using this tool you agree to the MangaDex ToS and have accepted the upload terms and conditions. Terms available at: https://mangadex.org/compliance",
+    "agree_terms_conditions": "You agreed to the MangaDex ToS and have accepted the upload terms and conditions. Terms available at: https://mangadex.org/compliance",
+    "not_agree_terms_conditions": "You did not agree to the MangaDex ToS and upload terms and conditions. You need to agree to use this tool.",
+    "terms_need_accepting": "Do you accept the MangaDex terms of service? (y/n): ",
 
     "new_update_found": "Update found: {} => {}: {}.",
     "new_update_warning": "The new version may have breaking changes, please check the github releases page for a list of changes",
