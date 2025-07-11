@@ -26,7 +26,7 @@ def main():
     parser.add_argument(
         "--update",
         "-u",
-        action="store_true",
+        action="store_false",
         help="Check for program update before running.",
     )
     parser.add_argument(

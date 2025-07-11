@@ -40,7 +40,7 @@ def check_for_update(mupl_path=Path("."), translation=None, mdauth_path=".mdauth
     logger.debug("Looking for program update.")
 
     update = False
-    local_version = version.parse(__version__)
+    local_version = version.parse(__version__.__version__)
     remote_release = requests.get(
         "https://api.github.com/repos/ArdaxHz/mupl/releases/latest"
     )
