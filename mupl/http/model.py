@@ -33,7 +33,7 @@ class HTTPModel:
         upload_retry: int,
         ratelimit_time: int,
         mangadex_api_url: str,
-        mdauth_path: str,
+        mdauth_path: Path,
         mupl_path: Path,
         translation: Dict,
         cli: bool,
@@ -75,8 +75,8 @@ class HTTPModel:
 
         if self._token_file.exists():
             self._file_token = self._open_auth_file()
-            access_token = self._file_token.get("access_token")
-            refresh_token = self._file_token.get("refresh_token")
+            access_token = self._file_token.get("access")
+            refresh_token = self._file_token.get("refresh")
             self.terms_accepted = self._file_token.get("terms", 1)
 
         self.oauth = OAuth2(
@@ -384,13 +384,18 @@ class HTTPModel:
             logger.debug("Trying to login through the mdauth file.")
 
         terms_accepted = self._check_terms_accepted()
+        print(f"{terms_accepted} terms accepted.")
 
         if terms_accepted:
             self._save_tokens(
                 self.access_token, self.refresh_token, self.terms_accepted
             )
         else:
-            accepted_terms = self._accept_terms()
+            if self.cli:
+                accepted_terms = self._accept_terms()
+            else:
+                accepted_terms = False
+
             if accepted_terms:
                 self.terms_accepted = int(datetime.now(timezone.utc).timestamp())
                 self._save_tokens(
@@ -430,6 +435,9 @@ class HTTPModel:
                 if self._token_file.exists():
                     logger.warning(f"Deleting mdauth file and trying again.")
                     self._token_file.unlink()
+                    self.oauth.__access_token = None
+                    self.oauth.__refresh_token = None
+                    self.terms_accepted = 1
                     self._login(recursed=True)
 
         logger.critical("All login attempts failed.")

@@ -5,7 +5,7 @@ import time
 import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple, Union
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 
 import natsort
@@ -52,6 +52,7 @@ class Mupl:
         mangadex_auth_url: str = "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
         mdauth_filename: str = ".mdauth",
         verbose: bool = False,
+        home_path: Path = Path.home().joinpath("mupl"),
         **kwargs,
     ):
         r"""
@@ -87,7 +88,7 @@ class Mupl:
         self.move_files = bool(move_files)
 
         self.mupl_path = Path(__file__).parent
-        self.home_path = Path.home().joinpath("mupl")
+        self.home_path = home_path
         if not validate_path(Path.home()):
             self.home_path = self.mupl_path
 
@@ -405,6 +406,7 @@ class Mupl:
         zips_to_upload: List[FileProcesser],
         names_to_ids: Dict[str, str],
         *,
+        terms_accepted: bool,
         widestrip: bool,
         combine: bool,
         **kwargs,
@@ -423,6 +425,11 @@ class Mupl:
 
         widestrip = bool(widestrip)
         combine = bool(combine)
+
+        if not self.cli:
+            self.http_client.terms_accepted = (
+                1 if not terms_accepted else int(datetime.now(timezone.utc).timestamp())
+            )
 
         failed_uploads: List[Path] = []
         for index, file_name_obj in enumerate(zips_to_upload, start=1):
@@ -516,6 +523,7 @@ class Mupl:
         self,
         upload_dir_path: Union[Path, str],
         *,
+        terms_accepted: bool,
         widestrip: bool = False,
         combine: bool = False,
         **kwargs,
@@ -563,6 +571,7 @@ class Mupl:
         failed_uploads = self._upload_loop(
             zips_to_upload,
             names_to_ids,
+            terms_accepted=terms_accepted,
             widestrip=widestrip,
             combine=combine,
             **kwargs,
@@ -578,6 +587,7 @@ class Mupl:
         manga_id: str,
         group_ids: Optional[List[str]] = None,
         *,
+        terms_accepted: bool,
         language: str = "en",
         oneshot: Optional[bool] = False,
         chapter_number: Optional[str] = None,
@@ -714,6 +724,7 @@ class Mupl:
         failed_uploads = self._upload_loop(
             [file_name_obj],
             names_to_ids={},
+            terms_accepted=terms_accepted,
             widestrip=widestrip,
             combine=combine,
             **kwargs,

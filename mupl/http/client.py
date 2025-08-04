@@ -17,7 +17,7 @@ class HTTPClient(HTTPModel):
         client_secret: Optional[str] = None,
         mangadex_api_url: str = "https://api.mangadex.org",
         mangadex_auth_url: str = "https://auth.mangadex.org/realms/mangadex/protocol/openid-connect",
-        mdauth_path: str = ".mdauth",
+        mdauth_path: Path = ".mdauth",
         ratelimit_time: int = 2,
         upload_retry: int = 3,
         translation: Optional[Dict] = None,

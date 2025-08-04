@@ -141,6 +141,7 @@ def main():
 
         failed_list = mupl.upload_directory(
             upload_directory_path,
+            terms_accepted=False,
             widestrip=widestrip,
             combine=combine,
         )
