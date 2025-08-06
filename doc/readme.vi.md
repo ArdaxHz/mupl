@@ -60,7 +60,7 @@ Có các đối số dòng lệnh có thể thêm sau lệnh chính để thay �
 ##### Tùy chọn:
 - `--update` `-u` Không kiểm tra bản cập nhật mới khi bắt đầu chương trình.
 - `--verbose` `-v` Làm cho các thông báo và nhật ký dòng lệnh chi tiết hơn.
-- `--threaded` `-t` Chạy trình tải lên theo luồng. *Mặc định: False*
+
 - `--combine` `-c` Kết hợp các hình ảnh nhỏ hơn hoặc bằng 128px với hình ảnh trước đó. *Mặc định: False*
 
 ## Cấu trúc tên tệp
@@ -110,7 +110,7 @@ Sao chép và bỏ `.example` khỏi `config.json.example` để bắt đầu s�
 - `ratelimit_time` Thời gian nghỉ (tính bằng giây) sau các lần gọi API. *Mặc định: 2*
 - `max_log_days` Số ngày lưu trữ nhật ký. *Mặc định: 30*
 - `group_fallback_id` ID nhóm sử dụng nếu không tìm thấy trong tệp hoặc bản đồ ID, để trống nếu không tải lên nhóm.  *Mặc định: null*
-- `number_threads`: Số luồng để tải hình ảnh đồng thời. **Điều này có thể làm bạn bị hạn chế số lượng request.** Các luồng bị giới hạn từ 1-3. *Mặc định: 3*
+
 - `language`: Ngôn ngữ cho các thông báo dòng lệnh. *Mặc định: en*
 
 #### Thông tin đăng nhập

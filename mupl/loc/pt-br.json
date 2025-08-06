@@ -18,8 +18,7 @@
     "invalid_images_to_upload": "Nenhuma imagem válida para upload, pulando.",
     "draft_create_session": "Sessão de upload criada: {}",
     "images_to_upload": "{} imagens para upload.",
-    "threaded_upload_running": "Executando uploader em threads.",
-    "non_threaded_upload_running": "Executando uploader sem threads.",
+    "non_threaded_upload_running": "Executando uploader.",
     "draft_deleting_failed_upload": "Excluindo rascunho devido a falha no upload de imagem.",
     "not_defined_value": "Não adicionado",
 

@@ -21,4 +21,4 @@ build/*
 dist/*
 .pypirc
 .DS_Store
-*.py
+test.py

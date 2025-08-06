@@ -34,7 +34,7 @@ Des arguments peuvent être ajoutés après la commande principale pour modifier
 ##### Options:
 - `--update` `-u` Désactive la recherche de mise à jour au lancement.
 - `--verbose` `-v` Rend les messages et logs plus verbeux.
-- `--threaded` `-t` Lance l'uploader en mode multithread. *Par défaut: False*
+
 
 ## Format de nom des fichiers à upload
 #### Format
@@ -68,7 +68,7 @@ Copiez le fichier `config.json.example` et retirez le suffixe `.example` pour en
 - `ratelimit_time` Temps d'attente (en secondes) après chaque appel API. *Par défaut: 2*
 - `max_log_days` Nombre de jours de conservation des logs. *Par défaut: 30*
 - `group_fallback_id` ID de groupe subsidiaire si l'ID est absent du nom du fichier et de `name_id_map.json`. Laissez `null` pour n'indiquer aucun groupe. *Par défaut: null*
-- `number_threads`: Nombre de threads pour l'upload d'images simultané. **Peut vous faire dépasser la fréquence limite de requêtes d'upload.** Minimum-maximum : 1-3. *Par défaut: 3*
+
 - `language`: Langue utilisée pour les messages affichés sur le terminal. *Par défaut: null*
 
 #### Authentifiants MangaDex

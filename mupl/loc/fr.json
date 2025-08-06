@@ -25,8 +25,7 @@
     "invalid_images_to_upload": "Aucune image valide à upload trouvée, passage à l'upload suivant.",
     "draft_create_session": "Session d'upload créée: {}",
     "images_to_upload": "{} images à upload.",
-    "threaded_upload_running": "Upload en mode multithread.",
-    "non_threaded_upload_running": "Upload en mode monothread.",
+    "non_threaded_upload_running": "Upload en cours.",
     "draft_deleting_failed_upload": "Session d'upload supprimée : au moins une image n'a pu être upload.",
     "not_defined_value": "Indéfini",
 

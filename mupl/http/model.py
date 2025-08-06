@@ -92,10 +92,6 @@ class HTTPModel:
         self._successful_login = False
 
     @property
-    def upload_terms_accepted(self) -> bool:
-        return self._check_terms_accepted()
-
-    @property
     def access_token(self) -> Optional[str]:
         return self.oauth.access_token
 
@@ -302,114 +298,10 @@ class HTTPModel:
 
         raise RequestError(formatted_request_string)
 
-    def _check_terms_accepted(self) -> "bool":
-        """Check if the MangaDex terms of service have been accepted."""
-        try:
-            self.terms_accepted = int(self.terms_accepted)
-        except (ValueError, TypeError):
-            self.terms_accepted = 1
-
-        current_time = datetime.now(timezone.utc)
-        input_time = datetime.fromtimestamp(int(self.terms_accepted), timezone.utc)
-        if current_time - timedelta(days=7) <= input_time <= current_time:
-            return True
-        else:
-            return False
-
-    def _accept_terms(self) -> "bool":
-        """Accept the MangaDex terms of service."""
-        if not self._first_login:
-            return True
-
-        logger.debug("Prompting user to accept MangaDex terms of service.")
-
-        print(
-            self.translation.get(
-                "accept_terms_conditions",
-                "By using this tool you agree to the MangaDex ToS and have accepted the upload terms and conditions.",
-            )
-        )
-
-        timeout = 30
-
-        t = Timer(
-            timeout,
-            raise_error,
-            [
-                ValueError(
-                    self.translation.get(
-                        "not_agree_terms_conditions",
-                        "You did not agree to the MangaDex ToS and upload terms and conditions. You need to agree to use this tool.",
-                    )
-                )
-            ],
-        )
-        t.start()
-
-        answer = input(
-            self.translation.get(
-                "terms_need_accepting",
-                "Do you accept the MangaDex terms of service? (y/n): ",
-            )
-        )
-        t.cancel()
-
-        if answer.lower() in ["true", "1", "t", "y", "yes"]:
-            accepted_terms = True
-        else:
-            accepted_terms = False
-
-        if not accepted_terms:
-            print(
-                self.translation.get(
-                    "not_agree_terms_conditions",
-                    "You did not agree to the MangaDex ToS and upload terms and conditions. You need to agree to use this tool.",
-                )
-            )
-            logger.info(f"User did not agree to the MangaDex ToS.")
-            return False
-        else:
-            print(
-                self.translation.get(
-                    "agree_terms_conditions",
-                    "You agreed to the MangaDex ToS and upload terms and conditions.",
-                )
-            )
-            logger.info(f"User agreed to the MangaDex ToS.")
-            return True
-
     def _login(self, recursed=False) -> "bool":
         """Attempt to ensure the client is logged in."""
         if self._first_login:
             logger.debug("Trying to login through the mdauth file.")
-
-        terms_accepted = self._check_terms_accepted()
-        print(f"{terms_accepted} terms accepted.")
-
-        if terms_accepted:
-            self._save_tokens(
-                self.access_token, self.refresh_token, self.terms_accepted
-            )
-        else:
-            if self.cli:
-                accepted_terms = self._accept_terms()
-            else:
-                accepted_terms = False
-
-            if accepted_terms:
-                self.terms_accepted = int(datetime.now(timezone.utc).timestamp())
-                self._save_tokens(
-                    self.access_token, self.refresh_token, self.terms_accepted
-                )
-            else:
-                self.terms_accepted = 1
-                logger.error("Terms of service not accepted, cannot login.")
-                raise MuplTermsNotAccepted(
-                    self.translation.get(
-                        "not_agree_terms_conditions",
-                        "You did not agree to the MangaDex ToS and upload terms and conditions. You need to agree to use this tool.",
-                    )
-                )
 
         if self.access_token is not None:
             self._update_headers(self.access_token)
@@ -421,6 +313,9 @@ class HTTPModel:
             self._successful_login = True
 
             self._update_headers(self.access_token)
+            # Ensure terms_accepted is properly set before saving
+            if self.terms_accepted is None:
+                self.terms_accepted = 1
             self._save_tokens(
                 self.access_token, self.refresh_token, self.terms_accepted
             )

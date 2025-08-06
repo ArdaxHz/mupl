@@ -33,8 +33,7 @@
     "invalid_images_to_upload": "No valid images to upload, skipping.",
     "draft_create_session": "Created upload session: {}",
     "images_to_upload": "{} images to upload.",
-    "threaded_upload_running": "Running threaded uploader.",
-    "non_threaded_upload_running": "Running non-threaded uploader.",
+    "non_threaded_upload_running": "Running uploader.",
     "draft_deleting_failed_upload": "Deleting draft due to failed image upload.",
     "not_defined_value": "None",
 

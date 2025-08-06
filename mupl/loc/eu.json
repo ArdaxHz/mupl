@@ -25,8 +25,7 @@
     "invalid_images_to_upload": "Ez dira igotzeko irudi baliogarririk aurkitu, hurrengo igoerara salto egiten.",
     "draft_create_session": "Igoera saioa sortu da: {}",
     "images_to_upload": "{} irudi igotzeko.",
-    "threaded_upload_running": "Hari multiprozesuan igotzen.",
-    "non_threaded_upload_running": "Hari bakarrean igotzen.",
+    "non_threaded_upload_running": "Igotzen.",
     "draft_deleting_failed_upload": "Igotzeko saioa ezabatzen irudi bat huts egin duelako.",
     "not_defined_value": "Ez zehaztua",
 

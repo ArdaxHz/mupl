@@ -69,7 +69,7 @@ mupl = Mupl(
     # logs_dir_path=None,                          # Directory where to store logs. Defaults to home path. Will create 'logs' folder in this directory.
     # max_log_days=30,                             # Days to keep log files
     # group_fallback_id=None,                      # Default group UUID if not found in filename/map
-    # number_threads=3,                            # Number of threads for concurrent image uploads
+
     # language="en",                               # Language code for mupl localisation
     # name_id_map_filename="name_id_map.json",     # Filename for manga/group name-to-ID mapping (relative to home_path or absolute path), not required for single_chapter uploads
     # uploaded_dir_path="uploaded",                # Directory name/path for successfully uploaded files (relative to home_path or absolute path to folder)
@@ -150,7 +150,7 @@ There are command line arguments that can be added after the main command to cha
 ##### Options:
 - `--update` `-u` Don't check for a new update at the start of the program.
 - `--verbose` `-v` Make the command line messages and logs more verbose.
-- `--threaded` `-t` Run the threaded uploader. *Default: False*
+
 - `--combine` `-c` Combine images that are smaller than or equal to 128px with the previous image. *Default: False*
 - `--widestrip` `-w` Splits images over 10000px wide into multiple, smaller images. *Default: False*
 
@@ -211,7 +211,7 @@ Copy and remove the `.example` from `config.json.example` to start using the con
 - `ratelimit_time` Time (in seconds) to sleep after API calls. *Default: `2`*
 - `max_log_days` Days to keep logs. *Default: `30`*
 - `group_fallback_id` Group ID to use if not found in file or ID map, leave blank to not upload to a group. *Default: `null`*
-- `number_threads`: Number of thread for concurrent image upload. **This can rate limit you.** Threads are limited to the range 1-3 (inclusive). *Default: `3`*
+
 - `language`: Language for command line messages. *Default: `en`*
 
 #### Credentials

@@ -1,15 +1,15 @@
 import os
 import shutil
 import time
-import asyncio
 import logging
 from pathlib import Path
 
 from tqdm import tqdm
 
-from mupl.file_validator import FileProcesser
+from mupl.validators import FileProcessor
 from mupl.http.client import HTTPClient
 from mupl.uploader.handler import ChapterUploaderHandler
+from mupl.status import ProgressTracker, SessionManager
 
 logger = logging.getLogger("mupl")
 
@@ -18,12 +18,11 @@ class ChapterUploader(ChapterUploaderHandler):
     def __init__(
         self,
         http_client: "HTTPClient",
-        file_name_obj: "FileProcesser",
+        file_name_obj: "FileProcessor",
         names_to_ids: "dict",
         failed_uploads: "list",
         mangadex_api_url: str,
         upload_retry: int,
-        number_threads: int,
         uploaded_files: Path,
         ratelimit_time: int,
         translation: dict,
@@ -35,6 +34,8 @@ class ChapterUploader(ChapterUploaderHandler):
         home_path: Path,
         **kwargs,
     ):
+        self._progress_tracker = ProgressTracker()
+        self._session_manager = SessionManager()
         super().__init__(
             http_client,
             file_name_obj,
@@ -51,12 +52,8 @@ class ChapterUploader(ChapterUploaderHandler):
             **kwargs,
         )
         self.names_to_ids = names_to_ids
-        self.number_threads = number_threads
         self.uploaded_files = uploaded_files
         self.ratelimit_time = ratelimit_time
-        self.threaded = kwargs.get("threaded", False)
-        if self.number_threads <= 1:
-            self.threaded = False
 
         if os.path.isabs(self.uploaded_files):
             self.uploaded_files_path = (
@@ -69,18 +66,57 @@ class ChapterUploader(ChapterUploaderHandler):
         self.ratelimit_time = self.ratelimit_time
         self.myzip = self.image_uploader_process.myzip
 
-    @staticmethod
-    def create_new_event_loop():
-        """Return the event loop, create one if not there is not one running."""
-        try:
-            return asyncio.get_event_loop()
-        except RuntimeError as e:
-            if str(e).startswith("There is no current event loop in thread"):
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                return loop
+        chapter_metadata = {
+            "manga_series": self.file_name_obj.manga_series,
+            "chapter_number": self.file_name_obj.chapter_number,
+            "volume_number": self.file_name_obj.volume_number,
+            "chapter_title": self.file_name_obj.chapter_title,
+            "language": self.file_name_obj.language,
+            "groups": self.file_name_obj.groups,
+            "publish_date": self.file_name_obj.publish_date,
+        }
+        self._session_manager.set_chapter_metadata(chapter_metadata)
+
+    def get_current_upload_phase(self) -> str:
+        """Get the current phase of the upload process."""
+        return self._progress_tracker.get_current_phase()
+
+    def get_images_upload_progress(self) -> dict:
+        """Get the progress of image uploads."""
+        return self._progress_tracker.get_images_progress()
+
+    def get_upload_session_data(self) -> dict:
+        """Get the current upload session data."""
+        return self._session_manager.get_session_data()
+
+    def get_chapter_metadata(self) -> dict:
+        """Get the chapter metadata."""
+        return self._session_manager.get_chapter_metadata()
+
+    def get_upload_errors(self) -> list:
+        """Get any upload errors that occurred."""
+        return self._progress_tracker.get_errors()
+
+    def update_chapter_metadata(self, **metadata_updates) -> None:
+        """Update chapter metadata for dependency usage."""
+        valid_fields = {
+            "manga_series",
+            "chapter_number",
+            "volume_number",
+            "chapter_title",
+            "language",
+            "groups",
+            "publish_date",
+        }
+
+        for field, value in metadata_updates.items():
+            if field in valid_fields:
+                self._session_manager.update_chapter_metadata(**{field: value})
+                # Also update the file processor object if possible
+                if hasattr(self.file_name_obj, field):
+                    setattr(self.file_name_obj, field, value)
             else:
-                raise
+                logger.warning(f"Invalid metadata field: {field}")
 
     def move_files(self):
         """Move the uploaded chapters to a different folder."""
@@ -116,52 +152,24 @@ class ChapterUploader(ChapterUploaderHandler):
         )
         logger.debug(f"Moved '{self.to_upload}' to '{new_uploaded_zip_path}'")
 
-    async def process_images_upload(self, images_array):
-        """Start uploading the images, threaded."""
-        images_to_upload = self.image_uploader_process.get_images_to_upload(
-            images_array
-        )
-        failed = self._upload_images(images_to_upload)
-        if failed:
-            self.failed_image_upload = True
-            asyncio.get_running_loop().close()
+    def run_image_uploader(self):
+        """Run the image uploader."""
+        images_to_upload = self.image_uploader_process.get_images_to_upload()
 
-    def run_threaded_uploader(self, spliced_images):
-        """Run the threads for upload."""
-        tasks = []
-
-        loop = self.create_new_event_loop()
-        for images_to_upload in spliced_images:
-            task = self.process_images_upload(images_to_upload)
-            tasks.append(task)
-
-        gathered = asyncio.gather(*tasks)
-
-        try:
-            loop.run_until_complete(gathered)
-        except KeyboardInterrupt as e:
-            print(self.translation["keyboard_interrupt_cancel"])
-            gathered.cancel()
-            self.failed_image_upload = True
-
-    def run_image_uploader(self, images):
-        """Run the image mupl ."""
-        for images_array in images:
-            images_to_upload = self.image_uploader_process.get_images_to_upload(
-                images_array
-            )
-            failed = self._upload_images(images_to_upload)
+        for i in range(0, len(images_to_upload), self.number_of_images_upload):
+            batch = images_to_upload[i : i + self.number_of_images_upload]
+            images_dict = {str(j): data for j, (name, data) in enumerate(batch)}
+            failed = self._upload_images(images_dict)
             if failed:
                 self.failed_image_upload = True
 
-            # Don't upload rest of the chapter's images if the images before failed
             if self.failed_image_upload:
                 break
 
-            # self.tqdm.update(len(images_to_upload))
-
     def upload(self):
         """Process the zip for uploading."""
+        self._progress_tracker.set_current_phase("validating_images")
+        self._session_manager.start_session()
         logger.info(f"Uploading chapter: {repr(self.file_name_obj)}")
         print(
             "Manga id: {manga_series}\n"
@@ -204,21 +212,40 @@ class ChapterUploader(ChapterUploaderHandler):
         )
 
         if not self.image_uploader_process.valid_images_to_upload:
+            self._progress_tracker.set_current_phase("failed_validation")
+            error_msg = f"No valid images found for {self.zip_name}"
+            self._progress_tracker.add_error(error_msg)
             print(self.translation["invalid_images_to_upload"])
-            logger.error(f"No valid images found for {self.zip_name}")
+            logger.error(error_msg)
             self.failed_uploads.append(self.to_upload)
             return False
 
+        total_images = len(
+            [
+                item
+                for sublist in self.image_uploader_process.valid_images_to_upload
+                for item in sublist
+            ]
+        )
+        self._progress_tracker.set_total_images(total_images)
+        self._progress_tracker.set_current_phase("authenticating")
         self.http_client.login()
-        if not self.http_client._check_terms_accepted():
-            return False
 
+        self._progress_tracker.set_current_phase("creating_upload_session")
         upload_session_response_json = self._create_upload_session()
         if upload_session_response_json is None:
+            self._progress_tracker.set_current_phase("failed_session_creation")
+            self._progress_tracker.add_error("Failed to create upload session")
             time.sleep(self.ratelimit_time)
             return False
 
         self.upload_session_id = upload_session_response_json["data"]["id"]
+        session_data = {
+            "session_id": self.upload_session_id,
+            "created_at": time.time(),
+            "chapter_name": self.zip_name,
+        }
+        self._session_manager.update_session_data(**session_data)
 
         logger.info(
             f"Created upload session: {self.upload_session_id}, {self.zip_name}."
@@ -237,31 +264,15 @@ class ChapterUploader(ChapterUploaderHandler):
                 )
             )
 
-        self.tqdm = tqdm(total=len(self.image_uploader_process.info_list))
+        self._progress_tracker.set_current_phase("uploading_images")
+        self.tqdm = tqdm(total=len(self.image_uploader_process.valid_images_to_upload))
 
-        if self.threaded:
-            if self.verbose:
-                print(self.translation["threaded_upload_running"])
-
-            spliced_images_list = [
-                self.image_uploader_process.valid_images_to_upload[
-                    elem : elem + self.number_threads
-                ]
-                for elem in range(
-                    0,
-                    len(self.image_uploader_process.valid_images_to_upload),
-                    self.number_threads,
-                )
-            ]
-
-            for spliced_images in spliced_images_list:
-                self.run_threaded_uploader(spliced_images)
-                if self.failed_image_upload:
-                    break
-        else:
-            if self.verbose:
-                print(self.translation["non_threaded_upload_running"])
-            self.run_image_uploader(self.image_uploader_process.valid_images_to_upload)
+        if self.verbose:
+            print(self.translation["non_threaded_upload_running"])
+        self.run_image_uploader()  # Parameter not used
+        if self.failed_image_upload:
+            self._progress_tracker.set_current_phase("failed_image_upload")
+            self._progress_tracker.add_error("Failed to upload images")
 
         self.tqdm.close()
         if not self.folder_upload:
@@ -269,14 +280,27 @@ class ChapterUploader(ChapterUploaderHandler):
 
         # Skip chapter upload and delete upload session
         if self.failed_image_upload:
+            self._progress_tracker.set_current_phase("cleaning_up_failed_upload")
             print(self.translation["draft_deleting_failed_upload"])
             logger.error(
                 f"Deleting draft due to failed image upload: {self.upload_session_id}, {self.zip_name}."
             )
             self.remove_upload_session()
             self.failed_uploads.append(self.to_upload)
+            self._progress_tracker.set_current_phase("failed")
+            self._session_manager.end_session()
             return False
 
+        self._progress_tracker.set_current_phase("committing_chapter")
         logger.info("Uploaded all of the chapter's images.")
         commit_chapter_resp = self._commit_chapter()
+
+        if commit_chapter_resp:
+            self._progress_tracker.set_current_phase("completed_successfully")
+            self._session_manager.end_session()
+        else:
+            self._progress_tracker.set_current_phase("failed_commit")
+            self._progress_tracker.add_error("Failed to commit chapter")
+            self._session_manager.end_session()
+
         return commit_chapter_resp

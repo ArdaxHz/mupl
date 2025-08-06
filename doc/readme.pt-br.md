@@ -91,7 +91,7 @@ Copie e remova o `.example` de `config.json.example` para começar a usar o arqu
 - `ratelimit_time` Tempo (em segundos) para dormir após chamadas de API. *Padrão: 2*
 - `max_log_days` Dias para manter logs. *Padrão: 30*
 - `group_fallback_id` ID do grupo a ser usado se não encontrado no arquivo ou mapa de ID, deixe em branco para não carregar para um grupo. *Padrão: null*
-- `number_threads`: Número de threads para upload simultâneo de imagens. **Isso pode limitar a taxa de upload.** As threads são limitadas ao intervalo de 1 a 3 (inclusive). *Padrão: 3*
+
 - `language`: Idioma para mensagens da linha de comando. *Padrão: null*
 
 #### Credenciais

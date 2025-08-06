@@ -33,8 +33,7 @@
     "invalid_images_to_upload": "No se encontraron imágenes válidas para subir, omitiendo.",
     "draft_create_session": "Creada sesión de subida: {}",
     "images_to_upload": "{} imagen(es) para subir.",
-    "threaded_upload_running": "Ejecutando subidor multihilo.",
-    "non_threaded_upload_running": "Ejecutando subidor no-multihilo.",
+    "non_threaded_upload_running": "Ejecutando subidor.",
     "draft_deleting_failed_upload": "Eliminando borrador debido a una subida de imagen fallida.",
     "not_defined_value": "Ninguno",
 

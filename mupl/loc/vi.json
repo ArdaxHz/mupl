@@ -27,8 +27,7 @@
     "invalid_images_to_upload": "Không tìm thấy hình ảnh hợp lệ để tải lên, đang bỏ qua.",
     "draft_create_session": "Đã tạo phiên tải lên: {}",
     "images_to_upload": "{} hình ảnh cần tải lên.",
-    "threaded_upload_running": "Đang chạy trình tải lên đa luồng.",
-    "non_threaded_upload_running": "Đang chạy trình tải lên đơn luồng.",
+    "non_threaded_upload_running": "Đang chạy trình tải lên.",
     "draft_deleting_failed_upload": "Xóa bản nháp do tải hình ảnh lên thất bại.",
     "not_defined_value": "Không có giá trị",
 

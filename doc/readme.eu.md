@@ -34,7 +34,7 @@ Komando-lerroko argumentuak daude komando nagusiaren ondoren gehi daitezkeenak p
 ##### Aukerak
 - `--update` `-u` Ez konprobatu eguneratze berririk programaren hasieran.
 - `--verbose` `-v` Egin komando-lerroko mezuak eta erregistroak zehatzagoak.
-- `--threaded` `-t` Exekutatu hari bat baino gehiagorekin. *Defektuz: false/faltsua*
+
 
 ## Fitxategi Izen Formatua
 #### Izen formatua
@@ -78,7 +78,7 @@ Kopiatu eta kendu `.example` zatia `config.json.example` fitxategitik konfiguraz
 - `ratelimit_time` API deien ondoren itxaroteko denbora (segundutan). *Defektuz: 2*
 - `max_log_days` Erregistroak mantentzeko egun kopurua. *Defektuz: 30*
 - `group_fallback_id` Erabili beharreko talde IDa, fitxategian edo ID mapan ezarritako talde IDa aurkitzen ez bada. *Defektuz: null*
-- `number_threads` Aldi berean irudiak igotzeko hari kopurua. **Honek mugatu zaitzake.** Hariak 1-3 tartera mugatzen dira (biak barne). *Defektuz: 3*
+
 - `language` Komando-lerroko mezuetarako hizkuntza. *Defektuz: null*
 
 #### Kredentzialak

@@ -36,12 +36,7 @@ def main():
         default=0,
         help="Increase log verbosity (e.g., -v for DEBUG).",
     )
-    parser.add_argument(
-        "--threaded",
-        "-t",
-        action="store_true",
-        help="Upload the images concurrently using threads.",
-    )
+
     parser.add_argument(
         "--combine",
         "-c",
@@ -104,7 +99,7 @@ def main():
         combine = vargs.get("combine", False)
 
         print(f"{'*'*3} {translation.get('accept_terms_conditions','')} {'*'*3}")
-        time.sleep(5)
+        # time.sleep(5)
 
         mupl = Mupl(
             mangadex_username=config_data["credentials"]["mangadex_username"],
@@ -141,7 +136,7 @@ def main():
 
         failed_list = mupl.upload_directory(
             upload_directory_path,
-            terms_accepted=False,
+            terms_accepted=True,
             widestrip=widestrip,
             combine=combine,
         )

@@ -61,7 +61,7 @@ mupl = Mupl(
     # logs_dir_path=None,                          # Directorio donde almacenar los logs. Por defecto es la ruta de Home. Se creará la carpeta "logs" en este directorio.
     # max_log_days=30,                             # Días de conservación de los registros
     # group_fallback_id=None,                      # UUID de grupo por defecto si no se encuentra en el nombre de archivo/mapa
-    # number_threads=3,                            # Número de subprocesos para la subida simultánea de imágenes
+    
     # language="en",                               # Código de idioma para el lenguaje de mupl
     # name_id_map_filename="name_id_map.json",     # Nombre del archivo del mapa de nombre-a-id (relativo a home_path o ruta absoluta), no es necesario para las subdas de un solo capítulo.
     # uploaded_dir_path="uploaded",                # Nombre del directorio/ruta para los archivos subidos correctamente (relativo a home_path o ruta absoluta para la carpeta)
@@ -138,7 +138,7 @@ Hay argumentos que se pueden agregar al comando de ejecución para cambiar el co
 ##### Opciones:
 - `--update` `-u` El programa no revisará nuevas versiones disponibles al iniciar.
 - `--verbose` `-v` Hace que los mensajes de la línea de comandos y los registros sean más detallados.
-- `--threaded` `-t` Ejecuta el subidor multihilo. *Default: False*
+
 - `--combine` `-c` Combina la imagen cuya resolución es igual o más pequeña a 128px con la imagen anterior. *Default: False*
 - `--widestrip` `-w` Divide las imágenes de más de 10000px de ancho en varias imágenes más pequeñas. *Default: False*
 
@@ -197,7 +197,7 @@ Para empezar a usar el archivo de configuración, copia y elimina la extensión 
 - `ratelimit_time` Tiempo (en segundos) de espera tras cada llamada a la API. *Default: 2*
 - `max_log_days` Tiempo (en días) en los que se mantienen los registros del programa. *Default: 30*
 - `group_fallback_id` ID de grupo a utilizar si no se encuentra en el archivo o mapa de IDs, dejar en blanco para no subir a un grupo. *Default: null*
-- `number_threads`: Número de hilos para la subida simultanea de imágenes. **Esto puede limitar tu velocidad de subida.** El número de hilos están limitados a un rango de 1-3 (inclusivo). *Default: 3*
+
 - `language`: Idioma para los mensajes de la línea de comandos. *Default: en*
 
 #### Credenciales

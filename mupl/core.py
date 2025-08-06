@@ -5,21 +5,29 @@ import time
 import logging
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple, Union
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
+from threading import Timer
 import uuid
 
 import natsort
 
-from mupl.file_validator import FileProcesser
+from mupl.validators import FileProcessor
 from mupl.http.client import HTTPClient
 from mupl.uploader.uploader import ChapterUploader
-from mupl.exceptions import MuplException, MuplNotAFileError
+from mupl.exceptions import MuplException, MuplNotAFileError, MuplTermsNotAccepted
 from mupl.loc.load import download_localisation
 from mupl.utils.config import validate_path
 from mupl.utils.logs import (
     format_log_dir_path,
     setup_logs,
     clear_old_logs,
+)
+from mupl.status import UploadTracker, ProgressTracker, SessionManager
+from mupl.validators.constants import (
+    DEFAULT_IMAGES_UPLOAD_COUNT,
+    DEFAULT_UPLOAD_RETRY,
+    DEFAULT_RATELIMIT_TIME,
+    DEFAULT_MAX_LOG_DAYS,
 )
 
 logger = logging.getLogger("mupl")
@@ -38,13 +46,12 @@ class Mupl:
         translation: Dict = None,
         move_files: bool = True,
         verbose_level: int = 0,
-        number_of_images_upload: int = 10,
-        upload_retry: int = 3,
-        ratelimit_time: int = 2,
+        number_of_images_upload: int = DEFAULT_IMAGES_UPLOAD_COUNT,
+        upload_retry: int = DEFAULT_UPLOAD_RETRY,
+        ratelimit_time: int = DEFAULT_RATELIMIT_TIME,
         logs_dir_path: str = None,
-        max_log_days: int = 30,
+        max_log_days: int = DEFAULT_MAX_LOG_DAYS,
         group_fallback_id: Optional[str] = None,
-        number_threads: int = 3,
         language: str = "en",
         name_id_map_filename: str = "name_id_map.json",
         uploaded_dir_path: str = "uploaded",
@@ -55,6 +62,9 @@ class Mupl:
         home_path: Path = Path.home().joinpath("mupl"),
         **kwargs,
     ):
+        self._upload_tracker = UploadTracker()
+        self._progress_tracker = ProgressTracker()
+        self._session_manager = SessionManager()
         r"""
         Initializes the Mupl class with explicit parameters.
 
@@ -75,7 +85,7 @@ class Mupl:
             logs_dir_path (str, optional): Directory where to store logs. Defaults to home path. Will create 'logs' folder in this directory.
             max_log_days (int, optional): Maximum number of days to keep logs. Defaults to 30.
             group_fallback_id (str, optional): Fallback group ID. Defaults to None.
-            number_threads (int, optional): Number of threads for concurrent uploads. Defaults to 3.
+
             language (str, optional): Language for mupl localisation. Defaults to "en".
             name_id_map_filename (str): Path to name-ID mapping file. Will check your home directory for this file, if running as a dependency, otherwise will look in the current working directory. Defaults to "name_id_map.json"..
             uploaded_dir_path (str): Path to folder for uploaded files. Will check your home directory for this folder, if running as a dependency, otherwise will look in the current working directory. Defaults to "uploaded".
@@ -107,9 +117,7 @@ class Mupl:
         self.max_log_days = max(
             1, int(max_log_days) if max_log_days is not None else 30
         )
-        self.number_threads = max(
-            1, int(number_threads) if number_threads is not None else 3
-        )
+
         verbose_level = max(0, int(verbose_level) if verbose_level is not None else 0)
 
         self.mangadex_username = (
@@ -284,7 +292,7 @@ class Mupl:
         widestrip: bool,
         combine: bool,
         **kwargs,
-    ) -> Tuple[Optional[List[FileProcesser]], List[Path]]:
+    ) -> Tuple[Optional[List[FileProcessor]], List[Path]]:
         """Get a list of files that end with a zip/cbz extension or are folders for uploading."""
         if not isinstance(upload_dir_path, Path):
             upload_dir_path = Path(str(upload_dir_path))
@@ -295,7 +303,7 @@ class Mupl:
         widestrip = bool(widestrip)
         combine = bool(combine)
 
-        zips_to_upload: List[FileProcesser] = []
+        zips_to_upload: List[FileProcessor] = []
         zips_invalid_file_name = []
         zips_no_manga_id = []
 
@@ -313,7 +321,7 @@ class Mupl:
                 logger.debug(f"Skipping hidden file/folder: {archive.name}")
                 continue
 
-            zip_obj = FileProcesser(
+            zip_obj = FileProcessor(
                 archive,
                 names_to_ids,
                 self.translation,
@@ -323,7 +331,7 @@ class Mupl:
                 combine=combine,
                 **kwargs,
             )
-            zip_name_process = zip_obj.process_zip_name()
+            zip_name_process = zip_obj.metadata()
             if zip_name_process:
                 zips_to_upload.append(zip_obj)
                 continue
@@ -370,6 +378,120 @@ class Mupl:
         )
         return zips_to_upload, zips_invalid_file_name + zips_no_manga_id
 
+    def _check_terms_accepted(self) -> bool:
+        """Check if the MangaDex terms of service have been accepted."""
+        terms_timestamp = self._get_terms_timestamp()
+
+        try:
+            terms_timestamp = int(terms_timestamp)
+        except (ValueError, TypeError):
+            terms_timestamp = 1
+
+        current_time = datetime.now(timezone.utc)
+        input_time = datetime.fromtimestamp(int(terms_timestamp), timezone.utc)
+        if current_time - timedelta(days=7) <= input_time <= current_time:
+            return True
+        else:
+            return False
+
+    def _accept_terms(self) -> bool:
+        """Accept the MangaDex terms of service for CLI usage."""
+        logger.debug("Prompting user to accept MangaDex terms of service.")
+
+        print(
+            self.translation.get(
+                "accept_terms_conditions",
+                "By using this tool you agree to the MangaDex ToS and have accepted the upload terms and conditions.",
+            )
+        )
+
+        timeout = 30
+
+        def raise_error(ex):
+            raise ex
+
+        t = Timer(
+            timeout,
+            raise_error,
+            [
+                ValueError(
+                    self.translation.get(
+                        "not_agree_terms_conditions",
+                        "You did not agree to the MangaDex ToS and upload terms and conditions. You need to agree to use this tool.",
+                    )
+                )
+            ],
+        )
+        t.start()
+
+        answer = input(
+            self.translation.get(
+                "terms_need_accepting",
+                "Do you accept the MangaDex terms of service? (y/n): ",
+            )
+        )
+        t.cancel()
+
+        if answer.lower() in ["true", "1", "t", "y", "yes"]:
+            accepted_terms = True
+        else:
+            accepted_terms = False
+
+        if not accepted_terms:
+            print(
+                self.translation.get(
+                    "not_agree_terms_conditions",
+                    "You did not agree to the MangaDex ToS and upload terms and conditions. You need to agree to use this tool.",
+                )
+            )
+            logger.info(f"User did not agree to the MangaDex ToS.")
+            return False
+        else:
+            print(
+                self.translation.get(
+                    "agree_terms_conditions",
+                    "You agreed to the MangaDex ToS and upload terms and conditions.",
+                )
+            )
+            logger.info(f"User agreed to the MangaDex ToS.")
+            self._save_terms_acceptance(int(datetime.now(timezone.utc).timestamp()))
+            return True
+
+    def _get_terms_timestamp(self) -> int:
+        """Get the terms acceptance timestamp from the auth file."""
+        if not self.mdauth_path.exists():
+            return 1
+
+        try:
+            with open(self.mdauth_path, "r") as auth_file:
+                auth_data = json.load(auth_file)
+                return auth_data.get("terms", 1)
+        except (json.JSONDecodeError, FileNotFoundError, KeyError):
+            return 1
+
+    def _save_terms_acceptance(self, timestamp: int) -> None:
+        """Save the terms acceptance timestamp to the auth file."""
+        auth_data = {}
+
+        # Read existing auth data if file exists
+        if self.mdauth_path.exists():
+            try:
+                with open(self.mdauth_path, "r") as auth_file:
+                    auth_data = json.load(auth_file)
+            except (json.JSONDecodeError, FileNotFoundError):
+                auth_data = {}
+
+        # Update terms timestamp
+        auth_data["terms"] = timestamp
+
+        # Save back to file
+        try:
+            with open(self.mdauth_path, "w") as auth_file:
+                json.dump(auth_data, auth_file, indent=4)
+            logger.debug("Saved terms acceptance to mdauth file.")
+        except Exception as e:
+            logger.error(f"Failed to save terms acceptance: {e}")
+
     def _open_manga_series_map(self) -> Dict:
         """Get the manga-name-to-id map."""
         try:
@@ -403,7 +525,7 @@ class Mupl:
 
     def _upload_loop(
         self,
-        zips_to_upload: List[FileProcesser],
+        zips_to_upload: List[FileProcessor],
         names_to_ids: Dict[str, str],
         *,
         terms_accepted: bool,
@@ -411,7 +533,7 @@ class Mupl:
         combine: bool,
         **kwargs,
     ) -> List[Path]:
-        """Internal loop for processing and uploading a list of FileProcesser objects."""
+        """Internal loop for processing and uploading a list of FileProcessor objects."""
         if not isinstance(zips_to_upload, list):
             logger.error("zips_to_upload must be a list")
             return []
@@ -426,18 +548,42 @@ class Mupl:
         widestrip = bool(widestrip)
         combine = bool(combine)
 
-        if not self.cli:
-            self.http_client.terms_accepted = (
-                1 if not terms_accepted else int(datetime.now(timezone.utc).timestamp())
-            )
+        if self.cli:
+            if not self._check_terms_accepted():
+                if not self._accept_terms():
+                    logger.error(
+                        "Terms of service not accepted, cannot proceed with upload."
+                    )
+                    return []
+        else:
+            if terms_accepted:
+                if not self._check_terms_accepted():
+                    self._save_terms_acceptance(
+                        int(datetime.now(timezone.utc).timestamp())
+                    )
+            else:
+                self._save_terms_acceptance(1)
+                logger.error(
+                    "Terms of service not accepted, cannot proceed with upload."
+                )
+                return []
+
+        self.http_client.terms_accepted = self._get_terms_timestamp()
+
+        self._upload_tracker.start_upload_session(len(zips_to_upload))
+        self._progress_tracker.set_total_chapters(len(zips_to_upload))
+        self._session_manager.start_session()
 
         failed_uploads: List[Path] = []
         for index, file_name_obj in enumerate(zips_to_upload, start=1):
-            if not isinstance(file_name_obj, FileProcesser):
+            if not isinstance(file_name_obj, FileProcessor):
                 logger.warning(
                     f"Skipping invalid file processor object: {file_name_obj}"
                 )
                 continue
+
+            self._upload_tracker.set_current_chapter(str(file_name_obj))
+            self._progress_tracker.increment_chapters_processed()
 
             uploader_process = None
             try:
@@ -454,7 +600,6 @@ class Mupl:
                     mangadex_api_url=self.mangadex_api_url,
                     upload_retry=self.upload_retry,
                     translation=self.translation,
-                    number_threads=self.number_threads,
                     uploaded_files=self.uploaded_files,
                     ratelimit_time=self.ratelimit_time,
                     move_files=self.move_files,
@@ -467,6 +612,14 @@ class Mupl:
                 )
 
                 upload_success = uploader_process.upload()
+
+                if upload_success:
+                    self._upload_tracker.add_successful_upload(file_name_obj.to_upload)
+                    self._progress_tracker.increment_completed()
+                else:
+                    self._upload_tracker.add_failed_upload(file_name_obj.to_upload)
+                    self._progress_tracker.increment_failed()
+
                 del uploader_process
 
                 print(
@@ -504,7 +657,12 @@ class Mupl:
 
                     gc.collect()
 
+        self._upload_tracker.complete_upload_session()
+        self._progress_tracker.complete_all()
+        self._session_manager.end_session()
+
         if failed_uploads:
+            self._upload_tracker.set_status("completed_with_errors")
             logger.info(f"Failed uploads: {[f.name for f in failed_uploads]}")
 
             print(self.translation.get("failed_uploads", "Failed uploads"))
@@ -516,14 +674,16 @@ class Mupl:
                 )
 
                 print("{}: {}".format(prefix, fail.name))
+        else:
+            self._upload_tracker.set_status("completed_successfully")
 
         return failed_uploads
 
     def upload_directory(
         self,
         upload_dir_path: Union[Path, str],
-        *,
         terms_accepted: bool,
+        *,
         widestrip: bool = False,
         combine: bool = False,
         **kwargs,
@@ -585,9 +745,9 @@ class Mupl:
         self,
         file_path: Union[Path, str],
         manga_id: str,
+        terms_accepted: bool,
         group_ids: Optional[List[str]] = None,
         *,
-        terms_accepted: bool,
         language: str = "en",
         oneshot: Optional[bool] = False,
         chapter_number: Optional[str] = None,
@@ -700,7 +860,7 @@ class Mupl:
             )
             return False
 
-        file_name_obj = FileProcesser(
+        file_name_obj = FileProcessor(
             file_path,
             names_to_ids={},
             translation=self.translation,

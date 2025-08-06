@@ -2,11 +2,10 @@ import logging
 from pathlib import Path
 from typing import List, Optional, Dict
 
-from mupl.file_validator import FileProcesser
+from mupl.validators import FileProcessor, ImageProcessor
 from mupl.exceptions import MuplUploadSessionError
 from mupl.http import RequestError
 from mupl.http.client import HTTPClient
-from mupl.image_validator import ImageProcessor
 
 
 logger = logging.getLogger("mupl")
@@ -16,7 +15,7 @@ class ChapterUploaderHandler:
     def __init__(
         self,
         http_client: "HTTPClient",
-        file_name_obj: "FileProcesser",
+        file_name_obj: "FileProcessor",
         failed_uploads: "list",
         verbose: bool,
         mangadex_api_url: str,
@@ -131,18 +130,18 @@ class ChapterUploaderHandler:
 
                 uploaded_image_attributes = uploaded_image["attributes"]
                 uploaded_filename = uploaded_image_attributes["originalFileName"]
+                old_filename = self.image_uploader_process.new_to_old_name_map.get(
+                    uploaded_filename
+                )
                 file_size = uploaded_image_attributes["fileSize"]
+                converted_format = self.image_uploader_process.converted_images.get(
+                    old_filename
+                )
 
                 self.images_to_upload_ids.insert(
                     int(uploaded_filename), uploaded_image["id"]
                 )
-                original_filename = self.image_uploader_process.images_to_upload_names[
-                    uploaded_filename
-                ]
-                converted_format = self.image_uploader_process.converted_images.get(
-                    original_filename
-                )
-                formatted_name_message = original_filename
+                formatted_name_message = old_filename
                 if converted_format is not None:
                     formatted_name_message += f" (converted to {converted_format})"
 
@@ -219,6 +218,32 @@ class ChapterUploaderHandler:
 
     def _create_upload_session(self) -> "Optional[dict]":
         """Try create an upload session 3 times."""
+        # Validate manga_series is a valid UUID
+        if not self.file_name_obj.manga_series:
+            logger.error(f"No manga series ID found for {self.zip_name}")
+            print(
+                self.translation.get(
+                    "error_no_manga_id", "Error: No manga ID found"
+                ).format(self.zip_name)
+            )
+            self.failed_uploads.append(self.to_upload)
+            return None
+
+        # Import UUID_REGEX for validation
+        from mupl.validators.regex_patterns import UUID_REGEX
+
+        if not UUID_REGEX.match(self.file_name_obj.manga_series):
+            logger.error(
+                f"Invalid manga series ID format for {self.zip_name}: {self.file_name_obj.manga_series}"
+            )
+            print(
+                self.translation.get(
+                    "error_invalid_manga_id", "Error: Invalid manga ID format"
+                ).format(self.zip_name, self.file_name_obj.manga_series)
+            )
+            self.failed_uploads.append(self.to_upload)
+            return None
+
         payload = {
             "manga": self.file_name_obj.manga_series,
             "groups": self.file_name_obj.groups,
@@ -251,7 +276,6 @@ class ChapterUploaderHandler:
                 "title": self.file_name_obj.chapter_title,
                 "translatedLanguage": self.file_name_obj.language,
             },
-            "termsAccepted": self.http_client.upload_terms_accepted,
             "pageOrder": self.images_to_upload_ids,
         }
 

@@ -41,6 +41,16 @@ class OAuth2:
         self.__access_token = data["access_token"]
         self.__refresh_token = data["refresh_token"]
 
+        # Update terms_accepted in the HTTP client if present in response
+        if "terms_accepted" in data:
+            self.__client.terms_accepted = data["terms_accepted"]
+        elif (
+            hasattr(self.__client, "terms_accepted")
+            and self.__client.terms_accepted is None
+        ):
+            # If no terms_accepted in response and client doesn't have it set, default to 1 (not accepted)
+            self.__client.terms_accepted = 1
+
     def login(self) -> "bool":
         """Generate access token from login and client details."""
         username = self.username
