@@ -294,18 +294,11 @@ class ImageProcessor:
     def _read_image_data(self, image: str) -> bytes:
         """Read image data from file or ZIP."""
         if self.folder_upload:
-            image_path = Path(image)
-            if image_path.exists():
-                return image_path.read_bytes()
+            image_path = self.to_upload.joinpath(image)
+            return image_path.read_bytes()
         else:
-            try:
-                return self.myzip.read(image)
-            except KeyError:
-                logger.warning(f"Image not found in ZIP: {image}")
-            except AttributeError:
-                logger.error("ZIP file not properly initialized")
-
-        return b""
+            with self.myzip.open(image) as myfile:
+                return myfile.read()
 
     def _get_valid_images(self):
         """Process and validate all images."""
